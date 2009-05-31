@@ -3,6 +3,7 @@
 from numpy import *
 from scipy import optimize
 from scipy import stats
+from mpfit import mpfit
 
 def moments(data,circle,rotate,vheight):
     """Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
@@ -103,8 +104,11 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
         return g
     return rotgauss
 
-def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,\
-        rotate=1,vheight=1):
+def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
+        fixed=repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
+        limitedmax=[False,False,False,False,False,False,True],
+        minpars=repeat(0,7),maxpars=[0,0,0,0,0,0,360],
+        rotate=1,vheight=1,quiet=True):
     """
     Gaussian fitter with the ability to fit a variety of different forms of
     2-dimensional gaussian.
@@ -124,7 +128,7 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,\
         circle=0 - default is an elliptical gaussian (different x, y widths),
             but can reduce the input by one parameter if it's a circular gaussian
         rotate=1 - default allows rotation of the gaussian ellipse.  Can remove
-            last parameter by setting rotate=0
+            last parameter by setting rotate=0.  Expects angle in DEGREES
         vheight=1 - default allows a variable height-above-zero, i.e. an
             additive constant for the Gaussian function.  Can remove first
             parameter by setting this to 0
@@ -147,6 +151,32 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,\
     else:
         errorfunction = lambda p: ravel((twodgaussian(p,circle,rotate,vheight)\
                 (*indices(data.shape)) - data)/err)
+    def mpfitfun(data,err):
+        if err == None:
+            def f(p,fjac=None): return [0,ravel(data-twodgaussian(p,circle,rotate,vheight)\
+                    (*indices(data.shape)))]
+        else:
+            def f(p,fjac=None): return [0,ravel((data-twodgaussian(p,circle,rotate,vheight)\
+                    (*indices(data.shape)))/err)]
+        return f
+    if rotate == 0:
+        params[6] = 0
+        fixed[6] = True
+    if vheight == 0:
+        params[0] = 0
+        fixed[0] = True
+    if circle == 1:
+        params[5] = 0
+        fixed[5] = True
+                    
+    parinfo = [ {'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0} ,
+                {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
+                {'n':2,'value':params[2],'limits':[minpars[2],maxpars[2]],'limited':[limitedmin[2],limitedmax[2]],'fixed':fixed[2],'parname':"XSHIFT",'error':0},
+                {'n':3,'value':params[3],'limits':[minpars[3],maxpars[3]],'limited':[limitedmin[3],limitedmax[3]],'fixed':fixed[3],'parname':"YSHIFT",'error':0},
+                {'n':4,'value':params[4],'limits':[minpars[4],maxpars[4]],'limited':[limitedmin[4],limitedmax[4]],'fixed':fixed[4],'parname':"XWIDTH",'error':0},
+                {'n':5,'value':params[5],'limits':[minpars[5],maxpars[5]],'limited':[limitedmin[5],limitedmax[5]],'fixed':fixed[5],'parname':"YWIDTH",'error':0},
+                {'n':6,'value':params[6],'limits':[minpars[6],maxpars[6]],'limited':[limitedmin[6],limitedmax[6]],'fixed':fixed[6],'parname':"ROTATION",'error':0}]
+
     if autoderiv == 0:
         # the analytic derivative, while not terribly difficult, is less
         # efficient and useful.  I only bothered putting it here because I was
@@ -154,9 +184,47 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,\
         # like this feature implemented
         raise ValueError("I'm sorry, I haven't implemented this feature yet.")
     else:
-        p, cov, infodict, errmsg, success = optimize.leastsq(errorfunction,\
-                params, full_output=1)
+#        p, cov, infodict, errmsg, success = optimize.leastsq(errorfunction,\
+#                params, full_output=1)
+        mp = mpfit(mpfitfun(data,err),parinfo=parinfo,quiet=quiet)
     if  return_all == 0:
-        return p
+        return mp.params
     elif return_all == 1:
-        return p,cov,infodict,errmsg
+        return mp.params,mp.perror
+
+def onedgaussfit(xax,data,err=None,fixed=[False,False,False,False],limitedmin=[False,False,False,False],
+        limitedmax=[False,False,False,False],minpars=[0,0,0,0],maxpars=[0,0,0,0],params=[0,1,0,1],
+        quiet=True,shh=True):
+
+    def onedgauss(x,H,A,dx,w):
+        return H+A*exp(-(x-dx)**2/(2*w**2))
+
+    def mpfitfun(x,y,err):
+        if err == None:
+            def f(p,fjac=None): return [0,(y-onedgauss(x,*p))]
+        else:
+            def f(p,fjac=None): return [0,(y-onedgauss(x,*p))/err]
+        return f
+
+    if xax == None:
+        xax = arange(len(data))
+
+    parinfo = [ {'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0} ,
+                {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
+                {'n':2,'value':params[2],'limits':[minpars[2],maxpars[2]],'limited':[limitedmin[2],limitedmax[2]],'fixed':fixed[2],'parname':"SHIFT",'error':0},
+                {'n':3,'value':params[3],'limits':[minpars[3],maxpars[3]],'limited':[limitedmin[3],limitedmax[3]],'fixed':fixed[3],'parname':"WIDTH",'error':0}]
+
+    mp = mpfit(mpfitfun(xax,data,err),parinfo=parinfo,quiet=quiet)
+    mpp = mp.params
+    mpperr = mp.perror
+
+    if not shh:
+        for i,p in enumerate(mpp):
+            parinfo[i]['value'] = p
+            print parinfo[i]['parname'],p," +/- ",mpperr[i]
+        print "Chi2: ",mp.fnorm," Reduced Chi2: ",mp.fnorm/len(data)," DOF:",len(data)-len(mpp)
+
+    return mpp,onedgauss(xax,*mpp),mpperr
+
+
+
