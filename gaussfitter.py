@@ -217,6 +217,7 @@ def onedgaussfit(xax,data,err=None,fixed=[False,False,False,False],limitedmin=[F
     mp = mpfit(mpfitfun(xax,data,err),parinfo=parinfo,quiet=quiet)
     mpp = mp.params
     mpperr = mp.perror
+    chi2 = mp.fnorm
 
     if not shh:
         for i,p in enumerate(mpp):
@@ -224,7 +225,7 @@ def onedgaussfit(xax,data,err=None,fixed=[False,False,False,False],limitedmin=[F
             print parinfo[i]['parname'],p," +/- ",mpperr[i]
         print "Chi2: ",mp.fnorm," Reduced Chi2: ",mp.fnorm/len(data)," DOF:",len(data)-len(mpp)
 
-    return mpp,onedgauss(xax,*mpp),mpperr
+    return mpp,onedgauss(xax,*mpp),mpperr,chi2
 
 
 
