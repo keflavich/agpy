@@ -44,10 +44,11 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,co
         twod - two dimensional or one dimensional output
     """
     f=open(filename,'r').readlines()
+    
+    null=[f.pop(0) for i in range(skipline)]
+
     if names is True:
         nms=f.pop(0).split(fsep)
-
-    null=[f.pop(0) for i in range(skipline)]
     
     fstrip = map(string.strip,f)
     fseps = [ fsep for i in range(len(f)) ]
@@ -69,7 +70,10 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,co
 
     # remove comment lines
     if comment != None:
-        splitarr = filter(lambda a: comment.find(a[0][0]),splitarr)
+        def commentfilter(a):
+            try: return comment.find(a[0][0])
+            except: return -1
+        splitarr = filter(commentfilter,splitarr)
 
     try:
         x = asarray( splitarr , dtype=dtype)
