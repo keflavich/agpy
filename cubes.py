@@ -40,7 +40,6 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         raise Exception("Must specify wunit='arcsec','arcmin', or 'degree'")
 
     if wcs is not None and coordsys is not None:
-        print "Trying to convert wcs coordinates to pixel coordinates"
         pos = coords.Position((ap[0],ap[1]),system=coordsys)
         if wcs.wcs.ctype[0][:2] == 'RA':
             ra,dec = pos.j2000()
@@ -48,17 +47,12 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         elif wcs.wcs.ctype[0][:4] == 'GLON':
             ra,dec = pos.galactic()
             corrfactor=1
-        #import pdb; pdb.set_trace()
         try:
             radif = (wcs.wcs.crval[0]-ra)*dtor
             gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
             theta = atan2( sin(radif) , ( tan(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)-sin(wcs.wcs.crval[1]*dtor)*cos(radif) ) )
             x = -gamma * sin(theta) / wcs.wcs.cd[0,0] + wcs.wcs.crpix[0]
             y = gamma * cos(theta) / wcs.wcs.cd[1,1] + wcs.wcs.crpix[1]
-            #x = corrfactor*(ra-wcs.wcs.crval[0]) / wcs.wcs.cd[0,0] + wcs.wcs.crpix[0]
-            #dy = sqrt((gamma/wcs.wcs.cd[1,1])**2 - (x-wcs.wcs.crpix[0])**2)
-            #y = (dec-wcs.wcs.crval[1]) / wcs.wcs.cd[1,1] + wcs.wcs.crpix[1]
-            #y = dy + wcs.wcs.crpix[1]
         except:
             radif = (wcs.wcs.crval[0]-ra)*dtor
             gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
@@ -76,7 +70,6 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         PA = ap[4] 
         apold = copy(ap)
         ap = [x,y,width,height,PA]
-        print "Converted WCS coordinates to pixel coordinates: ",apold," -> ",ap
 
     if len(ap) == 2:
         sh = cube.shape
@@ -92,7 +85,6 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         ratio = max(ap[2:4])/min(ap[2:4])
         mask = sqrt( (xindr*ratio)**2 + yindr**2) < max(ap[2:4])
         npixinmask = mask.sum()
-        #import pdb; pdb.set_trace()
         mask3d = repeat(mask[newaxis,:,:],cube.shape[0],axis=0)
         spec = (mask3d*cube).sum(axis=2).sum(axis=1) / npixinmask
         print "Extracted ellipse"
