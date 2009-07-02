@@ -40,6 +40,8 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         raise Exception("Must specify wunit='arcsec','arcmin', or 'degree'")
 
     if wcs is not None and coordsys is not None:
+        if len(wcs.wcs.cdelt) != 2:
+            raise Exception("WCS header is not strictly 2-dimensional.  Look for 3D keywords.")
         pos = coords.Position((ap[0],ap[1]),system=coordsys)
         if wcs.wcs.ctype[0][:2] == 'RA':
             ra,dec = pos.j2000()
@@ -47,6 +49,7 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         elif wcs.wcs.ctype[0][:4] == 'GLON':
             ra,dec = pos.galactic()
             corrfactor=1
+        """ # workaround for a broken wcs.wcs_sky2pix
         try:
             radif = (wcs.wcs.crval[0]-ra)*dtor
             gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
@@ -59,8 +62,9 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
             theta = atan2( sin(radif) , ( tan(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)-sin(wcs.wcs.crval[1]*dtor)*cos(radif) ) )
             x = -gamma * sin(theta) / wcs.wcs.cdelt[0] + wcs.wcs.crpix[0]
             y = gamma * cos(theta) / wcs.wcs.cdelt[1] + wcs.wcs.crpix[1]
+        """
 
-        #x,y = wcs.wcs_sky2pix(array([ra]),array([dec]),0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)
+        x,y = wcs.wcs_sky2pix(array([ra]),array([dec]),0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)
         try:
             width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
             height = ap[3] / conv / abs(wcs.wcs.cd[0,0])
