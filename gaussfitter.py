@@ -195,6 +195,25 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
 def onedgaussfit(xax,data,err=None,fixed=[False,False,False,False],limitedmin=[False,False,False,False],
         limitedmax=[False,False,False,False],minpars=[0,0,0,0],maxpars=[0,0,0,0],params=[0,1,0,1],
         quiet=True,shh=True):
+    """
+    Inputs:
+       xax - x axis
+       data - y axis
+       err - error corresponding to data
+
+       params - Fit parameters: Height of background, Amplitude, Shift, Width
+       fixed - Is parameter fixed?
+       limitedmin/minpars - set lower limits on each parameter
+       limitedmax/maxpars - set upper limits on each parameter
+       quiet - should MPFIT output each iteration?
+       shh - output final parameters?
+
+    Returns:
+       Fit parameters
+       Model
+       Fit errors
+       chi2
+    """
 
     def onedgauss(x,H,A,dx,w):
         return H+A*exp(-(x-dx)**2/(2*w**2))

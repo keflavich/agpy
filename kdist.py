@@ -52,7 +52,7 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True
     solarmotion = coords.Position((solarmotion_ra,solarmotion_dec))
     #  ra,dec = cg.j2000()
     #  gcirc, 2, solarmotion_ra, solarmotion_dec, ra, dec, theta
-    theta = cg.angsep(solarmotion).radians()
+    theta = cg.angsep(solarmotion).arcsec()
 
     vhelio = vin-solarmotion_mag*cos(theta/206265.)
 
@@ -75,7 +75,8 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True
     neardist = r0*(cos(l*dtor)-radical)/(cos(b*dtor))
     rgal = null*r0
     ind = (abs(l-180) < 90)
-    if ind.sum() > 0: neardist[ind] = fardist[ind]
+    if ind.sum() > 1: neardist[ind] = fardist[ind]
+    elif ind==True: neardist = fardist
 
     if not(near): dist = fardist
     else: dist = neardist
