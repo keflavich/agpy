@@ -1,6 +1,6 @@
 # gaussfitter.py
 # created by Adam Ginsburg (adam.ginsburg@colorado.edu or keflavich@gmail.com) 3/17/08)
-from numpy import *
+import numpy
 from scipy import optimize
 from scipy import stats
 from mpfit import mpfit
@@ -10,19 +10,19 @@ def moments(data,circle,rotate,vheight):
     the gaussian parameters of a 2D distribution by calculating its
     moments.  Depending on the input parameters, will only output 
     a subset of the above"""
-    total = abs(data).sum()
-    Y, X = indices(data.shape) # python convention: reverse x,y indices
-    x = (X*abs(data)).sum()/total
-    y = (Y*abs(data)).sum()/total
+    total = numpy.abs(data).sum()
+    Y, X = numpy.indices(data.shape) # python convention: reverse x,y numpy.indices
+    x = (X*numpy.abs(data)).sum()/total
+    y = (Y*numpy.abs(data)).sum()/total
     col = data[:, int(y)]
-    width_x = sqrt(abs((arange(col.size)-y)**2*col).sum()/abs(col).sum())
+    width_x = numpy.sqrt(numpy.abs((numpy.arange(col.size)-y)**2*col).sum()/numpy.abs(col).sum())
     row = data[int(x), :]
-    width_y = sqrt(abs((arange(row.size)-x)**2*row).sum()/abs(row).sum())
+    width_y = numpy.sqrt(numpy.abs((numpy.arange(row.size)-x)**2*row).sum()/numpy.abs(row).sum())
     width = ( width_x + width_y ) / 2.
     height = stats.mode(data.ravel())[0][0]
     amplitude = data.max()-height
     mylist = [amplitude,x,y]
-    if isnan(width_y) or isnan(width_x) or isnan(height) or isnan(amplitude):
+    if numpy.isnan(width_y) or numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
         raise ValueError("something is nan")
     if vheight==1:
         mylist = [height] + mylist
@@ -36,10 +36,10 @@ def moments(data,circle,rotate,vheight):
 
 def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
     """Returns a 2d gaussian function of the form:
-        x' = cos(rota) * x - sin(rota) * y
-        y' = sin(rota) * x + cos(rota) * y
+        x' = numpy.cos(rota) * x - numpy.sin(rota) * y
+        y' = numpy.sin(rota) * x + numpy.cos(rota) * y
         (rota should be in degrees)
-        g = b + a exp ( - ( ((x-center_x)/width_x)**2 +
+        g = b + a numpy.exp ( - ( ((x-center_x)/width_x)**2 +
         ((y-center_y)/width_y)**2 ) / 2 )
 
         where x and y are the input parameters of the returned function,
@@ -49,7 +49,7 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
         inpars = (height,amplitude,center_x,center_y,width_x,width_y,rota)
 
         You can choose to ignore / neglect some of the above input parameters 
-            using the following options:
+            unumpy.sing the following options:
             circle=0 - default is an elliptical gaussian (different x, y
                 widths), but can reduce the input by one parameter if it's a
                 circular gaussian
@@ -81,8 +81,8 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
     if rotate == 1:
         rota = inpars.pop(0)
         rota = pi/180. * float(rota)
-        rcen_x = center_x * cos(rota) - center_y * sin(rota)
-        rcen_y = center_x * sin(rota) + center_y * cos(rota)
+        rcen_x = center_x * numpy.cos(rota) - center_y * numpy.sin(rota)
+        rcen_y = center_x * numpy.sin(rota) + center_y * numpy.cos(rota)
     else:
         rcen_x = center_x
         rcen_y = center_y
@@ -93,12 +93,12 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
             
     def rotgauss(x,y):
         if rotate==1:
-            xp = x * cos(rota) - y * sin(rota)
-            yp = x * sin(rota) + y * cos(rota)
+            xp = x * numpy.cos(rota) - y * numpy.sin(rota)
+            yp = x * numpy.sin(rota) + y * numpy.cos(rota)
         else:
             xp = x
             yp = y
-        g = height+amplitude*exp(
+        g = height+amplitude*numpy.exp(
             -(((rcen_x-xp)/width_x)**2+
             ((rcen_y-yp)/width_y)**2)/2.)
         return g
@@ -128,7 +128,7 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         circle=0 - default is an elliptical gaussian (different x, y widths),
             but can reduce the input by one parameter if it's a circular gaussian
         rotate=1 - default allows rotation of the gaussian ellipse.  Can remove
-            last parameter by setting rotate=0.  Expects angle in DEGREES
+            last parameter by setting rotate=0.  numpy.expects angle in DEGREES
         vheight=1 - default allows a variable height-above-zero, i.e. an
             additive constant for the Gaussian function.  Can remove first
             parameter by setting this to 0
@@ -146,18 +146,18 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
     if params == []:
         params = (moments(data,circle,rotate,vheight))
     if err == None:
-        errorfunction = lambda p: ravel((twodgaussian(p,circle,rotate,vheight)\
-                (*indices(data.shape)) - data))
+        errorfunction = lambda p: numpy.ravel((twodgaussian(p,circle,rotate,vheight)\
+                (*numpy.indices(data.shape)) - data))
     else:
-        errorfunction = lambda p: ravel((twodgaussian(p,circle,rotate,vheight)\
-                (*indices(data.shape)) - data)/err)
+        errorfunction = lambda p: numpy.ravel((twodgaussian(p,circle,rotate,vheight)\
+                (*numpy.indices(data.shape)) - data)/err)
     def mpfitfun(data,err):
         if err == None:
-            def f(p,fjac=None): return [0,ravel(data-twodgaussian(p,circle,rotate,vheight)\
-                    (*indices(data.shape)))]
+            def f(p,fjac=None): return [0,numpy.ravel(data-twodgaussian(p,circle,rotate,vheight)\
+                    (*numpy.indices(data.shape)))]
         else:
-            def f(p,fjac=None): return [0,ravel((data-twodgaussian(p,circle,rotate,vheight)\
-                    (*indices(data.shape)))/err)]
+            def f(p,fjac=None): return [0,numpy.ravel((data-twodgaussian(p,circle,rotate,vheight)\
+                    (*numpy.indices(data.shape)))/err)]
         return f
     if rotate == 0:
         params[6] = 0
@@ -216,7 +216,7 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
     """
 
     def onedgauss(x,H,A,dx,w):
-        return H+A*exp(-(x-dx)**2/(2*w**2))
+        return H+A*numpy.exp(-(x-dx)**2/(2*w**2))
 
     def mpfitfun(x,y,err):
         if err == None:
@@ -226,7 +226,7 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
         return f
 
     if xax == None:
-        xax = arange(len(data))
+        xax = numpy.arange(len(data))
 
     parinfo = [ {'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0} ,
                 {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
