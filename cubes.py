@@ -21,8 +21,6 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         coordsys - the coordinate system the aperture is specified in.
             Options are 'celestial' and 'galactic'.  Default is 'galactic'
         wunit - units of width/height.  default 'arcsec', options 'arcmin' and 'degree'
-        [NOTE: DOES NOT USE PYWCS TO CALCULATE PIXEL COORDINATES!  They crash.
-        XY computation pilfered from gcirc.pro and posang.pro in the astron idl library]
 
     For a circular aperture, len(ap)=3:
         ap = [xcen,ycen,radius]
@@ -82,6 +80,7 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean)
 
         hd = header.copy()
 
+        # Header cleanup: must make output 2D.
         try: del hd['CDELT3']
         except: pass
         try: del hd['CD3_3']
@@ -112,6 +111,13 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean)
         return subim,hd
 
 def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
+    """
+    Converts an elliptical aperture (x,y,width,height,PA) from
+    WCS to pixel coordinates given an input wcs (an instance
+    of the pywcs.WCS class).  Must be a 2D WCS header.
+
+
+    """
     convopt = {'arcsec':3600,'arcmin':60,'degree':1}
     try:
         conv = convopt[wunit]
@@ -148,6 +154,7 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
         y=y[0]
     except:
         pass
+    # cd is default, cdelt is backup
     try:
         width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
         height = ap[3] / conv / abs(wcs.wcs.cd[0,0])
