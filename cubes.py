@@ -1,4 +1,4 @@
-from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array
+from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum
 from math import acos,atan2,tan
 from copy import copy
 import pywcs, coords
@@ -33,47 +33,9 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
     Optional inputs:
         r_mask - return mask in addition to spectrum (for error checking?)
     """
-    convopt = {'arcsec':3600,'arcmin':60,'degree':1}
-    try:
-        conv = convopt[wunit]
-    except:
-        raise Exception("Must specify wunit='arcsec','arcmin', or 'degree'")
 
     if wcs is not None and coordsys is not None:
-        if len(wcs.wcs.cdelt) != 2:
-            raise Exception("WCS header is not strictly 2-dimensional.  Look for 3D keywords.")
-        pos = coords.Position((ap[0],ap[1]),system=coordsys)
-        if wcs.wcs.ctype[0][:2] == 'RA':
-            ra,dec = pos.j2000()
-            corrfactor = cos(dec*dtor)
-        elif wcs.wcs.ctype[0][:4] == 'GLON':
-            ra,dec = pos.galactic()
-            corrfactor=1
-        """ # workaround for a broken wcs.wcs_sky2pix
-        try:
-            radif = (wcs.wcs.crval[0]-ra)*dtor
-            gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
-            theta = atan2( sin(radif) , ( tan(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)-sin(wcs.wcs.crval[1]*dtor)*cos(radif) ) )
-            x = -gamma * sin(theta) / wcs.wcs.cd[0,0] + wcs.wcs.crpix[0]
-            y = gamma * cos(theta) / wcs.wcs.cd[1,1] + wcs.wcs.crpix[1]
-        except:
-            radif = (wcs.wcs.crval[0]-ra)*dtor
-            gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
-            theta = atan2( sin(radif) , ( tan(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)-sin(wcs.wcs.crval[1]*dtor)*cos(radif) ) )
-            x = -gamma * sin(theta) / wcs.wcs.cdelt[0] + wcs.wcs.crpix[0]
-            y = gamma * cos(theta) / wcs.wcs.cdelt[1] + wcs.wcs.crpix[1]
-        """
-
-        x,y = wcs.wcs_sky2pix(array([ra]),array([dec]),0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)
-        try:
-            width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
-            height = ap[3] / conv / abs(wcs.wcs.cd[0,0])
-        except:
-            width  = ap[2] / conv / abs(wcs.wcs.cdelt[0])  # first is width, second is height in DS9 PA convention
-            height = ap[3] / conv / abs(wcs.wcs.cdelt[0])
-        PA = ap[4] 
-        apold = copy(ap)
-        ap = [x,y,width,height,PA]
+        ap = aper_world2pix(ap,wcs,coordsys=coordsys,wunit=wunit)
 
     if len(ap) == 2:
         sh = cube.shape
@@ -91,7 +53,6 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         npixinmask = mask.sum()
         mask3d = repeat(mask[newaxis,:,:],cube.shape[0],axis=0)
         spec = (mask3d*cube).sum(axis=2).sum(axis=1) / npixinmask
-        print "Extracted ellipse"
     else:
         raise Exception("Wrong number of parameters.  Need either 3 parameters "+
                 "for a circular aperture or 5 parameters for an elliptical "+ 
@@ -102,7 +63,104 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
     else:
         return spec
 
-    
-    
+def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean):
+    """
+    Returns a sub-image from a data cube integrated over the specified velocity range
+
+    All units assumed to be pixel units
+
+    cube has dimensions (velocity, y, x)
+
+    """
+
+    subim = average(cube[vrange[0]:vrange[1],ycen-ywidth:ycen+ywidth,xcen-xwidth:xcen+xwidth],axis=0)
+
+    if header is None:
+        return subim
+
+    else:
+
+        hd = header.copy()
+
+        try: del hd['CDELT3']
+        except: pass
+        try: del hd['CD3_3']
+        except: pass
+        try: del hd['CRVAL3']
+        except: pass
+        try: del hd['CRPIX3']
+        except: pass
+        try: del hd['CTYPE3']
+        except: pass
+        try: del hd['NAXIS3']
+        except: pass
+        try: del hd['LBOUND3']
+        except: pass
+        try: del hd['CUNIT3']
+        except: pass
+        hd['NAXIS']=2
+
+        wcs = pywcs.WCS(header=hd)
+
+        crv1,crv2 = wcs.wcs_pix2sky(xcen-xwidth,ycen-ywidth,0)
+
+        hd['CRVAL1'] = crv1[0]
+        hd['CRVAL2'] = crv2[0]
+        hd['CRPIX1'] = 1
+        hd['CRPIX2'] = 1
+
+        return subim,hd
+
+def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
+    convopt = {'arcsec':3600,'arcmin':60,'degree':1}
+    try:
+        conv = convopt[wunit]
+    except:
+        raise Exception("Must specify wunit='arcsec','arcmin', or 'degree'")
+
+    if len(wcs.wcs.cdelt) != 2:
+        raise Exception("WCS header is not strictly 2-dimensional.  Look for 3D keywords.")
+    pos = coords.Position((ap[0],ap[1]),system=coordsys)
+    if wcs.wcs.ctype[0][:2] == 'RA':
+        ra,dec = pos.j2000()
+        corrfactor = cos(dec*dtor)
+    elif wcs.wcs.ctype[0][:4] == 'GLON':
+        ra,dec = pos.galactic()
+        corrfactor=1
+    """ # workaround for a broken wcs.wcs_sky2pix
+    try:
+        radif = (wcs.wcs.crval[0]-ra)*dtor
+        gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
+        theta = atan2( sin(radif) , ( tan(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)-sin(wcs.wcs.crval[1]*dtor)*cos(radif) ) )
+        x = -gamma * sin(theta) / wcs.wcs.cd[0,0] + wcs.wcs.crpix[0]
+        y = gamma * cos(theta) / wcs.wcs.cd[1,1] + wcs.wcs.crpix[1]
+    except:
+        radif = (wcs.wcs.crval[0]-ra)*dtor
+        gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
+        theta = atan2( sin(radif) , ( tan(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)-sin(wcs.wcs.crval[1]*dtor)*cos(radif) ) )
+        x = -gamma * sin(theta) / wcs.wcs.cdelt[0] + wcs.wcs.crpix[0]
+        y = gamma * cos(theta) / wcs.wcs.cdelt[1] + wcs.wcs.crpix[1]
+    """
+
+    x,y = wcs.wcs_sky2pix(ra,dec,0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)
+    try:
+        x=x[0]
+        y=y[0]
+    except:
+        pass
+    try:
+        width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
+        height = ap[3] / conv / abs(wcs.wcs.cd[0,0])
+    except:
+        width  = ap[2] / conv / abs(wcs.wcs.cdelt[0])  # first is width, second is height in DS9 PA convention
+        height = ap[3] / conv / abs(wcs.wcs.cdelt[0])
+    PA = ap[4] 
+    apold = copy(ap)
+    ap = [x,y,width,height,PA]
+
+    return ap
+
+
+
 
 

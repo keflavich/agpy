@@ -192,8 +192,8 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
     elif return_all == 1:
         return mp.params,mp.perror
 
-def onedgaussfit(xax,data,err=None,fixed=[False,False,False,False],limitedmin=[False,False,False,False],
-        limitedmax=[False,False,False,False],minpars=[0,0,0,0],maxpars=[0,0,0,0],params=[0,1,0,1],
+def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,False],limitedmin=[False,False,False,False],
+        limitedmax=[False,False,False,False],minpars=[0,0,0,0],maxpars=[0,0,0,0],
         quiet=True,shh=True):
     """
     Inputs:
