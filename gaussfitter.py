@@ -1,8 +1,7 @@
 # gaussfitter.py
 # created by Adam Ginsburg (adam.ginsburg@colorado.edu or keflavich@gmail.com) 3/17/08)
 import numpy
-from scipy import optimize
-from scipy import stats
+from scipy import optimize,stats,pi
 from mpfit import mpfit
 
 def moments(data,circle,rotate,vheight):
