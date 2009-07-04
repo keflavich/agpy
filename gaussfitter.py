@@ -105,9 +105,9 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
     return rotgauss
 
 def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
-        fixed=repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
+        fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
         limitedmax=[False,False,False,False,False,False,True],
-        minpars=repeat(0,7),maxpars=[0,0,0,0,0,0,360],
+        minpars=numpy.repeat(0,7),maxpars=[0,0,0,0,0,0,360],
         rotate=1,vheight=1,quiet=True):
     """
     Gaussian fitter with the ability to fit a variety of different forms of
