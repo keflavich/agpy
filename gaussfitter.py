@@ -13,9 +13,9 @@ def moments(data,circle,rotate,vheight):
     Y, X = numpy.indices(data.shape) # python convention: reverse x,y numpy.indices
     x = (X*numpy.abs(data)).sum()/total
     y = (Y*numpy.abs(data)).sum()/total
-    col = data[:, int(y)]
+    col = data[int(y),:]
     width_x = numpy.sqrt(numpy.abs((numpy.arange(col.size)-y)**2*col).sum()/numpy.abs(col).sum())
-    row = data[int(x), :]
+    row = data[:, int(x)]
     width_y = numpy.sqrt(numpy.abs((numpy.arange(row.size)-x)**2*row).sum()/numpy.abs(row).sum())
     width = ( width_x + width_y ) / 2.
     height = stats.mode(data.ravel())[0][0]
@@ -27,11 +27,12 @@ def moments(data,circle,rotate,vheight):
         mylist = [height] + mylist
     if circle==0:
         mylist = mylist + [width_x,width_y]
-    else:
+        if rotate==1:
+            mylist = mylist + [0.] #rotation "moment" is just zero...
+            # also, circles don't rotate.
+    else:  
         mylist = mylist + [width]
-    if rotate==1:
-        mylist = mylist + [0.] #rotation "moment" is just zero...
-    return tuple(mylist)
+    return mylist
 
 def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
     """Returns a 2d gaussian function of the form:
@@ -73,6 +74,7 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
         width = inpars.pop(0)
         width_x = float(width)
         width_y = float(width)
+        rotate = 0
     else:
         width_x, width_y = inpars.pop(0),inpars.pop(0)
         width_x = float(width_x)
@@ -158,23 +160,18 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
             def f(p,fjac=None): return [0,numpy.ravel((data-twodgaussian(p,circle,rotate,vheight)\
                     (*numpy.indices(data.shape)))/err)]
         return f
-    if rotate == 0:
-        params[6] = 0
-        fixed[6] = True
-    if vheight == 0:
-        params[0] = 0
-        fixed[0] = True
-    if circle == 1:
-        params[5] = 0
-        fixed[5] = True
                     
-    parinfo = [ {'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0} ,
+    parinfo = [ 
                 {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
                 {'n':2,'value':params[2],'limits':[minpars[2],maxpars[2]],'limited':[limitedmin[2],limitedmax[2]],'fixed':fixed[2],'parname':"XSHIFT",'error':0},
                 {'n':3,'value':params[3],'limits':[minpars[3],maxpars[3]],'limited':[limitedmin[3],limitedmax[3]],'fixed':fixed[3],'parname':"YSHIFT",'error':0},
-                {'n':4,'value':params[4],'limits':[minpars[4],maxpars[4]],'limited':[limitedmin[4],limitedmax[4]],'fixed':fixed[4],'parname':"XWIDTH",'error':0},
-                {'n':5,'value':params[5],'limits':[minpars[5],maxpars[5]],'limited':[limitedmin[5],limitedmax[5]],'fixed':fixed[5],'parname':"YWIDTH",'error':0},
-                {'n':6,'value':params[6],'limits':[minpars[6],maxpars[6]],'limited':[limitedmin[6],limitedmax[6]],'fixed':fixed[6],'parname':"ROTATION",'error':0}]
+                {'n':4,'value':params[4],'limits':[minpars[4],maxpars[4]],'limited':[limitedmin[4],limitedmax[4]],'fixed':fixed[4],'parname':"XWIDTH",'error':0} ]
+    if circle == 0:
+        parinfo.append({'n':5,'value':params[5],'limits':[minpars[5],maxpars[5]],'limited':[limitedmin[5],limitedmax[5]],'fixed':fixed[5],'parname':"YWIDTH",'error':0})
+        if rotate == 1:
+            parinfo.append({'n':6,'value':params[6],'limits':[minpars[6],maxpars[6]],'limited':[limitedmin[6],limitedmax[6]],'fixed':fixed[6],'parname':"ROTATION",'error':0})
+    if vheight == 1:
+        parinfo.insert(0,{'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0})
 
     if autoderiv == 0:
         # the analytic derivative, while not terribly difficult, is less
@@ -190,6 +187,13 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         return mp.params
     elif return_all == 1:
         return mp.params,mp.perror
+
+def onedgauss(x,H,A,dx,w):
+    """
+    Returns a 1-dimensional gaussian of form
+    H+A*numpy.exp(-(x-dx)**2/(2*w**2))
+    """
+    return H+A*numpy.exp(-(x-dx)**2/(2*w**2))
 
 def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,False],limitedmin=[False,False,False,False],
         limitedmax=[False,False,False,False],minpars=[0,0,0,0],maxpars=[0,0,0,0],
@@ -213,9 +217,6 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
        Fit errors
        chi2
     """
-
-    def onedgauss(x,H,A,dx,w):
-        return H+A*numpy.exp(-(x-dx)**2/(2*w**2))
 
     def mpfitfun(x,y,err):
         if err == None:
