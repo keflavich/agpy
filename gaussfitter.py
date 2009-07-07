@@ -1,14 +1,18 @@
 # gaussfitter.py
 # created by Adam Ginsburg (adam.ginsburg@colorado.edu or keflavich@gmail.com) 3/17/08)
 import numpy
+from numpy.ma import median
 from scipy import optimize,stats,pi
 from mpfit import mpfit
 
-def moments(data,circle,rotate,vheight):
+def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
     """Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
     the gaussian parameters of a 2D distribution by calculating its
     moments.  Depending on the input parameters, will only output 
-    a subset of the above"""
+    a subset of the above.
+    
+    If using masked arrays, pass estimator=numpy.ma.median
+    """
     total = numpy.abs(data).sum()
     Y, X = numpy.indices(data.shape) # python convention: reverse x,y numpy.indices
     x = (X*numpy.abs(data)).sum()/total
@@ -18,7 +22,7 @@ def moments(data,circle,rotate,vheight):
     row = data[:, int(x)]
     width_y = numpy.sqrt(numpy.abs((numpy.arange(row.size)-x)**2*row).sum()/numpy.abs(row).sum())
     width = ( width_x + width_y ) / 2.
-    height = stats.mode(data.ravel())[0][0]
+    height = estimator(data.ravel())
     amplitude = data.max()-height
     mylist = [amplitude,x,y]
     if numpy.isnan(width_y) or numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
@@ -108,8 +112,9 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
 def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
         limitedmax=[False,False,False,False,False,False,True],
+        usemoment=numpy.repeat(False,7,dtype='bool'),
         minpars=numpy.repeat(0,7),maxpars=[0,0,0,0,0,0,360],
-        rotate=1,vheight=1,quiet=True):
+        rotate=1,vheight=1,quiet=True,returnmp=False,**kwargs):
     """
     Gaussian fitter with the ability to fit a variety of different forms of
     2-dimensional gaussian.
@@ -133,6 +138,9 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         vheight=1 - default allows a variable height-above-zero, i.e. an
             additive constant for the Gaussian function.  Can remove first
             parameter by setting this to 0
+        usemoment - can choose which parameters to use a moment estimation for.
+            Other parameters will be taken from params.  Needs to be a boolean
+            array.
 
     Output:
         Default output is a set of Gaussian parameters with the same shape as
@@ -144,8 +152,12 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
 
         Warning: Does NOT necessarily output a rotation angle between 0 and 360 degrees.
     """
-    if params == []:
-        params = (moments(data,circle,rotate,vheight))
+    if params == [] or usemoment.any():
+        moment = (moments(data,circle,rotate,vheight,**kwargs))
+        for i in xrange(len(params)):
+            if params[i] > maxpars[i]: params[i] = maxpars[i]
+            if params[i] < minpars[i]: params[i] = minpars[i]
+        params[array(usemoment,dtype='bool')] = moment[array(usemoment,dtype='bool')]
     if err == None:
         errorfunction = lambda p: numpy.ravel((twodgaussian(p,circle,rotate,vheight)\
                 (*numpy.indices(data.shape)) - data))
@@ -183,7 +195,9 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
 #        p, cov, infodict, errmsg, success = optimize.leastsq(errorfunction,\
 #                params, full_output=1)
         mp = mpfit(mpfitfun(data,err),parinfo=parinfo,quiet=quiet)
-    if  return_all == 0:
+    if returnmp:
+        return mp
+    elif return_all == 0:
         return mp.params
     elif return_all == 1:
         return mp.params,mp.perror
