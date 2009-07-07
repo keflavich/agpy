@@ -70,7 +70,7 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
         height = float(height)
     else:
         height = float(0)
-    amplitude, center_x, center_y = inpars.pop(0),inpars.pop(0),inpars.pop(0)
+    amplitude, center_y, center_x = inpars.pop(0),inpars.pop(0),inpars.pop(0)
     amplitude = float(amplitude)
     center_x = float(center_x)
     center_y = float(center_y)
@@ -112,7 +112,7 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
 def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
         limitedmax=[False,False,False,False,False,False,True],
-        usemoment=numpy.repeat(False,7,dtype='bool'),
+        usemoment=numpy.array([],dtype='bool'),
         minpars=numpy.repeat(0,7),maxpars=[0,0,0,0,0,0,360],
         rotate=1,vheight=1,quiet=True,returnmp=False,**kwargs):
     """
@@ -152,12 +152,19 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
 
         Warning: Does NOT necessarily output a rotation angle between 0 and 360 degrees.
     """
-    if params == [] or usemoment.any():
-        moment = (moments(data,circle,rotate,vheight,**kwargs))
-        for i in xrange(len(params)):
-            if params[i] > maxpars[i]: params[i] = maxpars[i]
-            if params[i] < minpars[i]: params[i] = minpars[i]
-        params[array(usemoment,dtype='bool')] = moment[array(usemoment,dtype='bool')]
+    usemoment=numpy.array(usemoment,dtype='bool')
+    params=numpy.array(params,dtype='float')
+    if usemoment.any() and len(params)==len(usemoment):
+        moment = numpy.array(moments(data,circle,rotate,vheight,**kwargs),dtype='float')
+        params[usemoment] = moment[usemoment]
+    elif params == []:
+        params = (moments(data,circle,rotate,vheight,**kwargs))
+
+    # mpfit will fail if it is given a start parameter outside the allowed range:
+    for i in xrange(len(params)): 
+        if params[i] > maxpars[i]: params[i] = maxpars[i]
+        if params[i] < minpars[i]: params[i] = minpars[i]
+
     if err == None:
         errorfunction = lambda p: numpy.ravel((twodgaussian(p,circle,rotate,vheight)\
                 (*numpy.indices(data.shape)) - data))
