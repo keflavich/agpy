@@ -91,6 +91,9 @@ def dict2pix(dict,wcs):
         xw = array(xw)
         yw = array(yw)
     
+    xpix,ypix = wcs_util.world2pix(wcs,xw,yw)
+    """
+    # I think wcs_util has been updated a lot since this....
     if dict['coord_sys']=='fk5':
         if wcs_util.system(wcs)=='fk5':
             xpix,ypix = world2pix(wcs,xw,yw)
@@ -98,6 +101,7 @@ def dict2pix(dict,wcs):
             sys.exit("Unimplemented")
     else:
         sys.exit("Unimplemented")
+    """
     
     if t==float:
         dict['x'] = xpix[0]
@@ -106,7 +110,7 @@ def dict2pix(dict,wcs):
         dict['x'] = xpix.tolist()
         dict['y'] = ypix.tolist()
     
-    arc2pix = arcperpix(wcs)
+    arc2pix = wcs_util.arcperpix(wcs)
     
     if dict.has_key('width'):
         dict['width'] = dict['width'] * arc2pix
