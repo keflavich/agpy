@@ -12,10 +12,13 @@ def ds9(self,regionfile,wcs):
 def clear_markers(self):
     nmarks = len(self._ax1.patches)
     ncolls = len(self._ax1.collections)
+    ntexts = len(self._ax1.texts)
     for i in xrange(nmarks):
         self._ax1.patches.pop()
     for i in xrange(ncolls):
         self._ax1.collections.pop()
+    for i in xrange(ntexts):
+        self._ax1.texts.pop()
 
     self.refresh()
 
@@ -139,6 +142,11 @@ class RegionFile(object):
             elif shape['type'] == 'box':
                 shape['width'] = float(coords[2].replace('"',''))
                 shape['height'] = float(coords[3].replace('"',''))
+                if len(coords) == 7:
+                    shape['width2'] = float(coords[4].replace('"',''))
+                    shape['height2'] = float(coords[5].replace('"',''))
+                    print "box panda not implemented"
+                    continue
                 shape['angle'] = float(coords[4])
             elif shape['type'] == 'line':
                 if self.coord_sys == 'image':
@@ -162,6 +170,8 @@ class RegionFile(object):
                 shape['dx'] = float(dx)
                 shape['dy'] = float(dy)
             elif shape['type'] == 'polygon':
+                print "polygons are not implemented yet."
+                continue
                 vertices = np.array(coords,float)
                 n = vertices.size / 2
                 vertices = vertices.reshape((2,n),order='F')
@@ -192,27 +202,13 @@ class RegionFile(object):
                         head_width=8,**kwargs))
             elif shape['type'] == 'point':
                 if shape['point'] == 'circle':
-                    #patches.append(mpp.Circle(shape['x'],shape['y'],radius=5,**kwargs))
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
                 if shape['point'] == 'box':
-                    #patches.append(mpp.RegularPolygon(shape['x'],shape['y'],4,orientation=0,facecolor='none',**kwargs))
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
                 if shape['point'] == 'diamond':
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='d',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
-                    #patches.append(mpp.RegularPolygon(shape['x'],shape['y'],4,orientation=(45.0/180.0*pi),facecolor='none',**kwargs))
                 if shape['point'] == 'cross':
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='+',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
-                    # agh, this needs to be done with scatter.  
-                    """
-                    if kwargs.has_key('radius'):
-                        r = float(kwargs['radius'])
-                    else:
-                        r = 5.0
-                    x,y = shape['x'],shape['y']
-                    cross = mpp.Path([[x-r/2.0,y],[x+r/2.0,y],[x,y-r/2.0],[x,y+r/2.0]],
-                            [2,2,1,2],**kwargs)
-                    patches.append(cross)
-                    """
                 if shape['point'] == 'x':
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='x',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
                 if shape['point'] == 'arrow':
@@ -220,5 +216,9 @@ class RegionFile(object):
                 if shape['point'] == 'boxcircle':
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+            if shape['type'] == 'text':
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='left',**kwargs)
+            elif shape.has_key('text'):
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='left',**kwargs)
         
-        return patches
+        return matplotlib.collections.PatchCollection(patches,match_original=True)

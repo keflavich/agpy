@@ -1,5 +1,8 @@
 import numpy as np
 
+def isnumeric(value):
+    return type(value) in [float,int,np.int8,np.int16,np.int32,np.float32,np.float64]
+    
 def smart_range(array):
     
     array.sort()
@@ -36,6 +39,12 @@ def complete_range(xmin,xmax,spacing):
     else:
         return np.hstack([r,xmax])
 
+def arange2(xmin,xmax,xstep):
+    r = np.arange(xmin,xmax,xstep)
+    if(np.any(r>=xmax)):
+        return r
+    else:
+        return np.hstack([r,xmax])
 
 def closest(array,a):
     ipos = minloc(np.abs(a-array))

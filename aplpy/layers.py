@@ -8,6 +8,10 @@ class Layers(object):
         self._layers_list = []
         self._contour_counter = 0
         self._scatter_counter = 0
+        self._circle_counter = 0
+        self._ellipse_counter = 0
+        self._rectangle_counter = 0
+        self._ds9_counter = 0
     
     def list_layers(self):
         '''
@@ -46,7 +50,26 @@ class Layers(object):
         for i in empty:
             self._ax1.collections[i].aplpy_layer_name = name
         
-        if len(empty) > 0:
+        # check for layer name already defined; don't want duplicates
+        # (assume already-defined layer is visible b/c this should only
+        # happen in initial declaration)
+        if len(empty) > 0 and ({'name':name,'visible':True} not in self._layers_list):
+            self._layers_list.append({'name' : name,'visible' : True})
+
+    def _name_empty_text_layers(self,name):
+        """ same as name_empty_layers except for 'texts'
+        objects instead of 'collections' """
+        empty = []
+        for i in range(len(self._ax1.texts)):
+            try:
+                n = self._ax1.texts[i].aplpy_layer_name
+            except AttributeError:
+                empty.append(i)
+        
+        for i in empty:
+            self._ax1.texts[i].aplpy_layer_name = name
+        
+        if len(empty) > 0 and ({'name':name,'visible':True} not in self._layers_list):
             self._layers_list.append({'name' : name,'visible' : True})
     
     def remove_layer(self,layer,raise_exception=True):
@@ -67,6 +90,10 @@ class Layers(object):
         for i in range(len(self._ax1.collections)-1,-1,-1):
             if(layer==self._ax1.collections[i].aplpy_layer_name):
                 self._ax1.collections.pop(i)
+
+        for i in range(len(self._ax1.texts)-1,-1,-1):
+            if(layer==self._ax1.texts[i].aplpy_layer_name):
+                self._ax1.texts.pop(i)
         
         for i in range(len(self._layers_list)-1,-1,-1):
             if self._layers_list[i]['name']==layer:
@@ -96,6 +123,10 @@ class Layers(object):
             if(layer==self._ax1.collections[i].aplpy_layer_name):
                 self._ax1.collections[i].set_visible(False)
         
+        for i in range(len(self._ax1.texts)-1,-1,-1):
+            if(layer==self._ax1.texts[i].aplpy_layer_name):
+                self._ax1.texts[i].set_visible(False)
+        
         for i in range(len(self._layers_list)-1,-1,-1):
             if self._layers_list[i]['name']==layer:
                 self._layers_list[i]['visible']=False
@@ -122,6 +153,10 @@ class Layers(object):
         for i in range(len(self._ax1.collections)-1,-1,-1):
             if(layer==self._ax1.collections[i].aplpy_layer_name):
                 self._ax1.collections[i].set_visible(True)
+
+        for i in range(len(self._ax1.texts)-1,-1,-1):
+            if(layer==self._ax1.texts[i].aplpy_layer_name):
+                self._ax1.texts[i].set_visible(True)
         
         for i in range(len(self._layers_list)-1,-1,-1):
             if self._layers_list[i]['name']==layer:
