@@ -1,6 +1,6 @@
 import string
 from matplotlib.pyplot import *
-from matplotlib.patches import FancyArrow
+from matplotlib.patches import FancyArrow,Ellipse,Circle,Polygon
 from numpy import array, radians, cos, sin
 
 import wcs_util
@@ -50,7 +50,8 @@ def circle_patch(x,y,radius,**kwargs):
     return Circle((x,y),radius=radius,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],ls=kwargs['ls'])
 
 def ellipse_patch(x,y,width,height,angle,**kwargs):
-    return Ellipse((x,y),width,height,angle=angle,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],ls=kwargs['ls'])
+    return Ellipse((x,y),width,height,angle=angle,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],
+            lw=kwargs['lw'],ls=kwargs['ls'],facecolor=array([0.0,0.0,0.0,0.0]))
 
 def box_patch(x,y,width,height,angle,**kwargs):
     v = []
@@ -78,6 +79,9 @@ def rotate(position,position0,theta):
 
 def dict2pix(dict,wcs):
     
+    if dict['coord_sys'] in ['image','physical','pix']:
+        return dict
+
     xw = dict['x']
     yw = dict['y']
     
@@ -110,7 +114,7 @@ def dict2pix(dict,wcs):
         dict['x'] = xpix.tolist()
         dict['y'] = ypix.tolist()
     
-    arc2pix = wcs_util.arcperpix(wcs)
+    arc2pix = 1.0 / wcs_util.arcperpix(wcs)
     
     if dict.has_key('width'):
         dict['width'] = dict['width'] * arc2pix

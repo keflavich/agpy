@@ -1,31 +1,10 @@
 
-def ds9(self,regionfile,wcs):
-    
-    reg = RegionFile()
-    reg.parse(regionfile,wcs)
-    
-    for p in reg.plot():
-        self._ax1.add_patch(p)
-    
-    self.refresh()
-
-def clear_markers(self):
-    nmarks = len(self._ax1.patches)
-    ncolls = len(self._ax1.collections)
-    ntexts = len(self._ax1.texts)
-    for i in xrange(nmarks):
-        self._ax1.patches.pop()
-    for i in xrange(ncolls):
-        self._ax1.collections.pop()
-    for i in xrange(ntexts):
-        self._ax1.texts.pop()
-
-    self.refresh()
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.patches as mpp
 import coords as pywcs
+import re
 from ds9_util import *
 
 def ds9type(line):
@@ -73,6 +52,8 @@ class RegionFile(object):
         if self.coord_sys is None:
             raise EOFError("Did not find a coordinate system specification in your regions file.  " + \
                     "Valid systems are: fk4,fk5,icrs,galactic,physical,image,ecliptic")
+
+        fontre = re.compile('font="(.*?)"')
         
         for line in self.file[4:]:
             
@@ -86,10 +67,14 @@ class RegionFile(object):
             line_format = line[p2:].replace("# ","")
             line_format = line_format[2:]
             format = line_format.split(" ")
+            fontsform = fontre.search(line)
             
             shape['edgecolor'] = "g"
             shape['lw'] = None
             shape['ls'] = 'solid'
+            shape['fontsize'] = 'large'
+            shape['fontstyle'] = 'normal'
+            shape['fontweight'] = 'normal'
             
             for elem in format:
                 arr = elem.split("=")
@@ -105,6 +90,14 @@ class RegionFile(object):
                     L=line_format.find("{")+1
                     R=line_format.find("}")
                     shape['text'] = line_format[L:R]
+                if fontsform is not None:
+                    fonts = fontsform.groups()[0].split()
+                    shape['fontname'] = fonts[0]
+                    shape['fontsize'] = fonts[1]
+                    if fonts[2] == 'bold':
+                        shape['fontweight'] = 'bold'
+                    if fonts[2] == 'italic':
+                        shape['fontstyle'] = 'italic'
             shape['type'] = ds9type(line_prefix)
             shape['coord_sys'] = self.coord_sys
             coords = line_coords.split(",")
@@ -163,6 +156,10 @@ class RegionFile(object):
                 shape['y'] = [y1,y2]
             elif shape['type'] == 'point':
                 pass
+            elif shape['type'] == 'ellipse':
+                shape['width']  = float(coords[2].rstrip('\'"')) * 2
+                shape['height'] = float(coords[3].rstrip('\'"')) * 2
+                shape['angle'] = float(coords[4])
             elif shape['type'] == 'vector':
                 veclen   = float(coords[2].rstrip('\'"')) / wcs_util.arcperpix(wcs)
                 vecangle = (float(coords[3])) / 180.0 * np.pi
@@ -179,27 +176,38 @@ class RegionFile(object):
             
             self.shapes.append(shape)
     
-    def plot(self,**kwargs):
+    def plot(self,ax,**kwargs):
         
         patches = []
         collections = []
+        fill = [] # HACK to deal with http://www.nabble.com/Alpha-values-not-preserved-with-Ellipse-and-PatchCollection-td23408210.html#a23408210
+
+        headsize = np.abs(np.diff(ax.get_xlim()))[0] * .01
         
         for shape in self.shapes:
             
             if shape['type'] == 'circle':
                 #shape = dict2pix(shape,self._wcs)
                 patches.append(circle_patch(**shape))
+                fill.append(0)
+            elif shape['type'] == 'ellipse':
+                shape = dict2pix(shape,self._wcs)
+                patches.append(ellipse_patch(**shape))
+                fill.append(0)
             elif shape['type'] == 'box':
                 #shape = dict2pix(shape,self._wcs)
                 patches.append(box_patch(**shape))
+                fill.append(0)
             elif shape['type'] == 'line':
                 #shape = dict2pix(shape,self._wcs)
                 patches.append(line_patch(**shape))
+                fill.append(0)
             elif shape['type'] == 'vector':
                 #shape = dict2pix(shape,self._wcs)
                 patches.append(mpl.patches.FancyArrow(shape['x'],shape['y'],shape['dx'],shape['dy'],
                         edgecolor=shape['edgecolor'],facecolor=shape['edgecolor'],
-                        head_width=8,**kwargs))
+                        head_width=headsize,**kwargs))
+                fill.append(1.0)
             elif shape['type'] == 'point':
                 if shape['point'] == 'circle':
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
@@ -217,8 +225,14 @@ class RegionFile(object):
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
             if shape['type'] == 'text':
-                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='left',**kwargs)
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],**kwargs)
             elif shape.has_key('text'):
-                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='left',**kwargs)
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],**kwargs)
+
         
-        return matplotlib.collections.PatchCollection(patches,match_original=True)
+        # Hack to prevent facecolors from being drawn
+        PC = matplotlib.collections.PatchCollection(patches,match_original=True)
+        PC.set_facecolors(PC.get_facecolors()*np.array([fill]).T)
+        PC._is_filled=False
+        #import pdb; pdb.set_trace()
+        return PC

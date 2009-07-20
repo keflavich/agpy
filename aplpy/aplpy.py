@@ -195,6 +195,9 @@ class FITSFigure(Layers,Grid,Ticks,Labels):
         
         # Set default theme
         self.set_theme(theme='pretty',refresh=False)
+
+        # initialize regions list
+        self.regions={}
     
     def _get_hdu(self,data,hdu,north):
         
@@ -970,13 +973,17 @@ class FITSFigure(Layers,Grid,Ticks,Labels):
         reg = ds9mod.RegionFile()
         reg.parse(regionfile,self._wcs)
         
-        self._ax1.add_collection(reg.plot())
+        PC = reg.plot(self._ax1)
+        #PC = matplotlib.collections.PatchCollection(patches,match_original=True)
+        self._ax1.add_collection(PC)
         
         if layer:
             ds9_set_name = layer
         else:
             self._ds9_counter += 1
             ds9_set_name = 'ds9_set_'+str(self._ds9_counter)
+
+        self.regions[ds9_set_name] = reg
         
         self._name_empty_layers(ds9_set_name)
         self._name_empty_text_layers(ds9_set_name)
