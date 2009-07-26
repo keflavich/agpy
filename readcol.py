@@ -1,8 +1,8 @@
 import string
-from numpy import asarray
+from numpy import asarray,nan
 from scipy.stats import mode
 
-def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,comment='#',verbose=True):
+def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,comment='#',verbose=True,nullval=None):
     """
     The default return is a two dimensional float array.  You can specify
     the data type (e.g. dtype='S') in the normal python way.  If you want
@@ -42,6 +42,8 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,co
         names - read / don't read in the first line as a list of column names
         dtype - datatype of numpy array
         twod - two dimensional or one dimensional output
+        nullval - if specified, all instances of this value will be replaced
+           with a floating NaN
     """
     f=open(filename,'r').readlines()
     
@@ -82,14 +84,28 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,co
             print "WARNING: reading as string array because %s array failed" % dtype
         x = asarray( splitarr , dtype='S')
 
+    if nullval is not None:
+        x[x==nullval] = nan
+        x = get_astype(x,dtype)
+
     if names is True:
         if twod:
             return nms,x
         else:
-            return nms,[ x.T[i] for i in xrange(x.shape[1]) ]
+            # if not returning a twod array, try to return each vector as the spec. type
+            return nms,[ get_astype(x.T[i],dtype) for i in xrange(x.shape[1]) ]
     else:
         if twod:
             return x
         else:
-            return [ x.T[i] for i in xrange(x.shape[1]) ]
+            return [ get_astype(x.T[i],dtype) for i in xrange(x.shape[1]) ]
 
+def get_astype(arr,dtype):
+    """
+    Attempts to return a numpy array converted to the specified dtype
+    Value errors will be caught and simply return the original array
+    """
+    try:
+        return arr.astype(dtype)
+    except ValueError:
+        return arr
