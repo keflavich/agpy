@@ -157,13 +157,13 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
     if usemoment.any() and len(params)==len(usemoment):
         moment = numpy.array(moments(data,circle,rotate,vheight,**kwargs),dtype='float')
         params[usemoment] = moment[usemoment]
-    elif params == []:
+    elif params == [] or len(params)==0:
         params = (moments(data,circle,rotate,vheight,**kwargs))
 
     # mpfit will fail if it is given a start parameter outside the allowed range:
     for i in xrange(len(params)): 
-        if params[i] > maxpars[i]: params[i] = maxpars[i]
-        if params[i] < minpars[i]: params[i] = minpars[i]
+        if params[i] > maxpars[i] and limitedmax[i]: params[i] = maxpars[i]
+        if params[i] < minpars[i] and limitedmin[i]: params[i] = minpars[i]
 
     if err == None:
         errorfunction = lambda p: numpy.ravel((twodgaussian(p,circle,rotate,vheight)\
