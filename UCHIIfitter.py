@@ -12,7 +12,7 @@ pc = 3.08568e18      # cm
 au = 1.496e13        # cm
 msun = 1.99e33       # g
 
-unitfactor={'mJy':1e-23,'Jy':1e-26,'cgs':1.0}
+unitfactor={'mJy':1e-26,'Jy':1e-23,'cgs':1.0}
 freqfactor={'GHz':1e9,'Hz':1.0}
 
 def tnu(Te,nu,EM):
@@ -132,6 +132,15 @@ class HIIregion:
 
         errorbar(self.nu,self.flux,yerr=self.fluxerr,fmt=',',**kwargs)
 
+        self.physprops()
+        annotate("size (as): %0.2g" % (self.srcsize/au), [.8, .3],textcoords='axes fraction',xycoords='axes fraction')
+        annotate("size (au): %0.2g" % (self.srcsize/au), [.8, .3],textcoords='axes fraction',xycoords='axes fraction')
+        annotate("mass (msun): %0.2g" % self.mass, [.8, .25],textcoords='axes fraction',xycoords='axes fraction')
+        annotate("EM: %0.2g" % self.em, [.8, .2],textcoords='axes fraction',xycoords='axes fraction')
+        annotate("Nu(Tau=1): %0.2g" % self.nutau, [.8, .15],textcoords='axes fraction',xycoords='axes fraction')
+        annotate("N_lyc: %0.2g" % self.Nlyc, [.8,.1],textcoords='axes fraction',xycoords='axes fraction')
+        annotate("dens: %0.2g" % self.dens, [.8,.05],textcoords='axes fraction',xycoords='axes fraction')
+
     def physprops(self):
         """
         Get the source size (au), density (cm^-3), 
@@ -145,7 +154,7 @@ class HIIregion:
             self.srcsize = self.beamsize_as2 * (self.dist_kpc*1000.0*au)**2
         else:
             self.srcsize = sqrt(self.flux[0]*unitfactor[self.fluxunit]/(2*kb*self.Te) * \
-                    (c/(self.nu[0]*freqfactor[self.frequnit]))**2 * (self.dist_kpc*1e3*pc)**2) 
+                    (c/(self.nu[0]*freqfactor[self.frequnit]))**2 * (self.dist_kpc*1e3*pc)**2 / pi) 
         self.dens = sqrt(self.em/(self.srcsize/pc))
         self.mass = self.dens * 4.0/3.0 * pi * self.srcsize**3 * mu * mh / msun
 
