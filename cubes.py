@@ -133,7 +133,7 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
     elif wcs.wcs.ctype[0][:4] == 'GLON':
         ra,dec = pos.galactic()
         corrfactor=1
-    """ # workaround for a broken wcs.wcs_sky2pix
+    # workaround for a broken wcs.wcs_sky2pix
     try:
         radif = (wcs.wcs.crval[0]-ra)*dtor
         gamma = acos(cos(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)*cos(radif)+sin(dec*dtor)*sin(wcs.wcs.crval[1]*dtor)) / dtor
@@ -146,9 +146,9 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
         theta = atan2( sin(radif) , ( tan(dec*dtor)*cos(wcs.wcs.crval[1]*dtor)-sin(wcs.wcs.crval[1]*dtor)*cos(radif) ) )
         x = -gamma * sin(theta) / wcs.wcs.cdelt[0] + wcs.wcs.crpix[0]
         y = gamma * cos(theta) / wcs.wcs.cdelt[1] + wcs.wcs.crpix[1]
-    """
+    
 
-    x,y = wcs.wcs_sky2pix(ra,dec,0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)
+    #x,y = wcs.wcs_sky2pix(ra,dec,0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)
     try:
         x=x[0]
         y=y[0]

@@ -1,7 +1,7 @@
 import coords
-from numpy import sqrt, abs, pi, cos, sin, max
+from numpy import sqrt, abs, pi, cos, sin, max, ones, array
 
-def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True,regular=False,rrgal=False,verbose=False):
+def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True,regular=False,rrgal=False,verbose=False,inverse=False):
     """
     ; NAME:
     ;   KINDIST 
@@ -66,13 +66,22 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True
     # This is r/r0
     null = (v0/(v0-vs)+v/((v0-vs)*sin(l*dtor)*cos(b*dtor)))**(-1)
 
-    #  The > 0 traps things near the tangent point and sets them to the
-    #  tangent distance.  So quietly.  Perhaps this should pitch a flag?
-    radical = max(sqrt(((cos(l*dtor))**2-(1-null**2)) ),0)
+    if inverse:
+        radical = cos(l*dtor) - cos(b*dtor) * vin / r0 
+        null = sqrt(1 - cos(l*dtor)**2 + radical**2)
+        v = (1/null - v0/(v0-vs)) * ((v0-vs)*sin(l*dtor)*cos(b*dtor))
+        vhelio = v - ((bigu*cos(l*dtor)+bigv*sin(l*dtor))*cos(b*dtor)+bigw*sin(b*dtor))
+        vlsr = vhelio+solarmotion_mag*cos(theta/206265.)
+        return vlsr
+    else:
+        #  The > 0 traps things near the tangent point and sets them to the
+        #  tangent distance.  So quietly.  Perhaps this should pitch a flag?
+        radical = max(sqrt(((cos(l*dtor))**2-(1-null**2)) ),0)
 
-    fardist = r0*(cos(l*dtor)+radical)/(cos(b*dtor))
+        fardist = r0*(cos(l*dtor)+radical)/(cos(b*dtor))
 
-    neardist = r0*(cos(l*dtor)-radical)/(cos(b*dtor))
+        neardist = r0*(cos(l*dtor)-radical)/(cos(b*dtor))
+
     rgal = null*r0
     ind = (abs(l-180) < 90)
     if ind.sum() > 1: neardist[ind] = fardist[ind]
@@ -87,4 +96,11 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True
     if rrgal: return abs(dist),abs(rgal)
     return abs(dist)
 
+def vector_kdist(x,y,z,**kwargs):
 
+    if type(z)==type(1) or type(z)==type(1.0):
+        z = z*ones(len(x))
+    v = []
+    for i,j,k in array([x,y,z]).T:
+        v.append( kdist(i,j,k,**kwargs) )
+    return array(v)
