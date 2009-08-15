@@ -5,6 +5,12 @@ from numpy.ma import median
 from scipy import optimize,stats,pi
 from mpfit import mpfit
 
+"""
+To do:
+    -turn into a class instead of a collection of objects
+    -implement WCS-based gaussian fitting with correct coordinates
+"""
+
 def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
     """Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
     the gaussian parameters of a 2D distribution by calculating its
