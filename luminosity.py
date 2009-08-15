@@ -1,5 +1,11 @@
 
 import numpy
+try: 
+    import pylab
+    pylabok = True
+except:
+    pylabok = False
+    print "Pylab could not be imported; plotting functions will be disabled"
 from numpy import pi
 pc = 3.086e18 # cm
 c = 2.99792458e10 # cm/s
@@ -9,15 +15,16 @@ lsun = 3.839e33 # erg/s
 class luminosity:
     """
     Measures luminosity from an SED following the method of Kauffmann et al 2008
+    http://adsabs.harvard.edu/abs/2008A%26A...487..993K
 
     For frequency, bandwidth, etc. see http://casa.colorado.edu/~ginsbura/filtersets.htm
 
     Units are CGS
 
     nu - frequency (assumed Hz)
-    wnu - width of frequency bin
+    wnu - [optional/required for non-interpolation] width of frequency bin
     fnu - flux (assumed Jy)
-    efnu - flux error
+    efnu - [optional; currently does nothing] flux error
     """
 
     def __init__(self,nu,fnu,wnu=None,efnu=None,dist_pc=None,npoints=1e5):
@@ -103,8 +110,15 @@ class luminosity:
             self.fnu = self.fnu[nusort]
             self.addedpoint = True
 
+            if self.efnu is not None:
+                self.efnu = numpy.concatenate((self.efnu,numpy.array([0.0])))
+                self.efnu = self.efnu[nusort]
+            if self.wnu is not None:
+                self.wnu = numpy.concatenate((self.wnu,numpy.array([0.0])))
+                self.wnu = self.wnu[nusort]
 
-    def fbol_interp(self,mminterp=True,npoints=1e5,addpoint=True,mmfreq=None,extrap=False):
+
+    def fbol_interp(self,mminterp=True,npoints=1e5,addpoint=True,mmfreq=None,extrap=True):
         """
         Interpolates between data points to integrate over SED
 
@@ -140,8 +154,18 @@ class luminosity:
         dnu = newnu*0
         dnu[:-1] = newnu[:-1]-newnu[1:]
         dnu[-1] = dnu[-2]
-        self.interpdnu = numpy.abs(dnu)
 
+        if extrap:
+            # extrapolate 50% from either endpoint
+            nulow = newnu.min()/2.0
+            nuhigh = newnu.max()*2.0
+            dnulow = newnu.min()-nulow
+            dnuhigh = newnu.max()-nuhigh
+            newnu  = numpy.concatenate( ([nulow],newnu,[nuhigh]) )
+            newfnu = numpy.concatenate( ([newfnu[0]],newfnu,[newfnu[-1]]) )
+            dnu    = numpy.concatenate( ([dnulow],dnu,[dnuhigh]) )
+
+        self.interpdnu = numpy.abs(dnu)
         self.interpnu = newnu
         self.interpfnu = newfnu
 
@@ -157,6 +181,23 @@ class luminosity:
         self._lbol_interp = 4*pi*(self.dist_pc*pc)**2 * self.fbol_interp(**kwargs) * 1e-23 / lsun
 
         return self._lbol_interp
+
+    def plotsed(self,loglog=True):
+        """ Plots the SED """
+        if not pylabok:
+            print "pylab was not successfully imported.  Aborting."
+            return
+
+        pylab.errorbar(self.nu,self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=None)
+        ax = pylab.gca()
+        if loglog:
+            ax.set_xscale('log')
+            ax.set_yscale('log')
+        else:
+            ax.set_xscale('linear')
+            ax.set_yscale('linear')
+
+        return ax
 
     """ 
     Test case:
@@ -187,7 +228,7 @@ def test_case():
     for ind in xrange(len(mylum)):
         ml = luminosity(nu,irasfluxes[ind],dnu,dist_pc=dist[ind])
         mylum[ind] = ml.lbol_meas()
-        mylum_interp[ind] = ml.lbol_interp(addpoint=False)
+        mylum_interp[ind] = ml.lbol_interp(addpoint=False,extrap=True)
         mlarr.append(ml)
 
     return kleinlum,mylum,mylum_interp,mlarr
