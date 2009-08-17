@@ -215,7 +215,7 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
     elif return_all == 1:
         return mp.params,mp.perror
 
-def onedgauss(x,H,A,dx,w):
+def onedgaussian(x,H,A,dx,w):
     """
     Returns a 1-dimensional gaussian of form
     H+A*numpy.exp(-(x-dx)**2/(2*w**2))
@@ -247,9 +247,9 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
 
     def mpfitfun(x,y,err):
         if err == None:
-            def f(p,fjac=None): return [0,(y-onedgauss(x,*p))]
+            def f(p,fjac=None): return [0,(y-onedgaussian(x,*p))]
         else:
-            def f(p,fjac=None): return [0,(y-onedgauss(x,*p))/err]
+            def f(p,fjac=None): return [0,(y-onedgaussian(x,*p))/err]
         return f
 
     if xax == None:
@@ -271,7 +271,7 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
             print parinfo[i]['parname'],p," +/- ",mpperr[i]
         print "Chi2: ",mp.fnorm," Reduced Chi2: ",mp.fnorm/len(data)," DOF:",len(data)-len(mpp)
 
-    return mpp,onedgauss(xax,*mpp),mpperr,chi2
+    return mpp,onedgaussian(xax,*mpp),mpperr,chi2
 
 
 
