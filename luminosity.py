@@ -52,6 +52,9 @@ class luminosity:
         The Casoli et al 1986 formula is not used...
         FIR (10^-13 W m^-2) = 1.75 ( F12 / 0.79 + F25/2 + F60/3.9 + F100/9.9 )
         """
+        if self.wnu is None:
+            print "Must specify bandwidths."
+            return
         self._intflux = ( self.fnu * self.wnu ).sum()
         return self._intflux
 
@@ -123,6 +126,7 @@ class luminosity:
         Interpolates between data points to integrate over SED
 
         If mminterp is set, will assume a nu^4 power law (opacity lambda^-2)
+        from the longest wavelength point
 
         Returns int( nuFnu ) in units HzJy
 
@@ -176,19 +180,26 @@ class luminosity:
     def lbol_interp(self,**kwargs):
         """
         Bolometric luminosity from interpolation in units of solar luminosities
+
+        By default, adds a point at 500 microns extrapolated using a nu^4 power law 
+        (opacity nu^2) from the longest wavelength data point.  Specify addpoint=False
+        to disable this feature.
         """
 
         self._lbol_interp = 4*pi*(self.dist_pc*pc)**2 * self.fbol_interp(**kwargs) * 1e-23 / lsun
 
         return self._lbol_interp
 
-    def plotsed(self,loglog=True):
+    def plotsed(self,loglog=True,nufnu=False):
         """ Plots the SED """
         if not pylabok:
             print "pylab was not successfully imported.  Aborting."
             return
 
-        pylab.errorbar(self.nu,self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=None)
+        if nufnu:
+            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',')
+        else:
+            pylab.errorbar(self.nu,self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',')
         ax = pylab.gca()
         if loglog:
             ax.set_xscale('log')
@@ -196,15 +207,11 @@ class luminosity:
         else:
             ax.set_xscale('linear')
             ax.set_yscale('linear')
+        xlabel('Frequency (Hz)')
+        ylabel('Flux Density (Jy)')
 
         return ax
 
-    """ 
-    Test case:
-
-    nu = c/array([12e-4,25e-4,60e-4,100e-4,.12])
-    fnu = [4.97,26.08,66.34,80.04,3.06]
-    """
 
 import readcol
 
@@ -233,9 +240,15 @@ def test_case():
 
     return kleinlum,mylum,mylum_interp,mlarr
 
+""" 
+Test case:
 
+nu = c/array([12e-4,25e-4,60e-4,100e-4,.12])
+fnu = [4.97,26.08,66.34,80.04,3.06]
 
+# G31.28
+nu = c/array([8.3e-4,12e-4,21.3e-4,25e-4,60e-4,100e-4,.045,.085,.12])
+fnu = array([2.4,4.85,34.9,89.33,1071,3693,160,19.5,5.4])
 
-
-
+"""
 

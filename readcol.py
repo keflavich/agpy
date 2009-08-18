@@ -1,6 +1,11 @@
 import string
 from numpy import asarray,nan
-from scipy.stats import mode
+try:
+    from scipy.stats import mode
+    hasmode = True
+except:
+    print "scipy could not be imported.  Your table must have full rows."
+    hasmode = False
 
 def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,comment='#',verbose=True,nullval=None):
     """
@@ -61,14 +66,15 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,co
     # check to make sure each line has the same number of columns to avoid 
     # "ValueError: setting an array element with a sequence."
     nperline = map(len,splitarr)
-    ncols,nrows = mode(nperline)
-    if nrows != len(splitarr):
-        if verbose:
-            print "Removing %i rows that don't match most common length.  \
-             \n%i rows read into array." % (len(splitarr) - nrows,nrows)
-        for i in xrange(len(splitarr)-1,-1,-1):  # need to go backwards
-            if nperline[i] != ncols:
-                splitarr.pop(i)
+    if hasmode:
+        ncols,nrows = mode(nperline)
+        if nrows != len(splitarr):
+            if verbose:
+                print "Removing %i rows that don't match most common length.  \
+                 \n%i rows read into array." % (len(splitarr) - nrows,nrows)
+            for i in xrange(len(splitarr)-1,-1,-1):  # need to go backwards
+                if nperline[i] != ncols:
+                    splitarr.pop(i)
 
     # remove comment lines
     if comment != None:
