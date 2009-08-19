@@ -190,6 +190,9 @@ class luminosity:
 
         return self._lbol_interp
 
+    def tbol(self):
+
+
     def plotsed(self,loglog=True,nufnu=False):
         """ Plots the SED """
         if not pylabok:

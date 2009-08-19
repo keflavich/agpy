@@ -8,3 +8,4 @@ from readcol import readcol
 from UCHIIfitter import HIIregion
 from gaussfitter import moments,twodgaussian,gaussfit,onedgaussian,onedgaussfit
 from kdist import kdist,vector_kdist
+from plfit import plfit
