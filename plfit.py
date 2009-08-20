@@ -100,7 +100,7 @@ class plfit:
         if finite:
             alpha = alpha*(n-1.)/n+1./n
         if n < 50 and not finite and not silent:
-            print '(PLFIT) Warning: finite-size bias may be present.'
+            print '(PLFIT) Warning: finite-size bias may be present. n=%i' % n
         ks = max(abs( arange(n)/float(n) - (1-(xmin/z)**alpha) ))
         L = n*log((alpha-1)/xmin) - alpha*sum(log(z/xmin));
         #requires another map... Larr = arange(len(unique(x))) * log((av-1)/unique(x)) - av*sum
@@ -113,7 +113,7 @@ class plfit:
         self._ks = ks
 
         if not quiet:
-            print "xmin: %g  alpha: %g +/- %g  Likelihood: %g  ks: %g" % (xmin,alpha,self._alphaerr,L,ks)
+            print "xmin: %g  n(>xmin): %i  alpha: %g +/- %g  Likelihood: %g  ks: %g" % (xmin,n,alpha,self._alphaerr,L,ks)
 
         return xmin,alpha
 
@@ -158,7 +158,7 @@ class plfit:
             b = hb[1]
             db = hb[1][1:]-hb[1][:-1]
             h = h/db
-            plot(b[:-1],h,drawstyle='steps-pre',color='k',**kwargs)
+            plot(b[:-1],h,drawstyle='steps-post',color='k',**kwargs)
             #alpha -= 1
         elif dolog:
             hb = hist(x,bins=logspace(log10(min(x)),log10(max(x)),nbins),log=True,fill=False,edgecolor='k',**kwargs)
@@ -173,7 +173,8 @@ class plfit:
         px = (alpha-1)/xmin * (q/xmin)**(-alpha)
 
         arg = argmin(abs(b-xmin))
-        norm = mean( h[b>xmin] / ((alpha-1)/xmin * (b[b>xmin]/xmin)**(-alpha))  )
+        plotloc = (b>xmin)*(h>0)
+        norm = median( h[plotloc] / ((alpha-1)/xmin * (b[plotloc]/xmin)**(-alpha))  )
         px = px*norm
 
         loglog(q,px,'r',**kwargs)
@@ -212,13 +213,13 @@ class plfit:
         pnot = nnot/float(ntot)        # p(<xmin)
         nonpldata = self.data[self.data<xmin]
         nrandnot = sum( rand(ntot) < pnot ) # randomly choose how many to sample from <xmin
-        nrandtail = ntot - nrandtot         # and the rest will be sampled from the powerlaw
+        nrandtail = ntot - nrandnot         # and the rest will be sampled from the powerlaw
 
         ksv = []
         for i in xrange(niter):
             # first, randomly sample from power law
             # with caveat!  
-            nonplind = floor(rand(nrandnot)*nrandnot).astype('int')
+            nonplind = floor(rand(nrandnot)*nnot).astype('int')
             fakenonpl = nonpldata[nonplind]
             randarr = rand(nrandtail)
             fakepl = randarr**(1/(1-alpha)) * xmin 
