@@ -6,10 +6,18 @@ try:
 except:
     pylabok = False
     print "Pylab could not be imported; plotting functions will be disabled"
+try:
+    import scipy.special
+    scipyok = True
+except:
+    scipyok = False
+    print "Scipy could not be imported."
 from numpy import pi
 pc = 3.086e18 # cm
 c = 2.99792458e10 # cm/s
 lsun = 3.839e33 # erg/s
+kb = 1.3806503e-16 # erg/K
+h = 6.626068e-27 # erg s
 
 
 class luminosity:
@@ -190,7 +198,28 @@ class luminosity:
 
         return self._lbol_interp
 
-    def tbol(self):
+    def tbol(self,interp=True):
+        """
+        Not yet implemented
+        """
+        print "tbol not yet implemented"
+
+        if scipyok:
+            zeta4d5 = scipy.special.zeta(4,1)/scipy.special.zeta(5,1)
+        else:
+            zeta4d5 = 1.0437788248434832
+
+        if self.interpdnu is not None and interp:
+            meannu = (self.interpnu*self.interpfnu*self.interpdnu).sum() * (self.interpfnu*self.interpdnu).sum()
+        elif self.wnu is not None:
+            meannu = (self.nu*self.fnu*self.wnu).sum() * (self.fnu*self.wnu).sum()
+        else:
+            print "Need to specify either wnu (width of each band) or interpolate."
+            return
+
+        self.Tbol = zeta4d5 * h * meannu / (4 * kb)
+
+        return self.Tbol
 
 
     def plotsed(self,loglog=True,nufnu=False):
