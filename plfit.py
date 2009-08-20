@@ -183,6 +183,24 @@ class plfit:
 
     def test_pl(self,niter=1e3,**kwargs):
         """
+        Monte-Carlo test to determine whether distribution is consistent with a power law
+
+        Runs through niter iterations of a sample size identical to the input sample size.
+
+        Will randomly select values from the data < xmin.  The number of values selected will
+        be chosen from a uniform random distribution with p(<xmin) = n(<xmin)/n.
+
+        Once the sample is created, is fit using above methods, then the best fit is used to
+        compute a Kolmogorov-Smirnov statistic.  The KS stat distribution is compared to the 
+        KS value for the fit to the actual data, and p = fraction of random ks values greater
+        than the data ks value is computed.  If p<.1, the data may be inconsistent with a 
+        powerlaw.  A data set of n(>xmin)>100 is required to distinguish a PL from an exponential,
+        and n(>xmin)>~300 is required to distinguish a log-normal distribution from a PL.
+        For more details, see figure 4.1 and section
+
+        **WARNING** This can take a very long time to run!  Execution time scales as 
+        niter * setsize
+
         """
         xmin = self._xmin
         alpha = self._alpha
@@ -190,16 +208,19 @@ class plfit:
 
         ntail = sum(self.data >= xmin)
         ntot = len(self.data)
-        nnot = ntot-ntail
+        nnot = ntot-ntail              # n(<xmin)
+        pnot = nnot/float(ntot)        # p(<xmin)
         nonpldata = self.data[self.data<xmin]
+        nrandnot = sum( rand(ntot) < pnot ) # randomly choose how many to sample from <xmin
+        nrandtail = ntot - nrandtot         # and the rest will be sampled from the powerlaw
 
         ksv = []
         for i in xrange(niter):
             # first, randomly sample from power law
             # with caveat!  
-            nonplind = floor(rand(nnot)*nnot).astype('int')
+            nonplind = floor(rand(nrandnot)*nrandnot).astype('int')
             fakenonpl = nonpldata[nonplind]
-            randarr = rand(ntail)
+            randarr = rand(nrandtail)
             fakepl = randarr**(1/(1-alpha)) * xmin 
             fakedata = concatenate([fakenonpl,fakepl])
             # second, fit to powerlaw
@@ -208,6 +229,8 @@ class plfit:
         
         ksv = array(ksv)
         p = (ksv>self._ks).sum() / float(niter)
+        self._pval = p
+        self._ks_rand = ksv
 
         return p,ksv
 

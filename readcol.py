@@ -7,7 +7,8 @@ except:
     print "scipy could not be imported.  Your table must have full rows."
     hasmode = False
 
-def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,comment='#',verbose=True,nullval=None):
+def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
+        asdict=False,comment='#',verbose=True,nullval=None):
     """
     The default return is a two dimensional float array.  You can specify
     the data type (e.g. dtype='S') in the normal python way.  If you want
@@ -55,7 +56,10 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,co
     null=[f.pop(0) for i in range(skipline)]
 
     if names is True:
-        nms=f.pop(0).split(fsep)
+        nameline = f.pop(0)
+        if nameline[0]==comment:
+            nameline = nameline[1:]
+        nms=nameline.split(fsep)
     
     fstrip = map(string.strip,f)
     fseps = [ fsep for i in range(len(f)) ]
@@ -95,7 +99,9 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,co
         x = get_astype(x,dtype)
 
     if names is True:
-        if twod:
+        if asdict:
+            return dict(zip(nms,x.T))
+        elif twod:
             return nms,x
         else:
             # if not returning a twod array, try to return each vector as the spec. type
