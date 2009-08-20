@@ -26,6 +26,8 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
     x,y,z=readcol("myfile.tbl",skipline=1,twod=False)
     or 
     names,xx = readcol("myfile.tbl",names=True)
+    or
+    xxdict = readcol("myfile.tbl",asdict=True,names=True)
 
     CASE 2) no title is contained into the table, then there is
     no need to skipline:
@@ -38,25 +40,33 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
     1.0    3.4.  5.6
     ...
     then use:
-    names,x,y,z=readcol("myfile.tbl",names=True,skiplines=1,twod=False)
+    names,x,y,z=readcol("myfile.tbl",names=True,skipline=1,twod=False)
     or
     x,y,z=readcol("myfile.tbl",skipline=2,twod=False)
 
     INPUTS:
         fsep - field separator, e.g. for comma separated value (csv) files
-        skiplines - number of lines to ignore at the start of the file
+        skipline - number of lines to ignore at the start of the file
         names - read / don't read in the first line as a list of column names
+                can specify an integer line number too, though it will be 
+                the line number after skipping lines
         dtype - datatype of numpy array
         twod - two dimensional or one dimensional output
         nullval - if specified, all instances of this value will be replaced
            with a floating NaN
+        asdict - zips names with data to create a dict with column headings 
+            tied to column data
     """
     f=open(filename,'r').readlines()
     
     null=[f.pop(0) for i in range(skipline)]
 
-    if names is True:
-        nameline = f.pop(0)
+    if names:
+        # can specify name line 
+        if type(names) == type(1):
+            nameline = f.pop(names)
+        else:
+            nameline = f.pop(0)
         if nameline[0]==comment:
             nameline = nameline[1:]
         nms=nameline.split(fsep)
@@ -100,7 +110,10 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
 
     if names is True:
         if asdict:
-            return dict(zip(nms,x.T))
+            mydict = dict(zip(nms,x.T))
+            for k,v in mydict.iteritems():
+                mydict[k] = get_astype(v,dtype)
+            return mydict
         elif twod:
             return nms,x
         else:
