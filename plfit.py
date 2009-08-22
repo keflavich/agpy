@@ -1,5 +1,4 @@
 # intended to implement a power-law fitting routine as specified in.....
-# that paper Erik sent me in July 2009.  
 # http://www.santafe.edu/~aaronc/powerlaws/
 #
 # The MLE for the power-law alpha is very easy to derive given knowledge
@@ -37,7 +36,7 @@ class plfit:
     def __init__(self,x,**kwargs):
         """
         Initializes and fits the power law.  Can pass "quiet" to turn off 
-        output (except for warnings)
+        output (except for warnings; "silent" turns off warnings)
         """
         self.data = x
         self.plfit(**kwargs)
@@ -82,7 +81,7 @@ class plfit:
         http://arxiv.org/abs/0706.1062
         """
         x = self.data
-        xmins = unique(x)[1:-1]
+        xmins = unique(x)[:-1]
         #xmins = xmins[1:-1]
         z  = sort(x)
         av  = asarray( map(self.alpha_(z),xmins) ,dtype='float')
@@ -111,6 +110,7 @@ class plfit:
         self._alpha= alpha
         self._alphaerr = (alpha-1)/sqrt(n)
         self._ks = ks
+        self._ngtx = n
 
         if not quiet:
             print "xmin: %g  n(>xmin): %i  alpha: %g +/- %g  Likelihood: %g  ks: %g" % (xmin,n,alpha,self._alphaerr,L,ks)
@@ -140,7 +140,7 @@ class plfit:
 
     def plotpdf(self,x=None,xmin=None,alpha=None,nbins=50,dolog=False,dnds=False,**kwargs):
         """
-        Plots PDF and powerlaw....
+        Plots PDF and powerlaw.
         """
         x=self.data
         xmin=self._xmin
@@ -248,3 +248,71 @@ def plfit_lsq(x,y):
 
     A = exp(a)
     return A,b
+
+def plexp(x,xm=1,a=2.5):
+    """
+    CDF(x) for the piecewise distribution exponential x<xmin, powerlaw x>=xmin
+    This is the CDF version of the distributions drawn in fig 3.4a of Clauset et al.
+    """
+
+    C = 1/(-xm/(1 - a) - xm/a + exp(a)*xm/a)
+    Ppl = lambda(X): 1+C*(xm/(1-a)*(X/xm)**(1-a))
+    Pexp = lambda(X): C*xm/a*exp(a)-C*(xm/a)*exp(-a*(X/xm-1))
+    d=Ppl(x)
+    d[x<xm]=Pexp(x)
+    return d
+
+def XofP(P,xm,a,pl=True):
+    """
+    Inverse CDF for a piecewise PDF as defined in eqn. 3.10
+    of Clauset et al.  
+    """
+
+    C = 1/(-xm/(1 - a) - xm/a + exp(a)*xm/a)
+    Pxm = 1+C*(xm/(1-a))
+    x = P*0
+    x[P>=Pxm] = xm*( (P[P>=Pxm]-1) * (1-a)/(C*xm) )**(1/(1-a)) # powerlaw
+    x[P<Pxm] = (log( (C*xm/a*exp(a)-P[P<Pxm])/(C*xm/a) ) - a) * (-xm/a) # exp
+
+    return x
+
+def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000):
+    """
+    Tests the power-law fitter 
+
+    Example (fig 3.4b in Clauset et al.):
+    xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+    xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=1,npts=50000)
+    loglog(xminin,xmarr.squeeze(),'x')
+
+    Example 2:
+    xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+    xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=10,npts=1000)
+    loglog(xminin,xmarr.mean(axis=0),'x')
+
+    Example 3:
+    xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000)
+    hist(xmarr.squeeze());
+
+    """
+    xmin = array(xmin)
+    if xmin.shape == ():
+        xmin.shape = 1
+    lx = len(xmin)
+    sz = [niter,lx]
+    xmarr,alphaf_v,ksv,nxarr = zeros(sz),zeros(sz),zeros(sz),zeros(sz)
+    for j in xrange(lx):
+        for i in xrange(niter):
+            randarr = rand(npts)
+            fakedata = XofP(randarr,xmin[j],alpha)
+            TEST = plfit(fakedata,quiet=True,silent=True,nosmall=True)
+            alphaf_v[i,j] = TEST._alpha
+            ksv[i,j] = TEST._ks
+            nxarr[i,j] = TEST._ngtx
+            xmarr[i,j] = TEST._xmin
+
+    return xmarr,alphaf_v,ksv,nxarr
+
+
+
+
