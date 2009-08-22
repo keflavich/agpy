@@ -262,7 +262,7 @@ def plexp(x,xm=1,a=2.5):
     d[x<xm]=Pexp(x)
     return d
 
-def XofP(P,xm,a,pl=True):
+def plexp_inv(P,xm,a):
     """
     Inverse CDF for a piecewise PDF as defined in eqn. 3.10
     of Clauset et al.  
@@ -276,7 +276,15 @@ def XofP(P,xm,a,pl=True):
 
     return x
 
-def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000):
+def pl_inv(P,xm,a):
+    """ 
+    Inverse CDF for a pure power-law
+    """
+    
+    x = (1-P)**(1/(1-a)) * xm
+    return x
+
+def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000,invcdf=plexp_inv):
     """
     Tests the power-law fitter 
 
@@ -293,6 +301,17 @@ def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000):
     Example 3:
     xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000)
     hist(xmarr.squeeze());
+    # Test results:
+    # mean(xmarr) = 0.70, median(xmarr)=0.65 std(xmarr)=0.20
+    # mean(af) = 2.51 median(af) = 2.49  std(af)=0.14
+    # biased distribution; far from correct value of xmin but close to correct alpha
+    
+    Example 4:
+    xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000,invcdf=pl_inv)
+    print("mean(xmarr): %0.2f median(xmarr): %0.2f std(xmarr): %0.2f" % (mean(xmarr),median(xmarr),std(xmarr)))
+    print("mean(af): %0.2f median(af): %0.2f std(af): %0.2f" % (mean(af),median(af),std(af)))
+    # mean(xmarr): 1.19 median(xmarr): 1.03 std(xmarr): 0.35
+    # mean(af): 2.51 median(af): 2.50 std(af): 0.07
 
     """
     xmin = array(xmin)
@@ -304,7 +323,7 @@ def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000):
     for j in xrange(lx):
         for i in xrange(niter):
             randarr = rand(npts)
-            fakedata = XofP(randarr,xmin[j],alpha)
+            fakedata = invcdf(randarr,xmin[j],alpha)
             TEST = plfit(fakedata,quiet=True,silent=True,nosmall=True)
             alphaf_v[i,j] = TEST._alpha
             ksv[i,j] = TEST._ks
