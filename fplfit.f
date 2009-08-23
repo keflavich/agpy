@@ -15,6 +15,10 @@ cf2py intent(out) :: ksa
 c     write(*,*) "Starting length ",lx," run"
       do 100 i=1,lx-1
             if ( x(i) .lt. xmin ) write(*,*) "WARNING X WAS NOT SORTED!"
+            if ( x(i) .eq. xmin ) then
+                ksa(i)=0
+                goto 100
+            endif
             xmin = x(i)
             j=i
             lzs=0

@@ -86,7 +86,7 @@ class plfit:
         http://arxiv.org/abs/0706.1062
         """
         x = self.data
-        xmins = numpy.unique(x)[:-1]
+        #xmins = numpy.unique(x)[:-1]
         #xmins = xmins[1:-1]
         z  = numpy.sort(x)
         dat = fplfit.plfit(z,int(nosmall))
@@ -101,7 +101,7 @@ class plfit:
             dat = dat[sigma<0.1]
         """
         D     = min(dat);
-        xmin  = xmins[argmin(dat)]
+        xmin  = z[argmin(dat)]
         z     = x[x>=xmin]
         n     = len(z)
         alpha = 1 + n / sum( log(z/xmin) )
