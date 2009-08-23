@@ -228,16 +228,16 @@ class plfit:
         for i in xrange(niter):
             # first, randomly sample from power law
             # with caveat!  
-            nonplind = floor(npr.rand(nrandnot)*nnot).astype('int')
+            nonplind = numpy.floor(npr.rand(nrandnot)*nnot).astype('int')
             fakenonpl = nonpldata[nonplind]
             randarr = npr.rand(nrandtail)
             fakepl = randarr**(1/(1-alpha)) * xmin 
-            fakedata = concatenate([fakenonpl,fakepl])
+            fakedata = numpy.concatenate([fakenonpl,fakepl])
             # second, fit to powerlaw
             TEST = plfit(fakedata,quiet=True,silent=True,nosmall=True,**kwargs)
             ksv.append(TEST._ks)
         
-        ksv = array(ksv)
+        ksv = numpy.array(ksv)
         p = (ksv>self._ks).sum() / float(niter)
         self._pval = p
         self._ks_rand = ksv
