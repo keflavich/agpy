@@ -221,7 +221,7 @@ class plfit:
         nnot = ntot-ntail              # n(<xmin)
         pnot = nnot/float(ntot)        # p(<xmin)
         nonpldata = self.data[self.data<xmin]
-        nrandnot = sum( rand(ntot) < pnot ) # randomly choose how many to sample from <xmin
+        nrandnot = sum( npr.rand(ntot) < pnot ) # randomly choose how many to sample from <xmin
         nrandtail = ntot - nrandnot         # and the rest will be sampled from the powerlaw
 
         ksv = []
