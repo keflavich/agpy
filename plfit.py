@@ -20,8 +20,11 @@ MyPL.plotpdf(log=True)
 
 """
 
-from pylab import *
-import numpy
+import numpy 
+import pylab
+import fplfit
+import numpy.random as npr
+from numpy import log,log10,sum,argmin,exp,min,max
 
 class plfit:
     """
@@ -65,7 +68,7 @@ class plfit:
             x = x[x>=xmin]
             n = float(len(x))
             a = float(n) / sum(log(x/xmin))
-            cx = arange(n,dtype='float')/float(n)
+            cx = numpy.arange(n,dtype='float')/float(n)
             cf = 1-(xmin/x)**a
             ks = max(abs(cf-cx))
             return ks
@@ -83,16 +86,20 @@ class plfit:
         http://arxiv.org/abs/0706.1062
         """
         x = self.data
-        xmins = unique(x)[:-1]
+        xmins = numpy.unique(x)[:-1]
         #xmins = xmins[1:-1]
-        z  = sort(x)
-        av  = asarray( map(self.alpha_(z),xmins) ,dtype='float')
-        dat = asarray( map(self.kstest_(z),xmins),dtype='float')
+        z  = numpy.sort(x)
+        dat = fplfit.plfit(z,int(nosmall))
+        dat = dat[dat>0]
+        """  OLD VERSION
+        av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
+        dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
         if nosmall:
             # test to make sure the number of data points is high enough
             # to provide a reasonable s/n on the computed alpha
-            sigma = (av-1)/sqrt(arange(len(av),0,-1))
+            sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
             dat = dat[sigma<0.1]
+        """
         D     = min(dat);
         xmin  = xmins[argmin(dat)]
         z     = x[x>=xmin]
@@ -102,15 +109,15 @@ class plfit:
             alpha = alpha*(n-1.)/n+1./n
         if n < 50 and not finite and not silent:
             print '(PLFIT) Warning: finite-size bias may be present. n=%i' % n
-        ks = max(abs( arange(n)/float(n) - (1-(xmin/z)**alpha) ))
+        ks = max(abs( numpy.arange(n)/float(n) - (1-(xmin/z)**alpha) ))
         L = n*log((alpha-1)/xmin) - alpha*sum(log(z/xmin));
         #requires another map... Larr = arange(len(unique(x))) * log((av-1)/unique(x)) - av*sum
         self._likelihood = L
-        self._av = av
+        #self._av = av
         self._xmin_kstest = dat
         self._xmin = xmin
         self._alpha= alpha
-        self._alphaerr = (alpha-1)/sqrt(n)
+        self._alphaerr = (alpha-1)/numpy.sqrt(n)
         self._ks = ks
         self._ngtx = n
 
@@ -128,17 +135,17 @@ class plfit:
         xmin=self._xmin
         alpha=self._alpha
 
-        x=sort(x)
+        x=numpy.sort(x)
         n=len(x)
-        xcdf = arange(n,0,-1,dtype='float')/float(n)
+        xcdf = numpy.arange(n,0,-1,dtype='float')/float(n)
 
         q = x[x>=xmin]
         fcdf = (q/xmin)**(1-alpha)
         nc = xcdf[argmax(x>=xmin)]
         fcdf_norm = nc*fcdf
 
-        loglog(x,xcdf,marker='+',color='k',**kwargs)
-        loglog(q,fcdf_norm,color='r',**kwargs)
+        pylab.loglog(x,xcdf,marker='+',color='k',**kwargs)
+        pylab.loglog(q,fcdf_norm,color='r',**kwargs)
 
     def plotpdf(self,x=None,xmin=None,alpha=None,nbins=50,dolog=False,dnds=False,**kwargs):
         """
@@ -148,26 +155,26 @@ class plfit:
         xmin=self._xmin
         alpha=self._alpha
 
-        x=sort(x)
+        x=numpy.sort(x)
         n=len(x)
 
         gca().set_xscale('log')
         gca().set_yscale('log')
 
         if dnds:
-            hb = histogram(x,bins=logspace(log10(min(x)),log10(max(x)),nbins))
+            hb = pylab.histogram(x,bins=logspace(log10(min(x)),log10(max(x)),nbins))
             h = hb[0]
             b = hb[1]
             db = hb[1][1:]-hb[1][:-1]
             h = h/db
-            plot(b[:-1],h,drawstyle='steps-post',color='k',**kwargs)
+            pylab.plot(b[:-1],h,drawstyle='steps-post',color='k',**kwargs)
             #alpha -= 1
         elif dolog:
-            hb = hist(x,bins=logspace(log10(min(x)),log10(max(x)),nbins),log=True,fill=False,edgecolor='k',**kwargs)
+            hb = pylab.hist(x,bins=logspace(log10(min(x)),log10(max(x)),nbins),log=True,fill=False,edgecolor='k',**kwargs)
             alpha -= 1
             h,b=hb[0],hb[1]
         else:
-            hb = hist(x,bins=linspace((min(x)),(max(x)),nbins),fill=False,edgecolor='k',**kwargs)
+            hb = pylab.hist(x,bins=linspace((min(x)),(max(x)),nbins),fill=False,edgecolor='k',**kwargs)
             h,b=hb[0],hb[1]
         b = b[1:]
 
@@ -179,8 +186,8 @@ class plfit:
         norm = median( h[plotloc] / ((alpha-1)/xmin * (b[plotloc]/xmin)**(-alpha))  )
         px = px*norm
 
-        loglog(q,px,'r',**kwargs)
-        vlines(xmin,0.1,max(px),colors='r',linestyle='dashed')
+        pylab.loglog(q,px,'r',**kwargs)
+        pylab.vlines(xmin,0.1,max(px),colors='r',linestyle='dashed')
 
         gca().set_xlim(min(x),max(x))
 
@@ -221,9 +228,9 @@ class plfit:
         for i in xrange(niter):
             # first, randomly sample from power law
             # with caveat!  
-            nonplind = floor(rand(nrandnot)*nnot).astype('int')
+            nonplind = floor(npr.rand(nrandnot)*nnot).astype('int')
             fakenonpl = nonpldata[nonplind]
-            randarr = rand(nrandtail)
+            randarr = npr.rand(nrandtail)
             fakepl = randarr**(1/(1-alpha)) * xmin 
             fakedata = concatenate([fakenonpl,fakepl])
             # second, fit to powerlaw
@@ -318,15 +325,15 @@ def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000,invcdf=plexp_inv):
     # mean(af): 2.51 median(af): 2.50 std(af): 0.07
 
     """
-    xmin = array(xmin)
+    xmin = numpy.array(xmin)
     if xmin.shape == ():
         xmin.shape = 1
     lx = len(xmin)
     sz = [niter,lx]
-    xmarr,alphaf_v,ksv,nxarr = zeros(sz),zeros(sz),zeros(sz),zeros(sz)
+    xmarr,alphaf_v,ksv,nxarr = numpy.zeros(sz),numpy.zeros(sz),numpy.zeros(sz),numpy.zeros(sz)
     for j in xrange(lx):
         for i in xrange(niter):
-            randarr = rand(npts)
+            randarr = npr.rand(npts)
             fakedata = invcdf(randarr,xmin[j],alpha)
             TEST = plfit(fakedata,quiet=True,silent=True,nosmall=True)
             alphaf_v[i,j] = TEST._alpha
