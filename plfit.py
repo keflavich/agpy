@@ -6,7 +6,9 @@
 # difficult to derive and must be acquired iteratively.
 
 """
-plfit.py
+plfit.py - a python power-law fitter based on code by Aaron Clauset
+http://www.santafe.edu/~aaronc/powerlaws/
+http://arxiv.org/abs/0706.1062 "Power-law distributions in empirical data" 
 Requires pylab (matplotlib), which requires numpy
 
 example use:
@@ -232,6 +234,8 @@ class plfit:
         p = (ksv>self._ks).sum() / float(niter)
         self._pval = p
         self._ks_rand = ksv
+
+        print "p(%i) = %0.3f" % (niter,p)
 
         return p,ksv
 
