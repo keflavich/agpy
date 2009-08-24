@@ -21,6 +21,7 @@ MyPL.plotpdf(log=True)
 """
 
 import numpy 
+import time
 import pylab
 try:
     import fplfit
@@ -84,7 +85,7 @@ class plfit:
     
 
     # should probably use a decorator here
-    def plfit(self,nosmall=False,finite=False,quiet=False,silent=False):
+    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran):
         """
         A Python implementation of the Matlab code http://www.santafe.edu/~aaronc/powerlaws/plfit.m
         from http://www.santafe.edu/~aaronc/powerlaws/
@@ -92,23 +93,32 @@ class plfit:
         See A. Clauset, C.R. Shalizi, and M.E.J. Newman, "Power-law distributions
         in empirical data" SIAM Review, to appear (2009). (arXiv:0706.1062)
         http://arxiv.org/abs/0706.1062
+
+        nosmall is on by default; it rejects low s/n points
         """
         x = self.data
-        z  = numpy.sort(x)
+        z = numpy.sort(x)
+        t = time.time()
+        # NEED TO PERFORM SANITY CHECK!!
+        # Is the selected xmin correct?  Does it correspond to min(dat)?
         if usefortran:
             dat = fplfit.plfit(z,int(nosmall))
             dat = dat[dat>0]
+            xmins = z[dat>0]
+            if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
         else:
-            xmins = numpy.unique(x)[:-1]
+            xmins = numpy.unique(x)[1:-1]
             av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
+            self._av = av
             dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
             if nosmall:
                 # test to make sure the number of data points is high enough
                 # to provide a reasonable s/n on the computed alpha
                 sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
                 dat = dat[sigma<0.1]
-        D     = min(dat);
-        xmin  = z[argmin(dat)]
+                xmins = xmins[sigma<0.1]
+            if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
+        xmin  = xmins[argmin(dat)]
         z     = x[x>=xmin]
         n     = len(z)
         alpha = 1 + n / sum( log(z/xmin) )
@@ -120,12 +130,11 @@ class plfit:
         L = n*log((alpha-1)/xmin) - alpha*sum(log(z/xmin));
         #requires another map... Larr = arange(len(unique(x))) * log((av-1)/unique(x)) - av*sum
         self._likelihood = L
-        #self._av = av
         self._xmin_kstest = dat
         self._xmin = xmin
         self._alpha= alpha
         self._alphaerr = (alpha-1)/numpy.sqrt(n)
-        self._ks = ks
+        self._ks = ks  # this ks statistic may not have the same value as min(dat) because of unique()
         self._ngtx = n
 
         if not quiet:
@@ -154,7 +163,7 @@ class plfit:
         pylab.loglog(x,xcdf,marker='+',color='k',**kwargs)
         pylab.loglog(q,fcdf_norm,color='r',**kwargs)
 
-    def plotpdf(self,x=None,xmin=None,alpha=None,nbins=50,dolog=False,dnds=False,**kwargs):
+    def plotpdf(self,x=None,xmin=None,alpha=None,nbins=50,dolog=True,dnds=False,**kwargs):
         """
         Plots PDF and powerlaw.
         """
