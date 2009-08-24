@@ -32,7 +32,7 @@ except ImportError:
     usefortran=False
 
 import numpy.random as npr
-from numpy import log,log10,sum,argmin,exp,min,max
+from numpy import log,log10,sum,argmin,argmax,exp,min,max
 
 class plfit:
     """
