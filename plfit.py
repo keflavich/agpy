@@ -99,39 +99,44 @@ class plfit:
         x = self.data
         z = numpy.sort(x)
         t = time.time()
-        # NEED TO PERFORM SANITY CHECK!!
-        # Is the selected xmin correct?  Does it correspond to min(dat)?
+        xmins = numpy.unique(z)[1:-1]
+        t = time.time()
         if usefortran:
-            dat = fplfit.plfit(z,int(nosmall))
-            dat = dat[dat>0]
-            xmins = z[dat>0]
+            dat,av = fplfit.plfit(z,int(nosmall))
+            goodvals=dat>0
+            dat = dat[goodvals]
+            av = av[goodvals]
+            xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
             if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
         else:
-            xmins = numpy.unique(x)[1:-1]
             av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
-            self._av = av
             dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
             if nosmall:
                 # test to make sure the number of data points is high enough
                 # to provide a reasonable s/n on the computed alpha
                 sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
-                dat = dat[sigma<0.1]
-                xmins = xmins[sigma<0.1]
+                goodvals = sigma<0.1
+                dat = dat[goodvals]
+                xmins = xmins[goodvals]
+                av = av[goodvals]
+            self._av = av
             if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
-        xmin  = xmins[argmin(dat)]
-        z     = x[x>=xmin]
+        xmin  = xmins[argmin(dat)] 
+        z     = z[z>=xmin]
         n     = len(z)
         alpha = 1 + n / sum( log(z/xmin) )
         if finite:
             alpha = alpha*(n-1.)/n+1./n
         if n < 50 and not finite and not silent:
             print '(PLFIT) Warning: finite-size bias may be present. n=%i' % n
-        ks = max(abs( numpy.arange(n)/float(n) - (1-(xmin/z)**alpha) ))
-        L = n*log((alpha-1)/xmin) - alpha*sum(log(z/xmin));
+        ks = max(abs( numpy.arange(n)/float(n) - (1-(xmin/z)**(alpha-1)) ))
+        L = n*log((alpha-1)/xmin) - alpha*sum(log(z/xmin))
         #requires another map... Larr = arange(len(unique(x))) * log((av-1)/unique(x)) - av*sum
         self._likelihood = L
+        self._av = av
         self._xmin_kstest = dat
         self._xmin = xmin
+        self._xmins = xmins
         self._alpha= alpha
         self._alphaerr = (alpha-1)/numpy.sqrt(n)
         self._ks = ks  # this ks statistic may not have the same value as min(dat) because of unique()
@@ -142,6 +147,25 @@ class plfit:
 
         return xmin,alpha
 
+    def alphavsks(self,autozoom=True,**kwargs):
+        """
+        Plot alpha versus the ks value for derived alpha.  This plot can be used
+        as a diagnostic of whether you have derived the 'best' fit: if there are 
+        multiple local minima, your data set may be well suited to a broken 
+        powerlaw or a different function.
+        """
+        
+        pylab.plot(self._xmin_kstest,1+self._av,'.')
+        pylab.errorbar([self._ks],self._alpha,yerr=self._alphaerr,fmt='+')
+
+        ax=pylab.gca()
+        ax.set_xlim(0.8*(self._ks),3*(self._ks))
+        ax.set_ylim((self._alpha)-5*self._alphaerr,(self._alpha)+5*self._alphaerr)
+        ax.set_xlabel("KS statistic")
+        ax.set_ylabel(r'$\alpha$')
+        pylab.draw()
+
+        return ax
 
     def plotcdf(self,x=None,xmin=None,alpha=None,**kwargs):
         """
