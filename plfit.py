@@ -169,7 +169,7 @@ class plfit:
         pylab.gca().set_yscale('log')
 
         if dnds:
-            hb = pylab.histogram(x,bins=logspace(log10(min(x)),log10(max(x)),nbins))
+            hb = pylab.histogram(x,bins=numpy.logspace(log10(min(x)),log10(max(x)),nbins))
             h = hb[0]
             b = hb[1]
             db = hb[1][1:]-hb[1][:-1]
@@ -177,11 +177,11 @@ class plfit:
             pylab.plot(b[:-1],h,drawstyle='steps-post',color='k',**kwargs)
             #alpha -= 1
         elif dolog:
-            hb = pylab.hist(x,bins=logspace(log10(min(x)),log10(max(x)),nbins),log=True,fill=False,edgecolor='k',**kwargs)
+            hb = pylab.hist(x,bins=numpy.logspace(log10(min(x)),log10(max(x)),nbins),log=True,fill=False,edgecolor='k',**kwargs)
             alpha -= 1
             h,b=hb[0],hb[1]
         else:
-            hb = pylab.hist(x,bins=linspace((min(x)),(max(x)),nbins),fill=False,edgecolor='k',**kwargs)
+            hb = pylab.hist(x,bins=numpy.linspace((min(x)),(max(x)),nbins),fill=False,edgecolor='k',**kwargs)
             h,b=hb[0],hb[1]
         b = b[1:]
 
