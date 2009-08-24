@@ -190,7 +190,7 @@ class plfit:
 
         arg = argmin(abs(b-xmin))
         plotloc = (b>xmin)*(h>0)
-        norm = median( h[plotloc] / ((alpha-1)/xmin * (b[plotloc]/xmin)**(-alpha))  )
+        norm = numpy.median( h[plotloc] / ((alpha-1)/xmin * (b[plotloc]/xmin)**(-alpha))  )
         px = px*norm
 
         pylab.loglog(q,px,'r',**kwargs)
