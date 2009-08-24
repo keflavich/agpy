@@ -22,7 +22,15 @@ MyPL.plotpdf(log=True)
 
 import numpy 
 import pylab
-import fplfit
+try:
+    import fplfit
+    usefortran=True
+except ImportError:
+    print "Fortran module could not be loaded.  plfit will load with the \
+            python module instead - it is fully functional but at least 4x \
+            slower for large arrays"
+    usefortran=False
+
 import numpy.random as npr
 from numpy import log,log10,sum,argmin,exp,min,max
 
@@ -86,20 +94,19 @@ class plfit:
         http://arxiv.org/abs/0706.1062
         """
         x = self.data
-        #xmins = numpy.unique(x)[:-1]
-        #xmins = xmins[1:-1]
         z  = numpy.sort(x)
-        dat = fplfit.plfit(z,int(nosmall))
-        dat = dat[dat>0]
-        """  OLD VERSION
-        av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
-        dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
-        if nosmall:
-            # test to make sure the number of data points is high enough
-            # to provide a reasonable s/n on the computed alpha
-            sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
-            dat = dat[sigma<0.1]
-        """
+        if usefortran:
+            dat = fplfit.plfit(z,int(nosmall))
+            dat = dat[dat>0]
+        else:
+            xmins = numpy.unique(x)[:-1]
+            av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
+            dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
+            if nosmall:
+                # test to make sure the number of data points is high enough
+                # to provide a reasonable s/n on the computed alpha
+                sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
+                dat = dat[sigma<0.1]
         D     = min(dat);
         xmin  = z[argmin(dat)]
         z     = x[x>=xmin]
@@ -158,8 +165,8 @@ class plfit:
         x=numpy.sort(x)
         n=len(x)
 
-        gca().set_xscale('log')
-        gca().set_yscale('log')
+        pylab.gca().set_xscale('log')
+        pylab.gca().set_yscale('log')
 
         if dnds:
             hb = pylab.histogram(x,bins=logspace(log10(min(x)),log10(max(x)),nbins))
@@ -189,7 +196,7 @@ class plfit:
         pylab.loglog(q,px,'r',**kwargs)
         pylab.vlines(xmin,0.1,max(px),colors='r',linestyle='dashed')
 
-        gca().set_xlim(min(x),max(x))
+        pylab.gca().set_xlim(min(x),max(x))
 
     def test_pl(self,niter=1e3,**kwargs):
         """
