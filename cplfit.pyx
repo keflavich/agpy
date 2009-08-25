@@ -26,6 +26,7 @@ cnp.import_array()
 import numpy
 cimport numpy
 import cmath
+import time
 DTYPE=numpy.float
 ctypedef numpy.float_t DTYPE_t
 
@@ -56,6 +57,7 @@ def plfit(x,nosmall=False,finite=False,quiet=False,silent=False):
     cdef cnp.ndarray[DTYPE_t,ndim=1] myrange = numpy.arange(lxm+1,dtype='float')
     cdef float a,xmin
     #for xm in xrange(len(xmins)):
+    t=time.time()
     for xm from 0 <= xm < lxm:
         xmin = xmins[xm]
         z    = z[z>=xmin] 
@@ -77,13 +79,13 @@ def plfit(x,nosmall=False,finite=False,quiet=False,silent=False):
         cx   = myrange[:n]/float(n)  #data
         cf   = 1-(xmin/z)**a  # fitted
         av[xm] = a
-#        dat[xm] = 0
-        dat[xm] = numpy.max(numpy.abs(cf-cx))
-#        for i from 0 <= i < n:
-#            val = abs(cf[i]-cx[i])
-#            if dat[xm] < val:
-#                dat[xm] = val
-    D     = min(dat);
+        dat[xm] = 0
+#        dat[xm] = numpy.max(numpy.abs(cf-cx))
+        for i from 0 <= i < n:
+            val = abs(cf[i]-cx[i])
+            if dat[xm] < val:
+                dat[xm] = val
+    if not quiet: print "CYTHON plfit executed in %f seconds" % (time.time()-t)
     xmin  = xmins[numpy.argmin(dat)]
     z     = x[x>=xmin]
     n     = len(z)
