@@ -31,6 +31,8 @@ ctypedef numpy.float_t DTYPE_t
 
 cdef extern from "math.h":
     double log(double theta)
+    double sqrt(double theta)
+    double abs(double theta)
 
 def plfit(x,nosmall=False,finite=False,quiet=False,silent=False):
     """
@@ -49,7 +51,7 @@ def plfit(x,nosmall=False,finite=False,quiet=False,silent=False):
     cdef cnp.ndarray[DTYPE_t,ndim=1] av  = xmins * 0
     cdef cnp.ndarray[DTYPE_t,ndim=1] z = numpy.sort(x)
     cdef cnp.ndarray[DTYPE_t,ndim=1] cx,cf
-    cdef int xm,n
+    cdef int xm,n,i
     cdef int lxm = len(xmins)
     cdef cnp.ndarray[DTYPE_t,ndim=1] myrange = numpy.arange(lxm+1,dtype='float')
     cdef float a,xmin
@@ -59,22 +61,28 @@ def plfit(x,nosmall=False,finite=False,quiet=False,silent=False):
         z    = z[z>=xmin] 
         n    = float(len(z))
         # estimate alpha using direct MLE
-        a    =  float(n) / numpy.sum( numpy.log(z/xmin) )
+        a = 0
+        for i from 0 <= i < n:
+            a +=  float(n) / ( log(z[i]/xmin) )
         if nosmall:
             # 4. For continuous data, PLFIT can return erroneously large estimates of 
             #    alpha when xmin is so large that the number of obs x >= xmin is very 
             #    small. To prevent this, we can truncate the search over xmin values 
             #    before the finite-size bias becomes significant by calling PLFIT as
-            if (a-1)/numpy.sqrt(n) > 0.1:
+            if (a-1)/sqrt(n) > 0.1:
                 #dat(xm:end) = [];
                 dat = dat[:xm]
-                xm = len(xmins)+1
                 break
         # compute KS statistic
         cx   = myrange[:n]/float(n)  #data
         cf   = 1-(xmin/z)**a  # fitted
-        av[xm] = n/numpy.sum(numpy.log(z/xmin))
-        dat[xm] = numpy.max( numpy.abs(cf-cx) )
+        av[xm] = a
+#        dat[xm] = 0
+        dat[xm] = numpy.max(numpy.abs(cf-cx))
+#        for i from 0 <= i < n:
+#            val = abs(cf[i]-cx[i])
+#            if dat[xm] < val:
+#                dat[xm] = val
     D     = min(dat);
     xmin  = xmins[numpy.argmin(dat)]
     z     = x[x>=xmin]
