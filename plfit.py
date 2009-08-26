@@ -31,6 +31,12 @@ except ImportError:
             python module instead - it is fully functional but at least 4x \
             slower for large arrays"
     usefortran=False
+try: 
+    import cplfit
+    cyok=True
+except ImportError:
+    print "Cython module could not be loaded."
+    cyok=False
 
 import numpy.random as npr
 from numpy import log,log10,sum,argmin,argmax,exp,min,max
@@ -85,7 +91,7 @@ class plfit:
     
 
     # should probably use a decorator here
-    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran):
+    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran,usecy=False):
         """
         A Python implementation of the Matlab code http://www.santafe.edu/~aaronc/powerlaws/plfit.m
         from http://www.santafe.edu/~aaronc/powerlaws/
@@ -108,6 +114,10 @@ class plfit:
             av = av[goodvals]
             xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
             if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
+        elif usecy and cyok:
+            dat,av = cplfit.plfit_loop(z,xmins,nosmall=nosmall)
+            xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
+            if not quiet: print "CYTHON plfit executed in %f seconds" % (time.time()-t)
         else:
             av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
             dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
