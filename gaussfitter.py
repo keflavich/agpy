@@ -222,7 +222,7 @@ def onedgaussian(x,H,A,dx,w):
     """
     return H+A*numpy.exp(-(x-dx)**2/(2*w**2))
 
-def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,False],limitedmin=[False,False,False,False],
+def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,False],limitedmin=[False,False,False,True],
         limitedmax=[False,False,False,False],minpars=[0,0,0,0],maxpars=[0,0,0,0],
         quiet=True,shh=True):
     """
@@ -233,7 +233,7 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
 
        params - Fit parameters: Height of background, Amplitude, Shift, Width
        fixed - Is parameter fixed?
-       limitedmin/minpars - set lower limits on each parameter
+       limitedmin/minpars - set lower limits on each parameter (default: width>0)
        limitedmax/maxpars - set upper limits on each parameter
        quiet - should MPFIT output each iteration?
        shh - output final parameters?

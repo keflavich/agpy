@@ -91,7 +91,8 @@ class plfit:
     
 
     # should probably use a decorator here
-    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran,usecy=False):
+    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran,usecy=False,
+            xmin=None):
         """
         A Python implementation of the Matlab code http://www.santafe.edu/~aaronc/powerlaws/plfit.m
         from http://www.santafe.edu/~aaronc/powerlaws/
@@ -101,40 +102,46 @@ class plfit:
         http://arxiv.org/abs/0706.1062
 
         nosmall is on by default; it rejects low s/n points
+        can specify xmin to skip xmin estimation
+
+        There are 3 implementations of xmin estimation.  The fortran version is fastest, the C (cython)
+        version is ~10% slower, and the python version is ~3x slower than the fortran version.
         """
         x = self.data
         z = numpy.sort(x)
         t = time.time()
         xmins = numpy.unique(z)[1:-1]
         t = time.time()
-        if usefortran:
-            dat,av = fplfit.plfit(z,int(nosmall))
-            goodvals=dat>0
-            dat = dat[goodvals]
-            av = av[goodvals]
-            xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
-            if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
-        elif usecy and cyok:
-            dat,av = cplfit.plfit_loop(z,nosmall=nosmall)
-            goodvals=dat>0
-            dat = dat[goodvals]
-            av = av[goodvals]
-            xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
-            if not quiet: print "CYTHON plfit executed in %f seconds" % (time.time()-t)
-        else:
-            av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
-            dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
-            if nosmall:
-                # test to make sure the number of data points is high enough
-                # to provide a reasonable s/n on the computed alpha
-                sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
-                goodvals = sigma<0.1
+        if xmin is None:
+            if usefortran:
+                dat,av = fplfit.plfit(z,int(nosmall))
+                goodvals=dat>0
                 dat = dat[goodvals]
-                xmins = xmins[goodvals]
                 av = av[goodvals]
+                xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
+                if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
+            elif usecy and cyok:
+                dat,av = cplfit.plfit_loop(z,nosmall=nosmall)
+                goodvals=dat>0
+                dat = dat[goodvals]
+                av = av[goodvals]
+                xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
+                if not quiet: print "CYTHON plfit executed in %f seconds" % (time.time()-t)
+            else:
+                av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
+                dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
+                if nosmall:
+                    # test to make sure the number of data points is high enough
+                    # to provide a reasonable s/n on the computed alpha
+                    sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
+                    goodvals = sigma<0.1
+                    dat = dat[goodvals]
+                    xmins = xmins[goodvals]
+                    av = av[goodvals]
+                if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
             self._av = av
-            if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
-        xmin  = xmins[argmin(dat)] 
+            self._xmin_kstest = dat
+            xmin  = xmins[argmin(dat)] 
         z     = z[z>=xmin]
         n     = len(z)
         alpha = 1 + n / sum( log(z/xmin) )
@@ -146,8 +153,6 @@ class plfit:
         L = n*log((alpha-1)/xmin) - alpha*sum(log(z/xmin))
         #requires another map... Larr = arange(len(unique(x))) * log((av-1)/unique(x)) - av*sum
         self._likelihood = L
-        self._av = av
-        self._xmin_kstest = dat
         self._xmin = xmin
         self._xmins = xmins
         self._alpha= alpha
