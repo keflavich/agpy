@@ -39,7 +39,7 @@ h,b = hist(a,bins=30)[:2]
 bx = (b[1:]+b[:-1])/2.0
 
 import gaussfitter
-p,m,pe,chi2 = gaussfitter.onedgaussfit(bx,h,params=[0,ntests/10.0,2.5,0.5],fixed=[1,0,0,0])
+p,m,pe,chi2 = gaussfitter.onedgaussfit(bx,h,params=[0,ntests/10.0,2.5,0.05],fixed=[1,0,0,0])
 
 plot(bx,m)
 
@@ -55,19 +55,19 @@ for i in range(ntests):
     xm[i]=p._xmin
 
 figure()
-h,b = hist(a,bins=30)[:2]
+h1,b1 = hist(a,bins=30)[:2]
 xlabel('alpha')
-bx = (b[1:]+b[:-1])/2.0
+bx1 = (b1[1:]+b1[:-1])/2.0
 
-p,m,pe,chi2 = gaussfitter.onedgaussfit(bx,h,params=[0,ntests/10.0,2.5,0.5],fixed=[1,0,0,0])
-plot(bx,m)
-print "XMIN varies: Alpha = 2.5 (real), %0.3f +/- %0.3f (measured)" % (p[2],p[3])
+p1,m1,pe1,chi21 = gaussfitter.onedgaussfit(bx1,h1,params=[0,ntests/10.0,2.5,0.05],fixed=[1,0,0,0])
+plot(bx1,m1)
+print "XMIN varies: Alpha = 2.5 (real), %0.3f +/- %0.3f (measured)" % (p1[2],p1[3])
 
 figure()
-h,b = hist(xm,bins=30)[:2]
+h2,b2 = hist(xm,bins=30)[:2]
 xlabel('xmin')
-bx = (b[1:]+b[:-1])/2.0
+bx2 = (b2[1:]+b2[:-1])/2.0
 
-p,m,pe,chi2 = gaussfitter.onedgaussfit(bx,h,params=[0,ntests/10.0,xmin,0.2],fixed=[1,0,0,0])
-plot(bx,m)
-print "XMIN varies: XMIN = %0.3f (real), %0.3f +/- %0.3f (measured)" % (xmin,p[2],p[3])
+p2,m2,pe2,chi2 = gaussfitter.onedgaussfit(bx2,h2,params=[0,ntests/10.0,xmin,0.2],fixed=[1,0,0,0])
+plot(bx2,m2)
+print "XMIN varies: XMIN = %0.3f (real), %0.3f +/- %0.3f (measured)" % (xmin,p2[2],p2[3])
