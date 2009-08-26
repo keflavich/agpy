@@ -14,7 +14,7 @@ cf2py intent(out) :: av,ksa
       xmin = 0.0
 c     write(*,*) "Starting length ",lx," run"
 c     equivalent to python loop: i in arange(1,lx)      
-      do 100 i=2,lx
+      do 100 i=1,lx
             if ( x(i) .lt. xmin ) write(*,*) "WARNING X WAS NOT SORTED!"
 c           skip repeat values (only compute unique values of xmin)            
             if ( x(i) .eq. xmin ) then

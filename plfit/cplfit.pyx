@@ -37,39 +37,41 @@ cdef extern from "math.h":
     float pow(float x,float y)
 
 @cython.boundscheck(False)
-def plfit_loop(z,nosmall=True):
+def plfit_loop(z,zunique=None,argunique=None,nosmall=True):
     """
     The internal loop of plfit.  Useful because it can
     be wrapped into plfit.py for direct comparison
     with the fortran version
-
-    z must be sorted
     """
+    if zunique is None or argunique is None:
+        zunique,argunique = numpy.unique1d(z,return_index=True)
     cdef int lxm = len(z)
-    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] ksvals = numpy.zeros(lxm) 
-    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] av  = numpy.zeros(lxm)
-    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] data  = z
+    cdef int nu = len(zunique)
+    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] ksvals = numpy.zeros(nu) 
+    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] av     = numpy.zeros(nu)
+    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] data   = numpy.sort(z)
+    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] czunique = zunique
+    cdef cnp.ndarray[DTYPE_t,ndim=1,mode='c'] cargunique = argunique.astype('float')
     cdef float cx,cf,val,a,xmin,denom,nj,nk
-    cdef int xm,i
-    xmin = 0
-    for xm from 1 <= xm < lxm-1:  # I'm still confused why you need to skip the first
-        if data[xm] == xmin:
-            continue
-        xmin = data[xm]
+    cdef int xm,i,iu
+    for iu from 0 <= iu < nu:
+        xm = <int>(argunique[iu])
+        xmin = czunique[iu]
         # estimate alpha using direct MLE
         denom = 0
         for i from xm <= i < lxm:
             denom += log(data[i]/xmin)
         nj=<float>(lxm-xm)
         a =  nj / denom 
-        if nosmall and (a-1)/sqrt(nj) > 0.1:
+        if nosmall and ( ((a-1)/sqrt(nj+1)) >= 0.1 ):
             # 4. For continuous data, PLFIT can return erroneously large estimates of 
             #    alpha when xmin is so large that the number of obs x >= xmin is very 
             #    small. To prevent this, we can truncate the search over xmin values 
             #    before the finite-size bias becomes significant by calling PLFIT as
-            ksvals = ksvals[:xm] # this should only be called once
+            #av = av[:xm] # this should only be called once
+            #ksvals = ksvals[:xm] # this should only be called once
             break
-        av[xm] = a
+        av[iu] = a
         for i from xm <= i < lxm:
             # compute KS statistic
             cx   = <float>(i-xm)/(nj)  #data; cheap float conversion?
@@ -77,7 +79,8 @@ def plfit_loop(z,nosmall=True):
             val = (cf-cx)
             if val < 0:  # math.h's abs() does not work
                 val *= -1.0 
-            if ksvals[xm] < val:
-                ksvals[xm] = val
+            if ksvals[iu] < val:
+                ksvals[iu] = val
+#        print a,nj,denom,iu,xm,(a-1)/sqrt(nj),ksvals[xm],val
     
     return ksvals,av

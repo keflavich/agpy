@@ -106,26 +106,28 @@ class plfit:
 
         There are 3 implementations of xmin estimation.  The fortran version is fastest, the C (cython)
         version is ~10% slower, and the python version is ~3x slower than the fortran version.
+        Also, the cython code suffers ~2% numerical error relative to the fortran and python for unknown
+        reasons.
         """
         x = self.data
         z = numpy.sort(x)
         t = time.time()
-        xmins = numpy.unique(z)[1:-1]
+        xmins,argxmins = numpy.unique1d(z,return_index=True)#[:-1]
         t = time.time()
         if xmin is None:
             if usefortran:
                 dat,av = fplfit.plfit(z,int(nosmall))
                 goodvals=dat>0
+                sigma = ((av-1)/numpy.sqrt(len(z)-numpy.arange(len(z))))[argxmins]
                 dat = dat[goodvals]
                 av = av[goodvals]
-                xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
                 if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
             elif usecy and cyok:
-                dat,av = cplfit.plfit_loop(z,nosmall=nosmall)
+                dat,av = cplfit.plfit_loop(z,nosmall=nosmall,zunique=xmins,argunique=argxmins)
                 goodvals=dat>0
+                sigma = (av-1)/numpy.sqrt(len(z)-argxmins)
                 dat = dat[goodvals]
                 av = av[goodvals]
-                xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
                 if not quiet: print "CYTHON plfit executed in %f seconds" % (time.time()-t)
             else:
                 av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
@@ -133,14 +135,15 @@ class plfit:
                 if nosmall:
                     # test to make sure the number of data points is high enough
                     # to provide a reasonable s/n on the computed alpha
-                    sigma = (av-1)/numpy.sqrt(numpy.arange(len(av),0,-1))
+                    sigma = (av-1)/numpy.sqrt(len(z)-argxmins+1)
                     goodvals = sigma<0.1
-                    dat = dat[goodvals]
-                    xmins = xmins[goodvals]
-                    av = av[goodvals]
+                    nmax = argmin(goodvals)
+                    dat = dat[:nmax]
+                    av = av[:nmax]
                 if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
             self._av = av
             self._xmin_kstest = dat
+            self._sigma = sigma
             xmin  = xmins[argmin(dat)] 
         z     = z[z>=xmin]
         n     = len(z)
