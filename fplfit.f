@@ -33,7 +33,7 @@ c           skip repeat values (only compute unique values of xmin)
                 if ((av(i)-1.0)/sqrt(float(n+1)) .ge. 0.1) then
 c                   write(*,*) "Exiting nosmall - n=",n
 c           write(*,*) "Debug: lx=",lx,"n=",n,"ijk=",i,j,k,av(i),ksa(i)
-                    return
+                  return
                 endif
             endif
             ksp = 0

@@ -115,7 +115,10 @@ class plfit:
             xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
             if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
         elif usecy and cyok:
-            dat,av = cplfit.plfit_loop(z,xmins,nosmall=nosmall)
+            dat,av = cplfit.plfit_loop(z,nosmall=nosmall)
+            goodvals=dat>0
+            dat = dat[goodvals]
+            av = av[goodvals]
             xmins = xmins[:len(dat)] # unnecessary, but cuts off values ignored b/c of nsmall
             if not quiet: print "CYTHON plfit executed in %f seconds" % (time.time()-t)
         else:
