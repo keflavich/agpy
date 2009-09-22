@@ -202,7 +202,7 @@ class luminosity:
         """
         Not yet implemented
         """
-        print "tbol not yet implemented"
+        #print "tbol not yet implemented"
 
         if scipyok:
             zeta4d5 = scipy.special.zeta(4,1)/scipy.special.zeta(5,1)
@@ -222,16 +222,16 @@ class luminosity:
         return self.Tbol
 
 
-    def plotsed(self,loglog=True,nufnu=False):
+    def plotsed(self,loglog=True,nufnu=False,**kwargs):
         """ Plots the SED """
         if not pylabok:
             print "pylab was not successfully imported.  Aborting."
             return
 
         if nufnu:
-            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',')
+            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',',**kwargs)
         else:
-            pylab.errorbar(self.nu,self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',')
+            pylab.errorbar(self.nu,self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',',**kwargs)
         ax = pylab.gca()
         if loglog:
             ax.set_xscale('log')
@@ -239,8 +239,8 @@ class luminosity:
         else:
             ax.set_xscale('linear')
             ax.set_yscale('linear')
-        xlabel('Frequency (Hz)')
-        ylabel('Flux Density (Jy)')
+        pylab.xlabel('Frequency (Hz)')
+        pylab.ylabel('Flux Density (Jy)')
 
         return ax
 
