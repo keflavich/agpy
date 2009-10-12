@@ -129,7 +129,7 @@ class luminosity:
                 self.wnu = self.wnu[nusort]
 
 
-    def fbol_interp(self,mminterp=True,npoints=1e5,addpoint=True,mmfreq=None,extrap=True):
+    def fbol_interp(self,fnu=None,mminterp=True,npoints=1e5,addpoint=True,mmfreq=None,extrap=True,write=True):
         """
         Interpolates between data points to integrate over SED
 
@@ -144,8 +144,11 @@ class luminosity:
         if mminterp:
             self.mminterp(mmfreq,addpoint=addpoint)
 
+        if fnu is None:
+            fnu = self.fnu
+
         # powerlaw interpolation is done in logspace
-        logf = numpy.log10(self.fnu)
+        logf = numpy.log10(fnu)
         logn = numpy.log10(self.nu)
 
         # slope = dy/dx
@@ -161,7 +164,7 @@ class luminosity:
             highnu = self.nu[ind+1]
             userange = (newnu > lownu) * (newnu < highnu)
             nu0 = newnu[userange][0]
-            newfnu[userange] = self.fnu[ind] * (newnu[userange]/nu0)**alpha[ind]
+            newfnu[userange] = fnu[ind] * (newnu[userange]/nu0)**alpha[ind]
 
         dnu = newnu*0
         dnu[:-1] = newnu[:-1]-newnu[1:]
@@ -177,13 +180,22 @@ class luminosity:
             newfnu = numpy.concatenate( ([newfnu[0]],newfnu,[newfnu[-1]]) )
             dnu    = numpy.concatenate( ([dnulow],dnu,[dnuhigh]) )
 
-        self.interpdnu = numpy.abs(dnu)
-        self.interpnu = newnu
-        self.interpfnu = newfnu
+        if write:
+            self.interpdnu = numpy.abs(dnu)
+            self.interpnu = newnu
+            self.interpfnu = newfnu
 
-        self._fbol_integ = (self.interpdnu*self.interpfnu).sum()
+            fbint = (self.interpdnu*self.interpfnu).sum()
 
-        return self._fbol_integ
+            self._fbol_integ = fbint
+        else: # unfortunate repeated code; should clean this up / not write self. variables
+            interpdnu = numpy.abs(dnu)
+            interpnu = newnu
+            interpfnu = newfnu
+
+            fbint = (interpdnu*interpfnu).sum()
+
+        return fbint
 
     def lbol_interp(self,**kwargs):
         """
@@ -198,9 +210,32 @@ class luminosity:
 
         return self._lbol_interp
 
+    def lbol_interp_ulim(self,**kwargs):
+        """
+        If errors are specified, returns lbol(fnu+efnu)
+        """
+        if self.efnu is None:
+            print "Can't calculate limits unless errors are specified"
+
+        lbol_upper = 4*pi*(self.dist_pc*pc)**2 * self.fbol_interp(fnu=self.fnu+self.efnu,write=False,**kwargs) * 1e-23 / lsun
+
+        return lbol_upper
+
+    def lbol_interp_llim(self,**kwargs):
+        """
+        If errors are specified, returns lbol(fnu+efnu)
+        """
+        if self.efnu is None:
+            print "Can't calculate limits unless errors are specified"
+
+        lbol_upper = 4*pi*(self.dist_pc*pc)**2 * self.fbol_interp(fnu=self.fnu-self.efnu,write=False,**kwargs) * 1e-23 / lsun
+
+        return lbol_upper
+
     def tbol(self,interp=True):
         """
-        Not yet implemented
+        Computes the "bolometric temperature" as specified in the same document.
+        Uses scipy's zeta function if scipy is available
         """
         #print "tbol not yet implemented"
 
@@ -210,9 +245,9 @@ class luminosity:
             zeta4d5 = 1.0437788248434832
 
         if self.interpdnu is not None and interp:
-            meannu = (self.interpnu*self.interpfnu*self.interpdnu).sum() * (self.interpfnu*self.interpdnu).sum()
+            meannu = (self.interpnu*self.interpfnu*self.interpdnu).sum() / (self.interpfnu*self.interpdnu).sum()
         elif self.wnu is not None:
-            meannu = (self.nu*self.fnu*self.wnu).sum() * (self.fnu*self.wnu).sum()
+            meannu = (self.nu*self.fnu*self.wnu).sum() / (self.fnu*self.wnu).sum()
         else:
             print "Need to specify either wnu (width of each band) or interpolate."
             return
@@ -228,10 +263,11 @@ class luminosity:
             print "pylab was not successfully imported.  Aborting."
             return
 
+        # must divide wnu by 2 because plotter assumes "1-sigma", but wnu is full width
         if nufnu:
-            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu/2.0,yerr=self.efnu*self.nu,fmt=',',**kwargs)
         else:
-            pylab.errorbar(self.nu,self.fnu,xerr=self.wnu,yerr=self.efnu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.fnu,xerr=self.wnu/2.0,yerr=self.efnu,fmt=',',**kwargs)
         ax = pylab.gca()
         if loglog:
             ax.set_xscale('log')
