@@ -122,7 +122,7 @@ class RegionFile(object):
                     pos = pywcs.Position(coords[0]+" "+coords[1])
                 else:
                     sexagesimal=False
-                    pos = pywcs.Position((coords[0],coords[1]))
+                    pos = pywcs.Position((float(coords[0]),float(coords[1])))
 
                 exec("ra1,dec1 = pos."+coordfunc+"()")
                 x1,y1=wcs_util.world2pix(wcs,ra1,dec1)
@@ -133,14 +133,26 @@ class RegionFile(object):
             if shape['type'] == 'circle':
                 shape['radius'] = float(coords[2].replace('"',''))
             elif shape['type'] == 'box':
-                shape['width'] = float(coords[2].replace('"',''))
-                shape['height'] = float(coords[3].replace('"',''))
+                width  = float(coords[2].replace('"','')) 
+                height = float(coords[3].replace('"','')) 
+                angle = float(coords[4])
+                cosa = cos(angle/180.0 * np.pi)
+                sina = sin(angle/180.0 * np.pi)
+                dxm = (width/2.0*cosa-height/2.0*sina)/wcs_util.arcperpix(wcs)
+                dym = (width/2.0*sina-height/2.0*cosa)/wcs_util.arcperpix(wcs)
+                dxp = (width/2.0*cosa+height/2.0*sina)/wcs_util.arcperpix(wcs)
+                dyp = (width/2.0*sina+height/2.0*cosa)/wcs_util.arcperpix(wcs)
+                xb1,yb1 = x1 + dxm, y1 + dyp
+                xb2,yb2 = x1 + dxp, y1 + dym
+                xb3,yb3 = x1 - dxm, y1 - dyp
+                xb4,yb4 = x1 - dxp, y1 - dym
+                shape['box'] = [ [xb1,yb1] , [xb2,yb2] , [xb3,yb3], [xb4,yb4] ]
                 if len(coords) == 7:
                     shape['width2'] = float(coords[4].replace('"',''))
                     shape['height2'] = float(coords[5].replace('"',''))
                     print "box panda not implemented"
                     continue
-                shape['angle'] = float(coords[4])
+                #print x1,y1,dx,dy,shape,angle
             elif shape['type'] == 'line':
                 if self.coord_sys == 'image':
                     x2 = float(coords[2])
@@ -157,8 +169,8 @@ class RegionFile(object):
             elif shape['type'] == 'point':
                 pass
             elif shape['type'] == 'ellipse':
-                shape['width']  = float(coords[2].rstrip('\'"')) * 2
-                shape['height'] = float(coords[3].rstrip('\'"')) * 2
+                shape['width']  = float(coords[2].rstrip('\'"')) * 2 / wcs_util.arcperpix(wcs)
+                shape['height'] = float(coords[3].rstrip('\'"')) * 2 / wcs_util.arcperpix(wcs)
                 shape['angle'] = float(coords[4])
             elif shape['type'] == 'vector':
                 veclen   = float(coords[2].rstrip('\'"')) / wcs_util.arcperpix(wcs)
@@ -196,7 +208,7 @@ class RegionFile(object):
                 fill.append(0)
             elif shape['type'] == 'box':
                 #shape = dict2pix(shape,self._wcs)
-                patches.append(box_patch(**shape))
+                patches.append(box_patch2(**shape))
                 fill.append(0)
             elif shape['type'] == 'line':
                 #shape = dict2pix(shape,self._wcs)

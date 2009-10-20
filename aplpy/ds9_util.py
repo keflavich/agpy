@@ -61,6 +61,10 @@ def box_patch(x,y,width,height,angle,**kwargs):
     v.append(rotate((x-width/2.,y+height/2.),(x,y),angle))
     return Polygon(v,closed=True,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],ls=kwargs['ls'])
 
+def box_patch2(box,**kwargs):
+    v = box
+    return Polygon(v,closed=True,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],ls=kwargs['ls'])
+
 def line_patch(x,y,**kwargs):
     return Polygon([(x[0],y[0]),(x[1],y[1])],closed=False,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],ls=kwargs['ls'])
 
