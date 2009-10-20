@@ -71,7 +71,7 @@ class RegionFile(object):
             
             shape['edgecolor'] = "g"
             shape['lw'] = None
-            shape['ls'] = 'solid'
+            shape['linestyle'] = 'solid'
             shape['fontsize'] = 'large'
             shape['fontstyle'] = 'normal'
             shape['fontweight'] = 'normal'
@@ -83,7 +83,7 @@ class RegionFile(object):
                 if arr[0] == 'width':
                     shape['lw'] = arr[1]
                 if arr[0] == 'dash':
-                    if arr[1] == "1": shape['ls'] = "dashed"
+                    if arr[1] == "1": shape['linestyle'] = "dashed"
                 if arr[0] == 'point':
                     shape['point'] = arr[1]
                 if arr[0] == 'text':
@@ -242,9 +242,10 @@ class RegionFile(object):
                 matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],**kwargs)
 
         
+        # DO NOT USE COLLECTIONS!  Collections do not preserve linestyle or opacity.
         # Hack to prevent facecolors from being drawn
-        PC = matplotlib.collections.PatchCollection(patches,match_original=True)
-        PC.set_facecolors(PC.get_facecolors()*np.array([fill]).T)
-        PC._is_filled=False
+        #PC = matplotlib.collections.PatchCollection(patches,match_original=True)
+        #PC.set_facecolors(PC.get_facecolors()*np.array([fill]).T)
+        #PC._is_filled=False
         #import pdb; pdb.set_trace()
-        return PC
+        return patches #PC

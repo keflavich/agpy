@@ -974,8 +974,9 @@ class FITSFigure(Layers,Grid,Ticks,Labels):
         reg.parse(regionfile,self._wcs)
         
         PC = reg.plot(self._ax1)
-        #PC = matplotlib.collections.PatchCollection(patches,match_original=True)
-        self._ax1.add_collection(PC)
+        #PC = matplotlib.collections.PatchCollection(patches,match_original=True) # collections do not preserve line style or opacity
+        for p in PC:
+            self._ax1.add_patch(p)
         
         if layer:
             ds9_set_name = layer
