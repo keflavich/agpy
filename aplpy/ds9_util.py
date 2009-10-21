@@ -47,11 +47,11 @@ def string_find(List, st):
             return k
 
 def circle_patch(x,y,radius,**kwargs):
-    return Circle((x,y),radius=radius,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'])
+    return Circle((x,y),radius=radius,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'],zorder=kwargs['zorder'])
 
 def ellipse_patch(x,y,width,height,angle,**kwargs):
     return Ellipse((x,y),width,height,angle=angle,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],
-            lw=kwargs['lw'],ls=kwargs['ls'],facecolor=array([0.0,0.0,0.0,0.0]))
+            lw=kwargs['lw'],linestyle=kwargs['linestyle'],facecolor=array([0.0,0.0,0.0,0.0]),zorder=kwargs['zorder'])
 
 def box_patch(x,y,width,height,angle,**kwargs):
     v = []
@@ -59,17 +59,17 @@ def box_patch(x,y,width,height,angle,**kwargs):
     v.append(rotate((x+width/2.,y-height/2.),(x,y),angle))
     v.append(rotate((x+width/2.,y+height/2.),(x,y),angle))
     v.append(rotate((x-width/2.,y+height/2.),(x,y),angle))
-    return Polygon(v,closed=True,alpha=0.00,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'])
+    return Polygon(v,closed=True,alpha=0.00,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'],zorder=kwargs['zorder'])
 
 def box_patch2(box,**kwargs):
     v = box
-    return Polygon(v,closed=True,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'])
+    return Polygon(v,closed=True,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'],zorder=kwargs['zorder'])
 
 def line_patch(x,y,**kwargs):
-    return Polygon([(x[0],y[0]),(x[1],y[1])],closed=False,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'])
+    return Polygon([(x[0],y[0]),(x[1],y[1])],closed=False,alpha=0.80,fill=False,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'],zorder=kwargs['zorder'])
 
 def vector_patch(x,y,**kwargs):
-    return FancyArrow([x[0],y[0],x[1],y[1]],alpha=0.80,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'])
+    return FancyArrow([x[0],y[0],x[1],y[1]],alpha=0.80,edgecolor=kwargs['edgecolor'],lw=kwargs['lw'],linestyle=kwargs['linestyle'],zorder=kwargs['zorder'])
 
 def rotate(position,position0,theta):
     x = position[0]

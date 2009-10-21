@@ -38,6 +38,24 @@ class Layers(object):
                 return True
         return False
     
+    def _name_empty_patches(self,name):
+        
+        empty = []
+        for i in range(len(self._ax1.patches)):
+            try:
+                n = self._ax1.patches[i].aplpy_layer_name
+            except AttributeError:
+                empty.append(i)
+        
+        for i in empty:
+            self._ax1.patches[i].aplpy_layer_name = name
+        
+        # check for layer name already defined; don't want duplicates
+        # (assume already-defined layer is visible b/c this should only
+        # happen in initial declaration)
+        if len(empty) > 0 and ({'name':name,'visible':True} not in self._layers_list):
+            self._layers_list.append({'name' : name,'visible' : True})
+
     def _name_empty_layers(self,name):
         
         empty = []
@@ -91,6 +109,10 @@ class Layers(object):
             if(layer==self._ax1.collections[i].aplpy_layer_name):
                 self._ax1.collections.pop(i)
 
+        for i in range(len(self._ax1.patches)-1,-1,-1):
+            if(layer==self._ax1.patches[i].aplpy_layer_name):
+                self._ax1.patches.pop(i)
+        
         for i in range(len(self._ax1.texts)-1,-1,-1):
             if(layer==self._ax1.texts[i].aplpy_layer_name):
                 self._ax1.texts.pop(i)

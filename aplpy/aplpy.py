@@ -987,6 +987,7 @@ class FITSFigure(Layers,Grid,Ticks,Labels):
         self.regions[ds9_set_name] = reg
         
         self._name_empty_layers(ds9_set_name)
+        self._name_empty_patches(ds9_set_name)
         self._name_empty_text_layers(ds9_set_name)
 
         if refresh: self.refresh()

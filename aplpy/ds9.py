@@ -75,17 +75,20 @@ class RegionFile(object):
             shape['fontsize'] = 'large'
             shape['fontstyle'] = 'normal'
             shape['fontweight'] = 'normal'
+            shape['zorder'] = 2  # default shapes to draw after whatever draws first, probably contours
             
             for elem in format:
                 arr = elem.split("=")
                 if arr[0] == 'color':
                     shape['edgecolor'] = arr[1]
                 if arr[0] == 'width':
-                    shape['lw'] = arr[1]
+                    shape['lw'] = float(arr[1])
                 if arr[0] == 'dash':
                     if arr[1] == "1": shape['linestyle'] = "dashed"
                 if arr[0] == 'point':
                     shape['point'] = arr[1]
+                if arr[0] == 'zorder':
+                    shape['zorder'] = int(arr[1])
                 if arr[0] == 'text':
                     L=line_format.find("{")+1
                     R=line_format.find("}")
@@ -222,24 +225,24 @@ class RegionFile(object):
                 fill.append(1.0)
             elif shape['type'] == 'point':
                 if shape['point'] == 'circle':
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
                 if shape['point'] == 'box':
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
                 if shape['point'] == 'diamond':
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='d',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='d',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
                 if shape['point'] == 'cross':
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='+',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='+',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
                 if shape['point'] == 'x':
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='x',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='x',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
                 if shape['point'] == 'arrow':
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='>',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='>',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
                 if shape['point'] == 'boxcircle':
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
-                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
+                    collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
             if shape['type'] == 'text':
-                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],**kwargs)
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],zorder=zorder,**kwargs)
             elif shape.has_key('text'):
-                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],**kwargs)
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],zorder=zorder,**kwargs)
 
         
         # DO NOT USE COLLECTIONS!  Collections do not preserve linestyle or opacity.
