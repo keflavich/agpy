@@ -31,11 +31,12 @@ class luminosity:
 
     nu - frequency (assumed Hz)
     wnu - [optional/required for non-interpolation] width of frequency bin
+    lnu/unu - lower/upper bounds on frequency bin
     fnu - flux (assumed Jy)
     efnu - [optional; currently does nothing] flux error
     """
 
-    def __init__(self,nu,fnu,wnu=None,efnu=None,dist_pc=None,npoints=1e5):
+    def __init__(self,nu,fnu,wnu=None,lnu=None,unu=None,efnu=None,dist_pc=None,npoints=1e5):
 
         self.nu   = numpy.asarray(nu)
         nusort = numpy.argsort(self.nu)
@@ -44,6 +45,12 @@ class luminosity:
             self.wnu  = numpy.asarray(wnu)[nusort]
         except:
             self.wnu = wnu
+        try:
+            self.lnu  = numpy.asarray(lnu)[nusort]
+            self.unu  = numpy.asarray(unu)[nusort]
+        except:
+            self.lnu = lnu
+            self.unu = unu
         self.fnu  = numpy.asarray(fnu)[nusort]
         try: 
             self.efnu = numpy.asarray(efnu)[nusort]
@@ -60,10 +67,13 @@ class luminosity:
         The Casoli et al 1986 formula is not used...
         FIR (10^-13 W m^-2) = 1.75 ( F12 / 0.79 + F25/2 + F60/3.9 + F100/9.9 )
         """
-        if self.wnu is None:
+        if self.wnu is None and self.lnu is None:
             print "Must specify bandwidths."
             return
-        self._intflux = ( self.fnu * self.wnu ).sum()
+        elif self.wnu is not None:
+            self._intflux = ( self.fnu * self.wnu ).sum()
+        elif self.lnu is not None and self.unu is not None:
+            self._intflux = ( self.fnu * (self.unu-self.lnu) ).sum()
         return self._intflux
 
     def lbol_meas(self,dist_pc=None):
@@ -92,7 +102,7 @@ class luminosity:
     def mminterp(self,freq,lowfreq=c/500e-4,alpha=4.0,addpoint=True):
         """
         Creates an interpolated point using an assumed nu^alpha opacity...
-        defaults to alpha=4
+        defaults to alpha=4 (beta=2)
 
         Default point location is 500 microns
         """
@@ -127,6 +137,12 @@ class luminosity:
             if self.wnu is not None:
                 self.wnu = numpy.concatenate((self.wnu,numpy.array([0.0])))
                 self.wnu = self.wnu[nusort]
+            if self.lnu is not None:
+                self.lnu = numpy.concatenate((self.lnu,numpy.array([lowfreq])))
+                self.lnu = self.lnu[nusort]
+            if self.unu is not None:
+                self.unu = numpy.concatenate((self.unu,numpy.array([lowfreq])))
+                self.unu = self.unu[nusort]
 
 
     def fbol_interp(self,fnu=None,mminterp=True,npoints=1e5,addpoint=True,mmfreq=None,extrap=True,write=True):
@@ -236,6 +252,7 @@ class luminosity:
         """
         Computes the "bolometric temperature" as specified in the same document.
         Uses scipy's zeta function if scipy is available
+        
         """
         #print "tbol not yet implemented"
 
@@ -246,6 +263,8 @@ class luminosity:
 
         if self.interpdnu is not None and interp:
             meannu = (self.interpnu*self.interpfnu*self.interpdnu).sum() / (self.interpfnu*self.interpdnu).sum()
+        elif self.lnu is not None and self.unu is not None:
+            meannu = (self.nu*self.fnu*(self.unu-self.lnu)).sum() / (self.fnu*(self.unu-self.lnu)).sum()
         elif self.wnu is not None:
             meannu = (self.nu*self.fnu*self.wnu).sum() / (self.fnu*self.wnu).sum()
         else:
@@ -265,9 +284,21 @@ class luminosity:
 
         # must divide wnu by 2 because plotter assumes "1-sigma", but wnu is full width
         if nufnu:
+          if self.lnu is not None and self.unu is not None:
+            xerr = numpy.abs( numpy.array([self.lnu,self.unu]) - self.nu )
+            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=xerr,yerr=self.efnu*self.nu,fmt=',',**kwargs)
+          elif self.wnu is not None:
             pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu/2.0,yerr=self.efnu*self.nu,fmt=',',**kwargs)
+          else:
+            pylab.errorbar(self.nu,self.nu*self.fnu,yerr=self.efnu*self.nu,fmt=',',**kwargs)
         else:
+          if self.lnu is not None and self.unu is not None:
+            xerr = numpy.abs( numpy.array([self.lnu,self.unu]) - self.nu )
+            pylab.errorbar(self.nu,self.fnu,xerr=xerr,yerr=self.efnu,fmt=',',**kwargs)
+          elif self.wnu is not None:
             pylab.errorbar(self.nu,self.fnu,xerr=self.wnu/2.0,yerr=self.efnu,fmt=',',**kwargs)
+          else:
+            pylab.errorbar(self.nu,self.fnu,yerr=self.efnu,fmt=',',**kwargs)
         ax = pylab.gca()
         if loglog:
             ax.set_xscale('log')
