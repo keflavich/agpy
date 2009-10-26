@@ -34,6 +34,10 @@ class luminosity:
     lnu/unu - lower/upper bounds on frequency bin
     fnu - flux (assumed Jy)
     efnu - [optional; currently does nothing] flux error
+
+    When interpolation is used, data is added to the luminosity' classes nu/fnu vectors.
+    If you use, e.g. luminosity.lbol_meas(), it will still work correctly because it sets
+    wnu ~ unu-lnu = 0
     """
 
     def __init__(self,nu,fnu,wnu=None,lnu=None,unu=None,efnu=None,dist_pc=None,npoints=1e5):

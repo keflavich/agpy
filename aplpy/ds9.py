@@ -240,9 +240,9 @@ class RegionFile(object):
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='s',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
                     collections.append(matplotlib.pyplot.scatter(shape['x'],shape['y'],marker='o',edgecolor=shape['edgecolor'],facecolor='none',zorder=shape['zorder'],**kwargs))
             if shape['type'] == 'text':
-                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],zorder=zorder,**kwargs)
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],zorder=shape['zorder'],**kwargs)
             elif shape.has_key('text'):
-                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],zorder=zorder,**kwargs)
+                matplotlib.pyplot.annotate(shape['text'],(shape['x'],shape['y']),color=shape['edgecolor'],ha='center',va='center',fontsize=shape['fontsize'],fontweight=shape['fontweight'],fontstyle=shape['fontstyle'],zorder=shape['zorder'],**kwargs)
 
         
         # DO NOT USE COLLECTIONS!  Collections do not preserve linestyle or opacity.
