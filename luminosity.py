@@ -287,22 +287,28 @@ class luminosity:
             return
 
         # must divide wnu by 2 because plotter assumes "1-sigma", but wnu is full width
+
+        if self.efnu is None:
+            efnu = 0
+        else:
+            efnu = self.efnu
+
         if nufnu:
           if self.lnu is not None and self.unu is not None:
             xerr = numpy.abs( numpy.array([self.lnu,self.unu]) - self.nu )
-            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=xerr,yerr=self.efnu*self.nu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=xerr,yerr=efnu*self.nu,fmt=',',**kwargs)
           elif self.wnu is not None:
-            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu/2.0,yerr=self.efnu*self.nu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu/2.0,yerr=efnu*self.nu,fmt=',',**kwargs)
           else:
-            pylab.errorbar(self.nu,self.nu*self.fnu,yerr=self.efnu*self.nu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.nu*self.fnu,yerr=efnu*self.nu,fmt=',',**kwargs)
         else:
           if self.lnu is not None and self.unu is not None:
             xerr = numpy.abs( numpy.array([self.lnu,self.unu]) - self.nu )
-            pylab.errorbar(self.nu,self.fnu,xerr=xerr,yerr=self.efnu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.fnu,xerr=xerr,yerr=efnu,fmt=',',**kwargs)
           elif self.wnu is not None:
-            pylab.errorbar(self.nu,self.fnu,xerr=self.wnu/2.0,yerr=self.efnu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.fnu,xerr=self.wnu/2.0,yerr=efnu,fmt=',',**kwargs)
           else:
-            pylab.errorbar(self.nu,self.fnu,yerr=self.efnu,fmt=',',**kwargs)
+            pylab.errorbar(self.nu,self.fnu,yerr=efnu,fmt=',',**kwargs)
         ax = pylab.gca()
         if loglog:
             ax.set_xscale('log')
