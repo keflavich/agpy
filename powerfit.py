@@ -1,4 +1,5 @@
 import mpfit
+import numpy as np
 
 def powerfit(xax,data,alphaguess=-2.0,scaleguess=1.0,quiet=True):
     """
@@ -7,10 +8,10 @@ def powerfit(xax,data,alphaguess=-2.0,scaleguess=1.0,quiet=True):
     this code simply fits a power law
     """
     
-    logdata = log10(data)
+    logdata = np.log10(data)
 
     def mpfitfun(data):
-        def f(p,fjac=None): return [0,np.ravel((log10(p[0])+log10(xax)*p[1])-data)]
+        def f(p,fjac=None): return [0,np.ravel((np.log10(p[0])+np.log10(xax)*p[1])-data)]
         return f
         
     mp = mpfit.mpfit(mpfitfun(logdata),xall=[scaleguess,alphaguess],quiet=quiet)
