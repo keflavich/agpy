@@ -26,6 +26,7 @@ import pylab
 try:
     import fplfit
     usefortran=True
+    print "Fortran plfit module loaded successfully."
 except ImportError:
     print "Fortran module could not be loaded.  plfit will load with the \
             python module instead - it is fully functional but at least 4x \
@@ -34,8 +35,9 @@ except ImportError:
 try: 
     import cplfit
     cyok=True
+    print "Cython plfit module loaded successfully."
 except ImportError:
-    print "Cython module could not be loaded."
+    print "Cython plfit module could not be loaded."
     cyok=False
 
 import numpy.random as npr
