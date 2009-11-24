@@ -1,0 +1,1 @@
+from plfit import plfit
