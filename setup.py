@@ -8,5 +8,5 @@ setup(name='agpy',
       author='Adam Ginsburg',
       author_email='adam.ginsburg@colorado.edu',
       url='http://code.google.com/p/agpy/',
-      packages=['agpy','plfit'],
+      packages=['agpy','plfit','mpfit'],
      )
