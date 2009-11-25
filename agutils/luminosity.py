@@ -102,6 +102,7 @@ class luminosity:
         self.interpnu = 10**numpy.linspace(numpy.log10(self.nu[0]),numpy.log10(self.nu[-1]),npoints)
         self.interpfnu = self.interpnu*0.0
         self.addedpoint = False
+        self.extrapolated = False
 
     def mminterp(self,freq,lowfreq=c/500e-4,alpha=4.0,addpoint=True):
         """
@@ -190,15 +191,18 @@ class luminosity:
         dnu[:-1] = newnu[:-1]-newnu[1:]
         dnu[-1] = dnu[-2]
 
-        if extrap:
+        if extrap and not self.extrapolated:
             # extrapolate 50% from either endpoint
             nulow = newnu.min()/2.0
             nuhigh = newnu.max()*2.0
             dnulow = newnu.min()-nulow
             dnuhigh = newnu.max()-nuhigh
+            scale_lownu  = min( [ newfnu[0]/newfnu[1]  , 1.0 ] ) # do not allow positive-slope extrapolation
+            scale_highnu = min( [ self.fnu[-2]/self.fnu[-1], 0.5 ] )
             newnu  = numpy.concatenate( ([nulow],newnu,[nuhigh]) )
-            newfnu = numpy.concatenate( ([newfnu[0]],newfnu,[newfnu[-1]]) )
+            newfnu = numpy.concatenate( ([newfnu[0]*scale_lownu],newfnu,[newfnu[-1]*scale_highnu]) )
             dnu    = numpy.concatenate( ([dnulow],dnu,[dnuhigh]) )
+            self.extrapolated=True
 
         if write:
             self.interpdnu = numpy.abs(dnu)
@@ -280,7 +284,7 @@ class luminosity:
         return self.Tbol
 
 
-    def plotsed(self,loglog=True,nufnu=False,**kwargs):
+    def plotsed(self,loglog=True,nufnu=False,interpplot=False,**kwargs):
         """ Plots the SED """
         if not pylabok:
             print "pylab was not successfully imported.  Aborting."
@@ -301,6 +305,8 @@ class luminosity:
             pylab.errorbar(self.nu,self.nu*self.fnu,xerr=self.wnu/2.0,yerr=efnu*self.nu,fmt=',',**kwargs)
           else:
             pylab.errorbar(self.nu,self.nu*self.fnu,yerr=efnu*self.nu,fmt=',',**kwargs)
+          if interpplot:
+            pylab.plot(self.interpnu,self.interpfnu*self.interpnu,**kwargs)
         else:
           if self.lnu is not None and self.unu is not None:
             xerr = numpy.abs( numpy.array([self.lnu,self.unu]) - self.nu )
@@ -309,6 +315,8 @@ class luminosity:
             pylab.errorbar(self.nu,self.fnu,xerr=self.wnu/2.0,yerr=efnu,fmt=',',**kwargs)
           else:
             pylab.errorbar(self.nu,self.fnu,yerr=efnu,fmt=',',**kwargs)
+          if interpplot:
+            pylab.plot(self.interpnu,self.interpfnu,**kwargs)
         ax = pylab.gca()
         if loglog:
             ax.set_xscale('log')
