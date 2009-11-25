@@ -8,6 +8,7 @@ import numpy
 
 print "To create cplfit.so (for importing), call command: "
 print "python setup.py build_ext --inplace"
+print "If this fails, make sure c_numpy.pxd is in the path somewhere (e.g. this directory)"
 
 try:
     from numpy.distutils.misc_util import get_numpy_include_dirs
@@ -16,13 +17,13 @@ except AttributeError:
     numpy_include_dirs = numpy.get_include()
 
 
-ext_cplfit = Extension("cplfit", ["cplfit.pyx"], include_dirs = [numpy_include_dirs,
-   '/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/Cython/','.'],
+ext_cplfit = Extension("cplfit", ["cplfit.pyx"], include_dirs = numpy_include_dirs + \
+        ['/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/Cython/','.'],
    extra_compile_args=['-O3'])
 #ext_fplfit = Extension(name="fplfit",
 #                    sources=["fplfit.f"])
 
-if __name__=="main":
+if __name__=="__main__":
     setup(
         ext_modules = [ ext_cplfit ],
         cmdclass = {'build_ext': build_ext}
