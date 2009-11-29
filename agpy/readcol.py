@@ -60,7 +60,10 @@ def readcol(filename,skipline=0,names=False,fsep=None,twod=True,fixedformat=None
         asStruct - same as asdict, but returns a structure instead of a dictionary
             (i.e. you call struct.key instead of struct['key'])
         fixedformat - if you have a fixed format file, this is a python list of 
-            column lengths.  e.g. the first table above would be [3,5,5]
+            column lengths.  e.g. the first table above would be [3,5,5].  Note
+            that if you specify the wrong fixed format, you will get junk; if your
+            format total is greater than the line length, the last entries will all
+            be blank but readcol will not report an error.
 
     If you get this error: "scipy could not be imported.  Your table must have
     full rows." it means readcol cannot automatically guess which columns
