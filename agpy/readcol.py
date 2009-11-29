@@ -8,7 +8,7 @@ except:
     hasmode = False
 
 def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
-        asdict=False,comment='#',verbose=True,nullval=None,asStruct=True):
+        asdict=False,comment='#',verbose=True,nullval=None,asStruct=False):
     """
     The default return is a two dimensional float array.  You can specify
     the data type (e.g. dtype='S') in the normal python way.  If you want
@@ -21,13 +21,15 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
     1.0  3.4  5.6
     0.7  3.2  2.1
     ...
-    names,[x,y,z]=readcol("myfile.tbl",names=True,twod=False)
+    names,(x,y,z)=readcol("myfile.tbl",names=True,twod=False)
     or
     x,y,z=readcol("myfile.tbl",skipline=1,twod=False)
     or 
     names,xx = readcol("myfile.tbl",names=True)
     or
-    xxdict = readcol("myfile.tbl",asdict=True,names=True)
+    xxdict = readcol("myfile.tbl",asdict=True)
+    or
+    xxstruct = readcol("myfile.tbl",asStruct=True)
 
     CASE 2) no title is contained into the table, then there is
     no need to skipline:
@@ -58,6 +60,11 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
             tied to column data.  If asdict=True, names will be set to True
         asStruct - same as asdict, but returns a structure instead of a dictionary
             (i.e. you call struct.key instead of struct['key'])
+
+    If you get this error: "scipy could not be imported.  Your table must have
+    full rows." it means readcol cannot automatically guess which columns
+    contain data.  If you have scipy and columns of varying length, readcol will
+    read in all of the rows with length=mode(row lengths).
     """
     f=open(filename,'r').readlines()
     
