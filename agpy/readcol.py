@@ -1,5 +1,5 @@
 import string,re
-from numpy import asarray,nan
+from numpy import asarray,array,nan
 try:
     from scipy.stats import mode
     hasmode = True
@@ -7,7 +7,7 @@ except:
     print "scipy could not be imported.  Your table must have full rows."
     hasmode = False
 
-def readcol(filename,skipline=0,names=False,fsep=None,twod=True,
+def readcol(filename,skipline=0,names=False,fsep=None,twod=True,fixedformat=None,
         asdict=False,comment='#',verbose=True,nullval=None,asStruct=False):
     """
     The default return is a two dimensional float array.  If you want a list of
@@ -59,6 +59,8 @@ def readcol(filename,skipline=0,names=False,fsep=None,twod=True,
             tied to column data.  If asdict=True, names will be set to True
         asStruct - same as asdict, but returns a structure instead of a dictionary
             (i.e. you call struct.key instead of struct['key'])
+        fixedformat - if you have a fixed format file, this is a python list of 
+            column lengths.  e.g. the first table above would be [3,5,5]
 
     If you get this error: "scipy could not be imported.  Your table must have
     full rows." it means readcol cannot automatically guess which columns
@@ -79,24 +81,28 @@ def readcol(filename,skipline=0,names=False,fsep=None,twod=True,
             nameline = nameline[1:]
         nms=nameline.split(fsep)
     
-    fstrip = map(string.strip,f)
-    fseps = [ fsep for i in range(len(f)) ]
-    splitarr = map(string.split,fstrip,fseps)
-    for i in xrange(splitarr.count([''])):
-        splitarr.remove([''])
+    if fixedformat:
+        myreadff = lambda(x): readff(x,fixedformat)
+        splitarr = map(myreadff,f)
+    else:
+        fstrip = map(string.strip,f)
+        fseps = [ fsep for i in range(len(f)) ]
+        splitarr = map(string.split,fstrip,fseps)
+        for i in xrange(splitarr.count([''])):
+            splitarr.remove([''])
 
-    # check to make sure each line has the same number of columns to avoid 
-    # "ValueError: setting an array element with a sequence."
-    nperline = map(len,splitarr)
-    if hasmode:
-        ncols,nrows = mode(nperline)
-        if nrows != len(splitarr):
-            if verbose:
-                print "Removing %i rows that don't match most common length.  \
-                 \n%i rows read into array." % (len(splitarr) - nrows,nrows)
-            for i in xrange(len(splitarr)-1,-1,-1):  # need to go backwards
-                if nperline[i] != ncols:
-                    splitarr.pop(i)
+        # check to make sure each line has the same number of columns to avoid 
+        # "ValueError: setting an array element with a sequence."
+        nperline = map(len,splitarr)
+        if hasmode:
+            ncols,nrows = mode(nperline)
+            if nrows != len(splitarr):
+                if verbose:
+                    print "Removing %i rows that don't match most common length.  \
+                     \n%i rows read into array." % (len(splitarr) - nrows,nrows)
+                for i in xrange(len(splitarr)-1,-1,-1):  # need to go backwards
+                    if nperline[i] != ncols:
+                        splitarr.pop(i)
 
     # remove comment lines
     if comment is not None:
@@ -154,5 +160,16 @@ class Struct(object):
         R = re.compile('\W')  # find and remove all non-alphanumeric characters
         for k in namedict.keys():
             v = namedict.pop(k) 
+            if k[0].isdigit():
+                k = 'n'+k
             namedict[R.sub('',k)] = v  
         self.__dict__ = namedict
+
+def readff(s,format):
+
+    F = array([0]+format).cumsum()
+    bothF = zip(F[:-1],F[1:])
+    strarr = [s[l:u] for l,u in bothF]
+
+    return strarr
+
