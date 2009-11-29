@@ -148,8 +148,8 @@ def get_astype(arr,dtype):
 
 class Struct(object):
     def __init__(self,namedict):
-        R = re.compile('\W')
+        R = re.compile('\W')  # find and remove all non-alphanumeric characters
         for k in namedict.keys():
-            v = namedict.pop(k)
-            namedict[R.sub('',k)] = v
+            v = namedict.pop(k) 
+            namedict[R.sub('',k)] = v  
         self.__dict__ = namedict
