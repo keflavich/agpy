@@ -7,12 +7,12 @@ except:
     print "scipy could not be imported.  Your table must have full rows."
     hasmode = False
 
-def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
+def readcol(filename,skipline=0,names=False,fsep=None,twod=True,
         asdict=False,comment='#',verbose=True,nullval=None,asStruct=False):
     """
-    The default return is a two dimensional float array.  You can specify
-    the data type (e.g. dtype='S') in the normal python way.  If you want
-    a list of columns output instead of a 2D array, pass 'twod=False'.
+    The default return is a two dimensional float array.  If you want a list of
+    columns output instead of a 2D array, pass 'twod=False'.  In this case,
+    each column's data type will be automatically detected.
     
     Example usage:
     CASE 1) a table has the format:
@@ -52,7 +52,6 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
         names - read / don't read in the first line as a list of column names
                 can specify an integer line number too, though it will be 
                 the line number after skipping lines
-        dtype - datatype of numpy array
         twod - two dimensional or one dimensional output
         nullval - if specified, all instances of this value will be replaced
            with a floating NaN
@@ -100,27 +99,27 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
                     splitarr.pop(i)
 
     # remove comment lines
-    if comment != None:
+    if comment is not None:
         def commentfilter(a):
             try: return comment.find(a[0][0])
             except: return -1
         splitarr = filter(commentfilter,splitarr)
 
     try:
-        x = asarray( splitarr , dtype=dtype)
+        x = asarray( splitarr , dtype='float')
     except:
         if verbose: 
-            print "WARNING: reading as string array because %s array failed" % dtype
+            print "WARNING: reading as string array because %s array failed" % 'float'
         x = asarray( splitarr , dtype='S')
 
     if nullval is not None:
         x[x==nullval] = nan
-        x = get_astype(x,dtype)
+        x = get_autotype(x)
 
     if asdict or asStruct:
         mydict = dict(zip(nms,x.T))
         for k,v in mydict.iteritems():
-            mydict[k] = get_astype(v,dtype)
+            mydict[k] = get_autotype(v)
         if asdict:
             return mydict
         elif asStruct:
@@ -129,20 +128,24 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
         return nms,x
     elif names:
         # if not returning a twod array, try to return each vector as the spec. type
-        return nms,[ get_astype(x.T[i],dtype) for i in xrange(x.shape[1]) ]
+        return nms,[ get_autotype(x.T[i]) for i in xrange(x.shape[1]) ]
     else:
         if twod:
             return x
         else:
-            return [ get_astype(x.T[i],dtype) for i in xrange(x.shape[1]) ]
+            return [ get_autotype(x.T[i]) for i in xrange(x.shape[1]) ]
 
-def get_astype(arr,dtype):
+def get_autotype(arr):
     """
     Attempts to return a numpy array converted to the specified dtype
     Value errors will be caught and simply return the original array
     """
     try:
-        return arr.astype(dtype)
+        narr = arr.astype('float')
+        if (narr % 1).sum() == 0:
+            return narr.astype('int')
+        else:
+            return narr
     except ValueError:
         return arr
 
