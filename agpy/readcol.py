@@ -1,4 +1,4 @@
-import string
+import string,re
 from numpy import asarray,nan
 try:
     from scipy.stats import mode
@@ -8,7 +8,7 @@ except:
     hasmode = False
 
 def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
-        asdict=False,comment='#',verbose=True,nullval=None):
+        asdict=False,comment='#',verbose=True,nullval=None,asStruct=True):
     """
     The default return is a two dimensional float array.  You can specify
     the data type (e.g. dtype='S') in the normal python way.  If you want
@@ -55,13 +55,15 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
         nullval - if specified, all instances of this value will be replaced
            with a floating NaN
         asdict - zips names with data to create a dict with column headings 
-            tied to column data
+            tied to column data.  If asdict=True, names will be set to True
+        asStruct - same as asdict, but returns a structure instead of a dictionary
+            (i.e. you call struct.key instead of struct['key'])
     """
     f=open(filename,'r').readlines()
     
     null=[f.pop(0) for i in range(skipline)]
 
-    if names:
+    if names or asdict or asStruct:
         # can specify name line 
         if type(names) == type(1):
             nameline = f.pop(names)
@@ -108,17 +110,19 @@ def readcol(filename,skipline=0,names=False,dtype='float',fsep=None,twod=True,
         x[x==nullval] = nan
         x = get_astype(x,dtype)
 
-    if names is True:
+    if asdict or asStruct:
+        mydict = dict(zip(nms,x.T))
+        for k,v in mydict.iteritems():
+            mydict[k] = get_astype(v,dtype)
         if asdict:
-            mydict = dict(zip(nms,x.T))
-            for k,v in mydict.iteritems():
-                mydict[k] = get_astype(v,dtype)
             return mydict
-        elif twod:
-            return nms,x
-        else:
-            # if not returning a twod array, try to return each vector as the spec. type
-            return nms,[ get_astype(x.T[i],dtype) for i in xrange(x.shape[1]) ]
+        elif asStruct:
+            return Struct(mydict)
+    elif names and twod:
+        return nms,x
+    elif names:
+        # if not returning a twod array, try to return each vector as the spec. type
+        return nms,[ get_astype(x.T[i],dtype) for i in xrange(x.shape[1]) ]
     else:
         if twod:
             return x
@@ -134,3 +138,11 @@ def get_astype(arr,dtype):
         return arr.astype(dtype)
     except ValueError:
         return arr
+
+class Struct(object):
+    def __init__(self,namedict):
+        R = re.compile('\W')
+        for k in namedict.keys():
+            v = namedict.pop(k)
+            namedict[R.sub('',k)] = v
+        self.__dict__ = namedict
