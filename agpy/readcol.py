@@ -1,5 +1,5 @@
 import string,re
-from numpy import asarray,array,nan
+import numpy
 try:
     from scipy.stats import mode
     hasmode = True
@@ -115,14 +115,14 @@ def readcol(filename,skipline=0,names=False,fsep=None,twod=True,fixedformat=None
         splitarr = filter(commentfilter,splitarr)
 
     try:
-        x = asarray( splitarr , dtype='float')
+        x = numpy.asarray( splitarr , dtype='float')
     except:
         if verbose: 
             print "WARNING: reading as string array because %s array failed" % 'float'
-        x = asarray( splitarr , dtype='S')
+        x = numpy.asarray( splitarr , dtype='S')
 
     if nullval is not None:
-        x[x==nullval] = nan
+        x[x==nullval] = numpy.nan
         x = get_autotype(x)
 
     if asdict or asStruct:
@@ -146,8 +146,9 @@ def readcol(filename,skipline=0,names=False,fsep=None,twod=True,fixedformat=None
 
 def get_autotype(arr):
     """
-    Attempts to return a numpy array converted to the specified dtype
+    Attempts to return a numpy array converted to the most sensible dtype
     Value errors will be caught and simply return the original array
+    Tries to make dtype int, then float, then no change
     """
     try:
         narr = arr.astype('float')
@@ -159,6 +160,10 @@ def get_autotype(arr):
         return arr
 
 class Struct(object):
+    """
+    Simple struct intended to take a dictionary of column names -> columns
+    and turn it into a struct by removing special characters
+    """
     def __init__(self,namedict):
         R = re.compile('\W')  # find and remove all non-alphanumeric characters
         for k in namedict.keys():
@@ -169,8 +174,13 @@ class Struct(object):
         self.__dict__ = namedict
 
 def readff(s,format):
+    """
+    Fixed-format reader
+    Pass in a single line string (s) and a format list, 
+    which needs to be a python list of string lengths 
+    """
 
-    F = array([0]+format).cumsum()
+    F = numpy.array([0]+format).cumsum()
     bothF = zip(F[:-1],F[1:])
     strarr = [s[l:u] for l,u in bothF]
 
