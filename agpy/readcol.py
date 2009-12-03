@@ -1,4 +1,4 @@
-import string,re
+import string,re,sys
 import numpy
 try:
     from scipy.stats import mode
@@ -152,7 +152,7 @@ def get_autotype(arr):
     """
     try:
         narr = arr.astype('float')
-        if (narr % 1).sum() == 0:
+        if (narr < sys.maxint).all() and (narr % 1).sum() == 0:
             return narr.astype('int')
         else:
             return narr
