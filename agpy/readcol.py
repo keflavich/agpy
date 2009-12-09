@@ -7,8 +7,9 @@ except:
     print "scipy could not be imported.  Your table must have full rows."
     hasmode = False
 
-def readcol(filename,skipline=0,names=False,fsep=None,twod=True,fixedformat=None,
-        asdict=False,comment='#',verbose=True,nullval=None,asStruct=False):
+def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
+        fixedformat=None,asdict=False,comment='#',verbose=True,nullval=None,
+        asStruct=False):
     """
     The default return is a two dimensional float array.  If you want a list of
     columns output instead of a 2D array, pass 'twod=False'.  In this case,
@@ -83,6 +84,8 @@ def readcol(filename,skipline=0,names=False,fsep=None,twod=True,fixedformat=None
         if nameline[0]==comment:
             nameline = nameline[1:]
         nms=nameline.split(fsep)
+
+    null=[f.pop(0) for i in range(skipafter)]
     
     if fixedformat:
         myreadff = lambda(x): readff(x,fixedformat)
