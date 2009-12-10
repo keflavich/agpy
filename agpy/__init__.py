@@ -9,3 +9,5 @@ from UCHIIfitter import HIIregion
 from gaussfitter import moments,twodgaussian,gaussfit,onedgaussian,onedgaussfit
 from kdist import kdist,vector_kdist
 from plfit import plfit
+from reg_gal2cel import gal2cel
+from posang import posang
