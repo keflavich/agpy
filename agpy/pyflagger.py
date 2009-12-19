@@ -12,7 +12,8 @@ from matplotlib.patches import Rectangle,FancyArrow
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Cursor, MultiCursor
 import matplotlib.cm as cm
-from Scientific.IO import NetCDF
+#from Scientific.IO import NetCDF
+from scipy.io import netcdf
 import time
 import re
 import os
@@ -29,7 +30,7 @@ class Flagger:
   Example:
 
       import pyflagger
-      f = pyflagger.Flagger('050906_o11_raw_ds5.nc')
+      f = pyflagger.Flagger('050906_o11_raw_ds5.nc_indiv13pca_timestream00.fits','050906_o11_raw_ds5.nc')
       f.plotscan(0)
       f.close()
   """
@@ -88,7 +89,7 @@ class Flagger:
     self.counter = 0
     self.mouse_up = False
     self.connected = 0
-    self.renderer = matplotlib.backends.backend_agg.RendererAgg
+    #self.renderer = matplotlib.backends.backend_agg.RendererAgg
     self.rectangles=[[] for i in xrange(self.maxscan)]
     self.lines=[[] for i in xrange(self.maxscan)]
     self.arrows=[]
@@ -177,10 +178,10 @@ class Flagger:
 
  
   def readncfile(self):
-        self.ncfile = NetCDF.NetCDFFile(self.ncfilename,'r')
-        self.ncflags = asarray(self.ncfile.variables['flags'])
-        self.ncbolo_params = asarray(self.ncfile.variables['bolo_params'])
-        self.ncscans = asarray(self.ncfile.variables['scans_info'])
+        self.ncfile = netcdf.netcdf_file(self.ncfilename,'r') # NetCDF.NetCDFFile(self.ncfilename,'r')
+        self.ncflags = asarray(self.ncfile.variables['flags'].data)
+        self.ncbolo_params = asarray(self.ncfile.variables['bolo_params'].data)
+        self.ncscans = asarray(self.ncfile.variables['scans_info'].data)
         self.timelen = self.ncflags.shape[0]
         self.scanlen = self.ncscans[0,1]-self.ncscans[0,0]
         self.whscan = asarray([arange(self.scanlen)+i for i in self.ncscans[:,0]]).ravel()
@@ -668,7 +669,7 @@ class Flagger:
       if flags.min() < 0:
            flags[flags<0] = 0
       self.ncfile.close()
-      ncfile = NetCDF.NetCDFFile(self.ncfilename,'a')
+      ncfile = netcdf.netcdf_file(self.ncfilename,'a') # NetCDF.NetCDFFile(self.ncfilename,'a')
       ncfile.variables['flags'].assignValue(flags)
       ncfile.history += "\n Flagged on "+time.ctime()
       ncfile.flush()

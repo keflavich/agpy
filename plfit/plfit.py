@@ -114,7 +114,7 @@ class plfit:
         x = self.data
         z = numpy.sort(x)
         t = time.time()
-        xmins,argxmins = numpy.unique1d(z,return_index=True)#[:-1]
+        xmins,argxmins = numpy.unique(z,return_index=True)#[:-1]
         t = time.time()
         if xmin is None:
             if usefortran:
