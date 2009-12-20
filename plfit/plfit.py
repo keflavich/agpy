@@ -194,9 +194,9 @@ class plfit:
         """
         Plots CDF and powerlaw
         """
-        x=self.data
-        xmin=self._xmin
-        alpha=self._alpha
+        if not(x): x=self.data
+        if not(xmin): xmin=self._xmin
+        if not(alpha): alpha=self._alpha
 
         x=numpy.sort(x)
         n=len(x)
@@ -214,9 +214,9 @@ class plfit:
         """
         Plots PDF and powerlaw.
         """
-        x=self.data
-        xmin=self._xmin
-        alpha=self._alpha
+        if not(x): x=self.data
+        if not(xmin): xmin=self._xmin
+        if not(alpha): alpha=self._alpha
 
         x=numpy.sort(x)
         n=len(x)
@@ -253,6 +253,27 @@ class plfit:
         pylab.vlines(xmin,0.1,max(px),colors='r',linestyle='dashed')
 
         pylab.gca().set_xlim(min(x),max(x))
+
+    def plotppf(self,x=None,xmin=None,alpha=None,dolog=True,**kwargs):
+        if not(xmin): xmin=self._xmin
+        if not(alpha): alpha=self._alpha
+        if not(x): x=numpy.sort(self.data[self.data>xmin])
+        else: x=numpy.sort(x[x>xmin])
+
+        # N = M^(-alpha+1)
+        # M = N^(1/(-alpha+1))
+        
+        m0 = min(x)
+        N = (1.0+numpy.arange(len(x)))[::-1]
+        xmodel = m0 * N**(1/(1-alpha)) / max(N)**(1/(1-alpha))
+        
+        if dolog:
+            pylab.loglog(x,xmodel,'.',**kwargs)
+            pylab.gca().set_xlim(min(x),max(x))
+            pylab.gca().set_ylim(min(x),max(x))
+        else:
+            pylab.plot(x,xmodel,'.',**kwargs)
+        pylab.plot([min(x),max(x)],[min(x),max(x)],'k--')
 
     def test_pl(self,niter=1e3,**kwargs):
         """
