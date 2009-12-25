@@ -33,9 +33,38 @@ class Flagger:
       f = pyflagger.Flagger('050906_o11_raw_ds5.nc_indiv13pca_timestream00.fits','050906_o11_raw_ds5.nc')
       f.plotscan(0)
       f.close()
+
+  Key commands:
+    left click - flag
+    right click - unflag
+    n - next scan
+    p - previous scan
+    q - save and quit
+    Q - quit (no save)
+    . - point to this point in the map
+    f - plot footprint of array at this time point
+    R - reverse order of flag boxes (to delete things hiding on the bottom)
+    r - redraw
+    d - delete flag box
+    t - flag timepoint
+    s - flag scan
+    w - flag Whole scan (this is the same as s, except some python backends catch / steal 's')
+    S - unflag scan
+    b - flag bolometer
+    T - unflag timepoint
+    B - unflag bolometer
+    c - toggle current scan
+    v - display data value
+ 
+  Map Key Commands:
+    c - toggle current scan
+    . - show point in timestream
+    click - show point in timestream
+    r - redraw
+
   """
 
-  def __init__(self, filename, ncfilename='', flagfile='', mapnum='', axis=None):
+  def __init__(self, filename, ncfilename='', flagfile='', mapnum='', axis=None, vmax=None):
     fnsearch = re.compile(
             '([0-9]{6}_o[0-9b][0-9]_raw_ds5.nc)(_indiv[0-9]{1,2}pca)').search(filename)
     ncsearch = re.compile(
@@ -102,12 +131,16 @@ class Flagger:
     self.open = 1
     self.currentscan = 0
 
-    self.showmap()
+    self.showmap(vmax=vmax)
 
-  def showmap(self,colormap=cm.spectral):
+  def showmap(self,colormap=cm.spectral,vmax=None):
     self.fig0=figure(0); clf(); 
+    if not vmax:
+        vmax = self.map.mean()+7*self.map.std()
+    elif vmax=='max':
+        vmax = self.map.max()
     imshow(self.map,vmin=self.map.mean()-2*self.map.std(),
-            vmax=self.map.mean()+7*self.map.std(),interpolation='nearest',
+            vmax=vmax,interpolation='nearest',
             cmap=colormap); 
     colorbar()
     try:
@@ -504,7 +537,7 @@ class Flagger:
           self.flag_box(self.x1,self.y1,self.x2,self.y2,'d')
       elif event.key == 't':
           self.flag_time(event.ydata,event.key)
-      elif event.key == 's':
+      elif event.key == 's' or event.key == 'w':
           self.flags[self.scannum,:,:] += 1
       elif event.key == 'S':
           self.flags[self.scannum,:,:] -= (self.flags[self.scannum,:,:] > 0)
@@ -563,8 +596,8 @@ class Flagger:
               self.arrows.append(a1)
               self.arrows.append(a2)
 #          draw()
-          self.datafig.axes[0].draw()
-          self.datafig.axes[1].draw()
+          self.datafig.canvas.draw()
+          self.datafig.canvas.draw()
 #          self.datafig
 
   def maparrow(self,tsx,tsy):
@@ -669,7 +702,7 @@ class Flagger:
       if flags.min() < 0:
            flags[flags<0] = 0
       self.ncfile.close()
-      ncfile = netcdf.netcdf_file(self.ncfilename,'a') # NetCDF.NetCDFFile(self.ncfilename,'a')
+      ncfile = netcdf.netcdf_file(self.ncfilename,'w') # NetCDF.NetCDFFile(self.ncfilename,'a')
       ncfile.variables['flags'].assignValue(flags)
       ncfile.history += "\n Flagged on "+time.ctime()
       ncfile.flush()
