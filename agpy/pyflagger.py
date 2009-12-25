@@ -472,7 +472,7 @@ class Flagger:
 
   def writeflags(self):
       tempdata = self.data
-      self.tsfile[0].data = self.flags
+      self.tsfile[0].data = asarray(self.flags,dtype='int')
       self.tsfile.writeto(self.flagfn,clobber=True)
       self.tsfile[0].data = tempdata
 
@@ -682,7 +682,7 @@ class Flagger:
 #      flags = asarray(ncfile.variables['flags'])
 #      bolo_params = asarray(ncfile.variables['bolo_params'])
 #      scans_info = asarray(ncfile.variables['scans_info'])
-      flags = asarray(self.ncflags)
+      flags = copy.copy(asarray(self.ncflags))
       scans_info = asarray(self.ncscans)
       bolo_params = asarray(self.ncbolo_params)
       nbolos = self.nbolos
@@ -701,11 +701,33 @@ class Flagger:
               [nscans*scanlen,self.ngoodbolos])
       if flags.min() < 0:
            flags[flags<0] = 0
-      self.ncfile.close()
-      ncfile = netcdf.netcdf_file(self.ncfilename,'w') # NetCDF.NetCDFFile(self.ncfilename,'a')
-      ncfile.variables['flags'].assignValue(flags)
+      #self.ncfile.close()
+      #ncfile = netcdf.netcdf_file(self.ncfilename.replace("_ds5","_ds5_flagged"),'w') # NetCDF.NetCDFFile(self.ncfilename,'a')
+      #ncfile.variables = self.ncfile.variables
+      #ncfile.dimensions = self.ncfile.dimensions
+      ncfile = copy.copy(self.ncfile)
+      ncfile.filename = ncfile.filename.replace("_ds5","_ds5_flagged")
+      ncfile.fp = open(ncfile.filename,'w')
+      ncfile.mode = 'w'
+      ncfile.variables['flags'].data = flags
+      ncfile.createDimension('one',1)
+      for key,var in ncfile.variables.items(): 
+          if var.shape is ():
+              var.dimensions = ('one',)
+          if var.__dict__.has_key('file'):
+              var.file = (var.file,)
+          if var.__dict__.has_key('units'):
+              var.units = (var.units,)
+          #if type(var.data) in (type(1),type(1.0)):
+          #    var.data = [var.data]
+          for k,v in var.__dict__.items():
+              if k not in ('_shape','_attributes','add_offset','scale_factor'):
+                  try:
+                      TEMP = v[0]
+                  except:
+                      print "Failed at %s with value %s and type %s" % (k,v,type(v))
       ncfile.history += "\n Flagged on "+time.ctime()
-      ncfile.flush()
+      ncfile._write()
 #      print ncfile.variables['flags'].max()
 #      import pdb; pdb.set_trace()
       ncfile.close()
