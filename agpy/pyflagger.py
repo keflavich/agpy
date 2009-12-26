@@ -5,7 +5,7 @@ import pylab
 from pylab import *
 import matplotlib
 import pyfits
-from numpy import isnan
+import numpy 
 from mad import MAD,nanmedian
 #from matplotlib import patches
 from matplotlib.patches import Rectangle,FancyArrow
@@ -18,7 +18,8 @@ import time
 import re
 import os
 import copy
-
+import idlsave
+import gaussfitter
 
 matplotlib.defaultParams['image.origin']='lower'
 matplotlib.defaultParams['image.interpolation']='nearest'
@@ -64,74 +65,153 @@ class Flagger:
 
   """
 
-  def __init__(self, filename, ncfilename='', flagfile='', mapnum='', axis=None, vmax=None):
-    fnsearch = re.compile(
-            '([0-9]{6}_o[0-9b][0-9]_raw_ds5.nc)(_indiv[0-9]{1,2}pca)').search(filename)
-    ncsearch = re.compile(
-            '[0-9]{6}_o[0-9b][0-9]_raw_ds5.nc').search(ncfilename)
-    if fnsearch is None:
-        print "Couldn't find the correct prefix in the filename" \
-                +" - expected form like 050906_o11_raw_ds5.nc_indiv13pca_timestream00.fits"
-        return
-    mapnumsearch = re.compile('([0-9]{2})(\.fits)').search(filename)
-    if mapnumsearch is not None and mapnum=='':
-        mapnum = mapnumsearch.groups()[0]
-    else:
-        mapnum = '01'
+  def __init__(self, filename, **kwargs):
+      if filename[-4:] == 'fits':
+          self._loadfits(filename,**kwargs)
+      elif filename[-3:] == 'sav':
+          self._loadsav(filename,**kwargs)
 
-    if fnsearch.groups()[0] == ncsearch.group():
-        self.ncfilename = ncfilename # self.pathprefix+fnsearch.groups()[0]
-        self.readncfile()
-    else:
-        print "Warning: the NCDF filename doesn't match the input fits file name."\
-                + "You'll probably get errors and your work won't be saved."
-        self.ncfilename = self.pathprefix+fnsearch.groups()[0]
+  def _loadfits(self, filename, ncfilename='', flagfile='', mapnum='', axis=None, **kwargs):
+      fnsearch = re.compile(
+              '([0-9]{6}_o[0-9b][0-9]_raw_ds5.nc)(_indiv[0-9]{1,2}pca)').search(filename)
+      ncsearch = re.compile(
+              '[0-9]{6}_o[0-9b][0-9]_raw_ds5.nc').search(ncfilename)
+      if fnsearch is None:
+          print "Couldn't find the correct prefix in the filename" \
+                  +" - expected form like 050906_o11_raw_ds5.nc_indiv13pca_timestream00.fits"
+          return
+      mapnumsearch = re.compile('([0-9]{2})(\.fits)').search(filename)
+      if mapnumsearch is not None and mapnum=='':
+          mapnum = mapnumsearch.groups()[0]
+      else:
+          mapnum = '01'
 
-    self.fileprefix = fnsearch.group()
-    self.pathprefix = filename[:fnsearch.start()]
-    self.tsfn = self.pathprefix+self.fileprefix+"_timestream00.fits"
-    self.tsfile = pyfits.open(self.tsfn)
-    self.mapfn = self.pathprefix+self.fileprefix+"_map"+mapnum+".fits"
-    self.mapfile = pyfits.open(self.mapfn)
-    self.map = self.mapfile[0].data
-    self.map[isnan(self.map)] = 0
-    self.tstomapfn = self.pathprefix+self.fileprefix+"_tstomap.fits"
-    self.tstomapfile = pyfits.open(self.tstomapfn)
-    self.tstomap = self.tstomapfile[0].data
+      if fnsearch.groups()[0] == ncsearch.group():
+          self.ncfilename = ncfilename # self.pathprefix+fnsearch.groups()[0]
+          self.readncfile()
+      else:
+          print "Warning: the NCDF filename doesn't match the input fits file name."\
+                  + "You'll probably get errors and your work won't be saved."
+          self.ncfilename = self.pathprefix+fnsearch.groups()[0]
 
-#    self.outfile = open(self.pathprefix+"log_"+self.fileprefix+"_flags.log",'a')
-    self.data = self.tsfile[0].data
-    self.aspect = float(self.data.shape[2])/float(self.data.shape[1])
-    self.maxscan = self.data.shape[0]
-    self.flagfn = self.pathprefix+self.fileprefix+"_flags.fits"
-#    if os.path.exists(self.flagfn):
-#        self.flagfile = pyfits.open(self.flagfn)
-#        self.flags = self.flagfile[0].data
-#        if self.flags.shape != self.data.shape:
-#            print "Flags / data shape are different.",self.flags.shape,self.data.shape
-#    else:
-#        self.flagfile = copy.copy(self.tsfile)
-#        self.flags = zeros(self.data.shape,dtype='int')
-    print "There are %i scans" % (self.data.shape[0])
-#    print >>self.outfile,"Started a new session at "+time.asctime()
-    self.reset()
-    self.counter = 0
-    self.mouse_up = False
-    self.connected = 0
-    #self.renderer = matplotlib.backends.backend_agg.RendererAgg
-    self.rectangles=[[] for i in xrange(self.maxscan)]
-    self.lines=[[] for i in xrange(self.maxscan)]
-    self.arrows=[]
-    self.maparrows=[]
-    self.md = 0
-    self.mu = 0
-    self.key = 0
-    self.scannum = 0
-    self.fignum = 1
-    self.open = 1
-    self.currentscan = 0
+      self.fileprefix = fnsearch.group()
+      self.pathprefix = filename[:fnsearch.start()]
+      self.tsfn = self.pathprefix+self.fileprefix+"_timestream00.fits"
+      self.tsfile = pyfits.open(self.tsfn)
+      self.mapfn = self.pathprefix+self.fileprefix+"_map"+mapnum+".fits"
+      self.mapfile = pyfits.open(self.mapfn)
+      self.map = self.mapfile[0].data
+      self.map[numpy.isnan(self.map)] = 0
+      self.tstomapfn = self.pathprefix+self.fileprefix+"_tstomap.fits"
+      self.tstomapfile = pyfits.open(self.tstomapfn)
+      self.tstomap = self.tstomapfile[0].data
 
-    self.showmap(vmax=vmax)
+#      self.outfile = open(self.pathprefix+"log_"+self.fileprefix+"_flags.log",'a')
+      self.data = self.tsfile[0].data
+      self.flagfn = self.pathprefix+self.fileprefix+"_flags.fits"
+#      if os.path.exists(self.flagfn):
+#          self.flagfile = pyfits.open(self.flagfn)
+#          self.flags = self.flagfile[0].data
+#          if self.flags.shape != self.data.shape:
+#              print "Flags / data shape are different.",self.flags.shape,self.data.shape
+#      else:
+#          self.flagfile = copy.copy(self.tsfile)
+#          self.flags = zeros(self.data.shape,dtype='int')
+      self._initialize_vars(**kwargs)
+  
+  def _initialize_vars(self,vmax=None):
+      print "There are %i scans" % (self.data.shape[0])
+      #print >>self.outfile,"Started a new session at "+time.asctime()
+      self.reset()
+      self.counter = 0
+      self.mouse_up = False
+      self.connected = 0
+      #self.renderer = matplotlib.backends.backend_agg.RendererAgg
+      self.maxscan = self.data.shape[0]
+      self.rectangles=[[] for i in xrange(self.maxscan)]
+      self.lines=[[] for i in xrange(self.maxscan)]
+      self.arrows=[]
+      self.maparrows=[]
+      self.md = 0
+      self.mu = 0
+      self.key = 0
+      self.scannum = 0
+      self.fignum = 1
+      self.open = 1
+      self.currentscan = 0
+      self.aspect = float(self.data.shape[2])/float(self.data.shape[1])
+      self.plotfig = None
+
+      self.showmap(vmax=vmax)
+  
+  def _loadsav(self,savfile,**kwargs):
+      self.sav = idlsave.read(savfile)
+
+      self.ncfilename = savfile
+
+      self.set_tsplot(**kwargs)
+
+      self.ncscans = self.sav.variables['bgps']['scans_info'][0]
+      self.scanlen = self.ncscans[0,1]-self.ncscans[0,0]
+      self.ncflags = self.sav.variables['bgps']['flags'][0] 
+      self.timelen = self.ncflags.shape[0]
+      self.nbolos = self.ncflags.shape[1]
+      self.nscans = self.ncscans.shape[0]
+      self.ncbolo_params = self.sav.variables['bgps']['bolo_params'][0]
+      self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
+      self.ngoodbolos = self.bolo_indices.shape[0]
+      self.whscan = asarray([arange(self.scanlen)+i for i in self.ncscans[:,0]]).ravel()
+
+      self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
+
+      self.astrosignal = nantomask( reshape( self.sav.variables['bgps']['astrosignal'][0][self.whscan,:] , self.datashape) )
+      self.atmosphere  = nantomask( reshape( self.sav.variables['bgps']['atmosphere'][0][self.whscan,:]  , self.datashape) )
+      self.ac_bolos    = nantomask( reshape( self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:]    , self.datashape) )
+      self.dc_bolos    = nantomask( reshape( self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:]    , self.datashape) )
+      self.scalearr    = nantomask( reshape( self.sav.variables['bgps']['scalearr'][0][self.whscan,:]    , self.datashape) )
+      self.weight      = nantomask( reshape( self.sav.variables['bgps']['weight'][0][self.whscan,:]      , self.datashape) )
+      self.flags       = nantomask( reshape( self.sav.variables['bgps']['flags'][0][self.whscan,:]       , self.datashape) )
+      if self.tsplot == 'astrosignal' and self.astrosignal.sum() == 0:
+          self.data        = self.astrosignal*self.scalearr
+      elif self.tsplot == 'dcbolos':
+          self.data        = self.dc_bolos*self.scalearr
+      elif self.tsplot == 'acbolos':
+          self.data        = self.ac_bolos*self.scalearr
+      else:
+          self.data        = self.ac_bolos*self.scalearr - self.atmosphere
+      self.ncfile = None
+      self.flagfn = savfile.replace("sav","_flags.fits")
+
+      self.map      = nantomask( self.sav.variables['mapstr']['astromap'][0] )
+      self.tstomap  = reshape( self.sav.variables['mapstr']['ts'][0][self.whscan,:] , self.datashape )
+
+      if self.map.sum() == 0:
+          self.map  = nantomask( self.sav.variables['mapstr']['rawmap'][0] )
+
+      print "DONT SAVE NEED TO CONVERT IDL TEXT HEADERS TO PYFITS HDU CARDS"
+      self.header = self.sav.variables['mapstr']['hdr'][0]
+
+      self._initialize_vars(**kwargs)
+  
+  def set_tsplot(self,tsplot='default'):
+      if tsplot is not None:
+          self.tsplot = tsplot
+
+  def readncfile(self):
+        self.ncfile = netcdf.netcdf_file(self.ncfilename,'r') # NetCDF.NetCDFFile(self.ncfilename,'r')
+        self.ncflags = asarray(self.ncfile.variables['flags'].data)
+        self.ncbolo_params = asarray(self.ncfile.variables['bolo_params'].data)
+        self.ncscans = asarray(self.ncfile.variables['scans_info'].data)
+        self.timelen = self.ncflags.shape[0]
+        self.scanlen = self.ncscans[0,1]-self.ncscans[0,0]
+        self.whscan = asarray([arange(self.scanlen)+i for i in self.ncscans[:,0]]).ravel()
+        self.nbolos = self.ncflags.shape[1]
+        self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
+        self.nscans = self.ncscans.shape[0]
+        ft = self.ncflags[self.whscan,:]
+        self.ngoodbolos = self.bolo_indices.shape[0]
+        self.flags = reshape(ft[:,self.bolo_indices],[self.nscans,self.scanlen,self.ngoodbolos])
+
 
   def showmap(self,colormap=cm.spectral,vmax=None):
     self.fig0=figure(0); clf(); 
@@ -153,78 +233,36 @@ class Flagger:
     self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
     self.connections=[self.MtoT]
 
-  def __call__(self, event):
-    """ this section is never invoked """
-    if event.inaxes:
-      clickX = event.xdata
-      clickY = event.ydata
-      print event.xdata, event.x
-#      tb = get_current_fig_manager().toolbar
-#      self.flagpoint(clickY,clickX,event.button)
-#      print clickX,clickY
-#      print self.axis
-#      print event.inaxes
-#      if ((self.axis is None) or (self.axis==event.inaxes)) and tb.mode=='':
-#        self.flagpoint(clickY,clickX,event.button)
 
-
-  def footprint(self,tsx,tsy):
+  def footprint(self,tsx,tsy,scatter=False):
     mappoints = asarray(self.tstomap[self.scannum,tsy,:])
-
-#    for a in self.maparrows:
-#        a.set_visible(False)
-#    for a in self.maparrows:
-#        self.maparrows.remove(a)
 
     x,y = mappoints / self.map.shape[1],mappoints % self.map.shape[1]
 
-    try:
-#        self.fp1.set_visible(False)
-        self.fp2[0].set_visible(False)
-        self.fp3[0].set_visible(False)
-#        draw()
-    except:
-        pass
-#        print "Could not set_visible(False)"
-#        draw()
+    if scatter:
+        self.plotfig=figure(4)
+        self.plotfig.clf()
+        downsample_factor = 2.
+        pylab.imshow(gridmap(x,y,self.data.data[self.scannum,tsy,:].flat,downsample_factor=downsample_factor)
+                ,interpolation='bilinear')
+        pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
 
-    figure(0)
-    myaxis = self.fig0.axes[0].axis()
-    self.fp3 = plot(y,x,'ro')
-#    self.fp1 = plot(y,x,'b+')
-    self.fp2 = plot(y,x,'wx')
-    self.fig0.axes[0].axis(myaxis)
-#    self.fp1 = scatter(y,x,30,'blue','+',edgecolor='blue')
-#    self.fp2 = scatter(y,x,30,'red','x',edgecolor='red')
-#    self.fig0.axes[0].images[0].cmap =
-#    gray()
-#    for mp in mappoints:
-#        a1 = arrow(y+2,x+2,-4,-4,head_width=0,facecolor='red',
-#           edgecolor='red',length_includes_head=True,head_starts_at_zero=False)
-#        a2 = arrow(y-2,x+2,4,-4,head_width=0,facecolor='red',
-#           edgecolor='red',length_includes_head=True,head_starts_at_zero=False)
-#        a1.set_visible(True)
-#        a2.set_visible(True)
-#        self.maparrows.append(a1)
-#        self.maparrows.append(a2)
-    draw()
+    else:
+        try:
+            self.fp2[0].set_visible(False)
+            self.fp3[0].set_visible(False)
+            self._refresh()
+        except:
+            pass
 
+        figure(0)
+        myaxis = self.fig0.axes[0].axis()
+        self.fp3 = plot(y,x,'ro')
+    #    self.fp1 = plot(y,x,'b+')
+        self.fp2 = plot(y,x,'wx')
+        self.fig0.axes[0].axis(myaxis)
+    self._refresh()
  
-  def readncfile(self):
-        self.ncfile = netcdf.netcdf_file(self.ncfilename,'r') # NetCDF.NetCDFFile(self.ncfilename,'r')
-        self.ncflags = asarray(self.ncfile.variables['flags'].data)
-        self.ncbolo_params = asarray(self.ncfile.variables['bolo_params'].data)
-        self.ncscans = asarray(self.ncfile.variables['scans_info'].data)
-        self.timelen = self.ncflags.shape[0]
-        self.scanlen = self.ncscans[0,1]-self.ncscans[0,0]
-        self.whscan = asarray([arange(self.scanlen)+i for i in self.ncscans[:,0]]).ravel()
-        self.nbolos = self.ncflags.shape[1]
-        self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
-        self.nscans = self.ncscans.shape[0]
-        ft = self.ncflags[self.whscan,:]
-        self.ngoodbolos = self.bolo_indices.shape[0]
-        self.flags = reshape(ft[:,self.bolo_indices],[self.nscans,self.scanlen,self.ngoodbolos])
-
 
   def plotscan(self, scannum, fignum=1, button=1):
     if self.connected:
@@ -250,7 +288,7 @@ class Flagger:
     self.showrects()
     self.showlines()
     self.cursor = Cursor(gca(),useblit=True,color='black',linewidth=1)
-    draw()
+    self._refresh()
     self.md=connect('button_press_event',self.mouse_down_event)
     self.mu=connect('button_release_event',self.mouse_up_event)
     self.key = connect('key_press_event',self.keypress)
@@ -296,7 +334,7 @@ class Flagger:
 #                  print >>self.outfile,"Removed object with center %f,%f"\
 #                          % (p.get_x(),p.get_y())
                   break
-          draw()
+          self._refresh()
  
   def flag_box(self,x1,y1,x2,y2,button):
 #      x = (x1+x2)/2.
@@ -331,7 +369,7 @@ class Flagger:
           p.set_alpha(.5)
 #          self.axis.draw()
           self.rectangles[self.scannum].append(p)
-          draw()
+          self._refresh()
 #          print x,y,w,h,p
 #          print >>self.outfile,\
 #                  "flag_manual,'%s',bolorange=[%i,%i],timerange=[%i,%i],scanrange=%i" \
@@ -347,7 +385,7 @@ class Flagger:
           p.set_visible(True)
           p.set_alpha(.5)
           self.rectangles[self.scannum].append(p)
-          draw()
+          self._refresh()
 #          print >>self.outfile,\
 #                  "undo_flag,'%s',bolorange=[%i,%i],timerange=[%i,%i],scanrange=%i" \
 #                  % (self.ncfilename,x1,x2,y1,y2,self.scannum)
@@ -377,7 +415,7 @@ class Flagger:
 #                  print >>self.outfile,"Removed object with center %f,%f"\
 #                          % (p.get_x(),p.get_y())
                   break
-          draw()
+          self._refresh()
       elif button==3:
           self.maparrow(x2i,y2i)
  
@@ -392,7 +430,7 @@ class Flagger:
           gca().add_line(p)
           p.set_visible(True)
           self.lines[self.scannum].append(p)
-          draw()
+          self._refresh()
 #          print >>self.outfile,\
 #                  "flag_manual,'%s',bolorange=[%i],scanrange=%i" \
 #                  % (self.ncfilename,x,self.scannum)
@@ -407,7 +445,7 @@ class Flagger:
           gca().add_line(p)
           p.set_visible(True)
           self.lines[self.scannum].append(p)
-          draw()
+          self._refresh()
 #          print >>self.outfile,\
 #                  "flag_manual,'%s',timerange=[%i,%i],scanrange=%i" \
 #                  % (self.ncfilename,0,w,self.scannum)
@@ -421,7 +459,7 @@ class Flagger:
                   self.flags[self.scannum,y,0:w] -= 1
                   l.set_visible(False)
                   self.lines[self.scannum].remove(l)
-                  draw()
+                  self._refresh()
           if self.flags[self.scannum,y,0:w].max() > 0:
               arr = self.flags[self.scannum,y,0:w]
               arr[arr>0] -= 1
@@ -436,7 +474,7 @@ class Flagger:
                   self.flags[self.scannum,0:h,x] -= 1
                   l.set_visible(False)
                   self.lines[self.scannum].remove(l)
-                  draw()
+                  self._refresh()
           if self.flags[self.scannum,0:h,x].max() > 0:
               arr = self.flags[self.scannum,0:h,x]
               arr[arr>0] -= 1
@@ -462,7 +500,7 @@ class Flagger:
       if self.open == 1:
            self.open = 0
            self.dcon()
-           if write:
+           if write and self.ncfile:
                self.write_ncdf()
 #           self.outfile.close()
      #      self.writeflags()
@@ -472,9 +510,13 @@ class Flagger:
 
   def writeflags(self):
       tempdata = self.data
-      self.tsfile[0].data = asarray(self.flags,dtype='int')
-      self.tsfile.writeto(self.flagfn,clobber=True)
-      self.tsfile[0].data = tempdata
+      if self.tsfile:
+          self.tsfile[0].data = asarray(self.flags,dtype='int')
+          self.tsfile.writeto(self.flagfn,clobber=True)
+          self.tsfile[0].data = tempdata
+      elif self.header:
+          self.flagfits = pyfits.PrimaryHDU(asarray(self.flags,dtype='int'),self.header)
+          self.flagfits.writeto(self.flagfn,clobber=True)
 
   def mapclick(self,event):
       if event.xdata == None:
@@ -516,28 +558,17 @@ class Flagger:
           self.maparrow(round(event.xdata),round(event.ydata))
       elif event.key == 'f':
           self.footprint(round(event.xdata),round(event.ydata))
+      elif event.key == 'F':
+          self.footprint(round(event.xdata),round(event.ydata),scatter=True)
       elif event.key == 'R': # reverse order of boxes
           self.rectangles[self.scannum].reverse()
       elif event.key == 'r': # redraw
-        #figure(self.fignum+1); clf()
-        #subplot(122)
-        #imshow(self.flags[self.scannum,:,:],\
-        #interpolation='nearest',origin='lower',aspect=.1)
-        #colorbar()
-        #figure(self.fignum);clf(); #subplot(121)
-        #self.plane = self.data[self.scannum,:,:]\
-        #        * (self.flags[self.scannum,:,:]==0)
-        #imshow(self.plane,interpolation='nearest',origin='lower',aspect=.1)
-        #colorbar()
         self.plotscan(self.scannum)
-        #self.showrects()
-        #self.showlines()
-        #draw()
       elif event.key == 'd':
           self.flag_box(self.x1,self.y1,self.x2,self.y2,'d')
       elif event.key == 't':
           self.flag_time(event.ydata,event.key)
-      elif event.key == 's' or event.key == 'w':
+      elif event.key == 's' or event.key == 'w': # "whole" scan
           self.flags[self.scannum,:,:] += 1
       elif event.key == 'S':
           self.flags[self.scannum,:,:] -= (self.flags[self.scannum,:,:] > 0)
@@ -595,10 +626,7 @@ class Flagger:
 #              print a,t,b
               self.arrows.append(a1)
               self.arrows.append(a2)
-#          draw()
-          self.datafig.canvas.draw()
-          self.datafig.canvas.draw()
-#          self.datafig
+          self._refresh()
 
   def maparrow(self,tsx,tsy):
 
@@ -621,7 +649,7 @@ class Flagger:
     a2.set_visible(True)
     self.maparrows.append(a1)
     self.maparrows.append(a2)
-    draw()
+    self._refresh()
 
   def toggle_currentscan(self):
       if self.currentscan == 0:
@@ -678,6 +706,9 @@ class Flagger:
 
   
   def write_ncdf(self):
+      if not self.ncfile:
+          print "Not writing NCDF file"
+          return
 
 #      flags = asarray(ncfile.variables['flags'])
 #      bolo_params = asarray(ncfile.variables['bolo_params'])
@@ -731,3 +762,75 @@ class Flagger:
 #      print ncfile.variables['flags'].max()
 #      import pdb; pdb.set_trace()
       ncfile.close()
+
+  def _refresh(self):
+      self.flagfig.canvas.draw()
+      self.datafig.canvas.draw()
+      self.fig0.canvas.draw()
+      if self.plotfig is not None:
+          self.plotfig.canvas.draw()
+
+def nantomask(arr):
+    mask = (arr != arr)
+    return numpy.ma.masked_where(mask,arr)
+
+def downsample(myarr,factor):
+    xs,ys = myarr.shape
+    crarr = myarr[:xs-(xs % int(factor)),:ys-(ys % int(factor))]
+    dsarr = numpy.concatenate([[crarr[i::factor,j::factor]
+        for i in xrange(factor)]
+        for j in xrange(factor)]).mean(axis=0)
+    return dsarr 
+
+def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0):
+    nx = xrange = numpy.ceil(numpy.max(x)-numpy.min(x))+3
+    ny = yrange = numpy.ceil(numpy.max(y)-numpy.min(y))+3
+    xax = x-min(x)
+    yax = y-min(y)
+    map = zeros([yrange,xrange])
+    map[numpy.round(yax),numpy.round(xax)] += v
+
+    xax,yax = numpy.indices(map.shape)
+    kernel = gaussfitter.twodgaussian([1,nx/2,ny/2,smoothpix],circle=1,rotate=0,vheight=0)(xax,yax)
+    kernelfft = numpy.fft.fft2(kernel)
+    imfft = numpy.fft.fft2(map)
+    dm = numpy.fft.fftshift(numpy.fft.ifft2(kernelfft*imfft).real)
+
+    return downsample(dm,downsample_factor)
+
+#def gridmap(xi,yi,val=1.0,smoothpix=1,downsample_factor=1):
+#
+#    xrange = numpy.ceil(numpy.max(xi)-numpy.min(xi))+1
+#    yrange = numpy.ceil(numpy.max(yi)-numpy.min(yi))+1
+#    ny,nx = yrange,xrange
+#    blankim = numpy.zeros((ny,nx))
+#
+#    xax = xi-min(xi)
+#    yax = yi-min(yi)
+#
+#    xf = numpy.floor(xax).astype('int')
+#    xc = numpy.ceil(xax).astype('int')
+#    yf = numpy.floor(yax).astype('int')
+#    yc = numpy.ceil(yax).astype('int')
+#    weight1 = (xax-xf) * (yax-yf)
+#    weight2 = (xax-xf) * (yc-yax)
+#    weight3 = (xc-xax) * (yax-yf)
+#    weight4 = (xc-xax) * (yc-yax)
+#    blankim[yc,xc] += weight4*val
+#    blankim[yc,xf] += weight3*val
+#    blankim[yf,xc] += weight2*val
+#    blankim[yf,xf] += weight1*val
+#
+#    if smoothpix > 1:
+#        xax,yax = numpy.indices(blankim.shape)
+#        kernel = gaussfitter.twodgaussian([1,nx/2,ny/2,smoothpix],circle=1,rotate=0,vheight=0)(xax,yax)
+#        kernelfft = numpy.fft.fft2(kernel)
+#        imfft = numpy.fft.fft2(blankim)
+#        dm = numpy.fft.fftshift(numpy.fft.ifft2(kernelfft*imfft).real)
+#    else:
+#        dm = blankim
+#
+#    if downsample_factor > 1:
+#        dm = downsample(dm,downsample_factor)
+#
+#    return dm

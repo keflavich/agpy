@@ -49,8 +49,10 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
         x' = numpy.cos(rota) * x - numpy.sin(rota) * y
         y' = numpy.sin(rota) * x + numpy.cos(rota) * y
         (rota should be in degrees)
-        g = b + a numpy.exp ( - ( ((x-center_x)/width_x)**2 +
+        g = b + a * numpy.exp ( - ( ((x-center_x)/width_x)**2 +
         ((y-center_y)/width_y)**2 ) / 2 )
+
+        inpars = [b,a,center_x,center_y,width_x,width_y,rota]
 
         where x and y are the input parameters of the returned function,
         and all other parameters are specified by this function
