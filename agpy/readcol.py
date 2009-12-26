@@ -3,8 +3,8 @@ import numpy
 try:
     from scipy.stats import mode
     hasmode = True
-except:
-    print "scipy could not be imported.  Your table must have full rows."
+except ImportError:
+    #print "scipy could not be imported.  Your table must have full rows."
     hasmode = False
 
 def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
