@@ -300,6 +300,16 @@ class Flagger:
         self.fp2 = plot(y,x,'wx')
         self.mapfig.axes[0].axis(myaxis)
     self._refresh()
+
+  def bolomap(self,bolonum):
+      self.bolofig = pylab.figure(5)
+      self.bolofig.clf()
+      self.bolomap = numpy.zeros(self.map.shape)
+      self.bolomap.flat[self.tstomap[:,:,bolonum].ravel()] += self.data[:,:,bolonum].ravel()
+      self.bolonhits.flat[self.tstomap[:,:,bolonum].ravel()] += 1
+      self.bolomap /= self.bolonhits
+      pylab.imshow(self.bolomap,interpolation='nearest',origin='lower')
+      pylab.colorbar()
  
   def set_plotscan_data(self,scannum,data=None,flag=True):
       if data is not None and flag:
@@ -653,6 +663,8 @@ class Flagger:
           self.unflag_bolo(event.xdata,event.key)
       elif event.key == 'c':
           self.toggle_currentscan()
+      elif event.key == 'o':
+          self.bolomap(event.xdata)
       elif event.key == 'v':
           x,y = round(event.xdata),round(event.ydata)
           vpt = self.data[self.scannum,y,x]
