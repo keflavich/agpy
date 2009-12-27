@@ -132,6 +132,8 @@ class Flagger:
       self.lines=[[] for i in xrange(self.maxscan)]
       self.arrows=[]
       self.maparrows=[]
+      self.connections=[]
+      self.mapconnections=[]
       self.md = 0
       self.mu = 0
       self.key = 0
@@ -148,8 +150,7 @@ class Flagger:
       self.sav = idlsave.read(savfile)
 
       self.ncfilename = savfile
-
-      self.set_tsplot(**kwargs)
+      self.tsfile = None
 
       self.ncscans = self.sav.variables['bgps']['scans_info'][0]
       self.scanlen = self.ncscans[0,1]-self.ncscans[0,0]
@@ -166,19 +167,16 @@ class Flagger:
 
       self.astrosignal = nantomask( reshape( self.sav.variables['bgps']['astrosignal'][0][self.whscan,:] , self.datashape) )
       self.atmosphere  = nantomask( reshape( self.sav.variables['bgps']['atmosphere'][0][self.whscan,:]  , self.datashape) )
+      self.raw         = nantomask( reshape( self.sav.variables['bgps']['raw'][0][self.whscan,:]         , self.datashape) )
       self.ac_bolos    = nantomask( reshape( self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:]    , self.datashape) )
       self.dc_bolos    = nantomask( reshape( self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:]    , self.datashape) )
       self.scalearr    = nantomask( reshape( self.sav.variables['bgps']['scalearr'][0][self.whscan,:]    , self.datashape) )
       self.weight      = nantomask( reshape( self.sav.variables['bgps']['weight'][0][self.whscan,:]      , self.datashape) )
       self.flags       = nantomask( reshape( self.sav.variables['bgps']['flags'][0][self.whscan,:]       , self.datashape) )
-      if self.tsplot == 'astrosignal' and self.astrosignal.sum() == 0:
-          self.data        = self.astrosignal*self.scalearr
-      elif self.tsplot == 'dcbolos':
-          self.data        = self.dc_bolos*self.scalearr
-      elif self.tsplot == 'acbolos':
-          self.data        = self.ac_bolos*self.scalearr
-      else:
-          self.data        = self.ac_bolos*self.scalearr - self.atmosphere
+
+      self.tsplot = 'default'
+      self.set_tsplot(**kwargs)
+
       self.ncfile = None
       self.flagfn = savfile.replace("sav","_flags.fits")
 
@@ -188,14 +186,43 @@ class Flagger:
       if self.map.sum() == 0:
           self.map  = nantomask( self.sav.variables['mapstr']['rawmap'][0] )
 
-      print "DONT SAVE NEED TO CONVERT IDL TEXT HEADERS TO PYFITS HDU CARDS"
-      self.header = self.sav.variables['mapstr']['hdr'][0]
+      self.header = pyfits.Header(_hdr_string_list_to_cardlist( self.sav.variables['mapstr']['hdr'][0] ))
 
       self._initialize_vars(**kwargs)
+
   
-  def set_tsplot(self,tsplot='default'):
+  def set_tsplot(self,tsplot=None):
       if tsplot is not None:
-          self.tsplot = tsplot
+          self.tsplot=tsplot
+      if self.tsplot == 'astrosignal' and self.astrosignal.sum() != 0:
+          self.data = self.astrosignal*self.scalearr
+      elif self.tsplot == 'dcbolos':
+          self.data = self.dc_bolos*self.scalearr
+      elif self.tsplot == 'acbolos':
+          self.data = self.ac_bolos*self.scalearr
+      elif self.tsplot == 'atmosphere':
+          self.data = self.atmosphere*self.scalearr
+      elif self.tsplot=='default' or self.tsplot=='skysub':
+          self.data = (self.ac_bolos - self.atmosphere) *self.scalearr
+      elif self.tsplot=='scale':
+          self.data = self.scalearr
+      elif self.tsplot=='raw':
+          self.data = self.raw
+      elif self.tsplot=='rawscaled':
+          self.data = self.raw * self.scalearr
+      else:
+          print "No option for %s" % self.tsplot
+  
+  def efuncs(self,arr):
+      try:
+          arr[arr.mask] = 0
+          arr.mask[:] = 0
+      except:
+          pass
+      covmat = dot(arr.T,arr)
+      evals,evects = numpy.linalg.eig(covmat)
+      efuncs = dot(arr,evects)
+      return efuncs
 
   def readncfile(self):
         self.ncfile = netcdf.netcdf_file(self.ncfilename,'r') # NetCDF.NetCDFFile(self.ncfilename,'r')
@@ -214,7 +241,7 @@ class Flagger:
 
 
   def showmap(self,colormap=cm.spectral,vmax=None):
-    self.fig0=figure(0); clf(); 
+    self.mapfig=figure(0); clf(); 
     if not vmax:
         vmax = self.map.mean()+7*self.map.std()
     elif vmax=='max':
@@ -231,7 +258,8 @@ class Flagger:
     self.MtoT = connect('button_press_event',self.mapclick)
     self.MtoTkey = connect('key_press_event',self.mapkeypress)
     self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
-    self.connections=[self.MtoT]
+    self.mapconnections.append(self.MtoT)
+    self.mapconnections.append(self.MtoTkey)
 
 
   def footprint(self,tsx,tsy,scatter=False):
@@ -243,8 +271,18 @@ class Flagger:
         self.plotfig=figure(4)
         self.plotfig.clf()
         downsample_factor = 2.
-        pylab.imshow(gridmap(x,y,self.data.data[self.scannum,tsy,:].flat,downsample_factor=downsample_factor)
+        try:
+            vals = self.data.data[self.scannum,tsy,:].ravel()
+        except TypeError:
+            vals = self.data[self.scannum,tsy,:].ravel()
+        try:
+            flags = self.flags.data[self.scannum,tsy,:].ravel()
+        except TypeError:
+            flags = self.flags[self.scannum,tsy,:].ravel()
+        flagvals = vals*(flags==0)
+        pylab.imshow(gridmap(x,y,flagvals,downsample_factor=downsample_factor)
                 ,interpolation='bilinear')
+        pylab.colorbar()
         pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
 
     else:
@@ -256,20 +294,29 @@ class Flagger:
             pass
 
         figure(0)
-        myaxis = self.fig0.axes[0].axis()
+        myaxis = self.mapfig.axes[0].axis()
         self.fp3 = plot(y,x,'ro')
     #    self.fp1 = plot(y,x,'b+')
         self.fp2 = plot(y,x,'wx')
-        self.fig0.axes[0].axis(myaxis)
+        self.mapfig.axes[0].axis(myaxis)
     self._refresh()
  
+  def set_plotscan_data(self,scannum,data=None,flag=True):
+      if data is not None and flag:
+          self.plane = data*(self.flags[scannum,:,:] == 0)
+      elif data is not None:
+          self.plane = data
+      elif flag:
+          self.plane = self.data[scannum,:,:] * (self.flags[scannum,:,:]==0)
+      else:
+          self.plane = self.data[scannum,:,:] 
 
-  def plotscan(self, scannum, fignum=1, button=1):
+  def plotscan(self, scannum, fignum=1, button=1, data=None, flag=True):
     if self.connected:
         self.dcon()
-    self.connected = 1
-    self.plane = self.data[scannum,:,:] * (self.flags[scannum,:,:]==0)
+    self.connected = True
     self.scannum = scannum
+    self.set_plotscan_data(scannum,flag=flag,data=data)
     self.fignum = fignum
     self.flagfig = figure(fignum+1)
     clf()
@@ -289,8 +336,8 @@ class Flagger:
     self.showlines()
     self.cursor = Cursor(gca(),useblit=True,color='black',linewidth=1)
     self._refresh()
-    self.md=connect('button_press_event',self.mouse_down_event)
-    self.mu=connect('button_release_event',self.mouse_up_event)
+    self.md  = connect('button_press_event',self.mouse_down_event)
+    self.mu  = connect('button_release_event',self.mouse_up_event)
     self.key = connect('key_press_event',self.keypress)
     self.connections.append(self.md)
     self.connections.append(self.mu)
@@ -377,8 +424,8 @@ class Flagger:
       elif button==2:
          # this won't work right; I need some way to make it undo-able  
          # <--- I don't know if that's true any more (11/10/08)
-          self.flags[scannum,yrange[0]:yrange[1],xrange[0]:xrange[1]] *= (
-                  -1*(self.flags[scannum,yrange[0]:yrange[1],xrange[0]:xrange[1]] > 0) )
+          unflagreg = self.flags[scannum,yrange[0]:yrange[1],xrange[0]:xrange[1]] 
+          unflagreg[unflagreg > 0] = 0
           p = matplotlib.patches.Rectangle(xy=(x2,y2), width=w, height=h,
                   facecolor='blue',transform=gca().transData)
           gca().add_patch(p)
@@ -481,18 +528,36 @@ class Flagger:
 
 
   def dcon(self):
-      self.connected = 0
+      self.connected = False
       disconnect(self.md)
       disconnect(self.mu)
       disconnect(self.key)
       disconnect(self.MtoT)
       for i in self.connections:
-          self.fig0.canvas.mpl_disconnect(i)
+          self.mapfig.canvas.mpl_disconnect(i)
           try:
               self.datafig.canvas.mpl_disconnect(i)
+          except:
+              continue
+          try:
               self.flagfig.canvas.mpl_disconnect(i)
           except:
               continue
+      for i in self.mapconnections:
+          self.mapfig.canvas.mpl_disconnect(i)
+
+  def reconnect(self):
+    self.connected = True
+    self.MtoT = self.mapfig.canvas.mpl_connect('button_press_event',self.mapclick)
+    self.MtoTkey = self.mapfig.canvas.mpl_connect('key_press_event',self.mapkeypress)
+    self.md  = self.datafig.canvas.mpl_connect('button_press_event',self.mouse_down_event)
+    self.mu  = self.datafig.canvas.mpl_connect('button_release_event',self.mouse_up_event)
+    self.key = self.datafig.canvas.mpl_connect('key_press_event',self.keypress)
+    self.connections.append(self.md)
+    self.connections.append(self.mu)
+    self.connections.append(self.key)
+    self.mapconnections.append(self.MtoT)
+    self.mapconnections.append(self.MtoTkey)
 
   def close(self,write=True):
       """ close the ncdf file and the graphics windows
@@ -507,6 +572,8 @@ class Flagger:
            figure(self.fignum-1); clf()
            figure(self.fignum);   clf()
            figure(self.fignum+1); clf()
+           if self.plotfig:
+               self.plotfig.clf()
 
   def writeflags(self):
       tempdata = self.data
@@ -550,6 +617,8 @@ class Flagger:
               self.plotscan(self.scannum-1)
           else:
               print "At first scan, can't go further back"
+      elif event.key == 'P': # PCA
+          self.plotscan(self.scannum,data=self.efuncs(self.plane),flag=False)
       elif event.key == 'q':
           self.close()
       elif event.key == 'Q':
@@ -563,7 +632,11 @@ class Flagger:
       elif event.key == 'R': # reverse order of boxes
           self.rectangles[self.scannum].reverse()
       elif event.key == 'r': # redraw
-        self.plotscan(self.scannum)
+          self.plotscan(self.scannum)
+      elif event.key == 'M': # flag highest point
+          self.flags[self.scannum,:,:].flat[self.plane.argmax()] += 1
+      elif event.key == 'm': # flag lowest point
+          self.flags[self.scannum,:,:].flat[self.plane.argmin()] += 1
       elif event.key == 'd':
           self.flag_box(self.x1,self.y1,self.x2,self.y2,'d')
       elif event.key == 't':
@@ -657,11 +730,11 @@ class Flagger:
           yarr = self.tstomap[self.scannum,:,:] % self.map.shape[1]
           x0,x1 = xarr.min(),xarr.max()
           y0,y1 = yarr.min(),yarr.max()
-          self.fig0.axes[0].axis([y0,y1,x0,x1])
+          self.mapfig.axes[0].axis([y0,y1,x0,x1])
           self.currentscan = 1
           self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
       elif self.currentscan == 1:
-          self.fig0.axes[0].axis([0,self.map.shape[1],0,self.map.shape[0]])
+          self.mapfig.axes[0].axis([0,self.map.shape[1],0,self.map.shape[0]])
           self.currentscan = 0
           self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
 
@@ -766,7 +839,7 @@ class Flagger:
   def _refresh(self):
       self.flagfig.canvas.draw()
       self.datafig.canvas.draw()
-      self.fig0.canvas.draw()
+      self.mapfig.canvas.draw()
       if self.plotfig is not None:
           self.plotfig.canvas.draw()
 
@@ -798,39 +871,20 @@ def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0):
 
     return downsample(dm,downsample_factor)
 
-#def gridmap(xi,yi,val=1.0,smoothpix=1,downsample_factor=1):
-#
-#    xrange = numpy.ceil(numpy.max(xi)-numpy.min(xi))+1
-#    yrange = numpy.ceil(numpy.max(yi)-numpy.min(yi))+1
-#    ny,nx = yrange,xrange
-#    blankim = numpy.zeros((ny,nx))
-#
-#    xax = xi-min(xi)
-#    yax = yi-min(yi)
-#
-#    xf = numpy.floor(xax).astype('int')
-#    xc = numpy.ceil(xax).astype('int')
-#    yf = numpy.floor(yax).astype('int')
-#    yc = numpy.ceil(yax).astype('int')
-#    weight1 = (xax-xf) * (yax-yf)
-#    weight2 = (xax-xf) * (yc-yax)
-#    weight3 = (xc-xax) * (yax-yf)
-#    weight4 = (xc-xax) * (yc-yax)
-#    blankim[yc,xc] += weight4*val
-#    blankim[yc,xf] += weight3*val
-#    blankim[yf,xc] += weight2*val
-#    blankim[yf,xf] += weight1*val
-#
-#    if smoothpix > 1:
-#        xax,yax = numpy.indices(blankim.shape)
-#        kernel = gaussfitter.twodgaussian([1,nx/2,ny/2,smoothpix],circle=1,rotate=0,vheight=0)(xax,yax)
-#        kernelfft = numpy.fft.fft2(kernel)
-#        imfft = numpy.fft.fft2(blankim)
-#        dm = numpy.fft.fftshift(numpy.fft.ifft2(kernelfft*imfft).real)
-#    else:
-#        dm = blankim
-#
-#    if downsample_factor > 1:
-#        dm = downsample(dm,downsample_factor)
-#
-#    return dm
+def _hdr_string_to_card(str):
+    name = str[:7].strip()
+    val  = str[9:31].strip()
+    try:
+        val = float(val)
+    except:
+        pass
+    comment = str[31:].strip()
+    if name == 'END':
+        return
+    else:
+        return pyfits.Card(name,val,comment)
+
+def _hdr_string_list_to_cardlist(strlist):
+    cardlist = [_hdr_string_to_card(s) for s in strlist]
+    cardlist.remove(None)
+    return pyfits.CardList(cardlist)

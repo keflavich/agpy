@@ -6,6 +6,9 @@ try:
 except ImportError:
     #print "scipy could not be imported.  Your table must have full rows."
     hasmode = False
+except ValueError:
+    #print "error"
+    hasmode = False
 
 def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
         fixedformat=None,asdict=False,comment='#',verbose=True,nullval=None,
