@@ -143,6 +143,11 @@ class Flagger:
       self.currentscan = 0
       self.aspect = float(self.data.shape[2])/float(self.data.shape[1])
       self.plotfig = None
+      self.bolofig = None
+      self.mapfig = None
+      self.flagfig = None
+      self.datafig = None
+      self.PCA = False
 
       self.showmap(vmax=vmax)
   
@@ -240,14 +245,19 @@ class Flagger:
         self.flags = reshape(ft[:,self.bolo_indices],[self.nscans,self.scanlen,self.ngoodbolos])
 
 
-  def showmap(self,colormap=cm.spectral,vmax=None):
+  def showmap(self,colormap=cm.spectral,vmin=None,vmax=None):
     self.mapfig=figure(0); clf(); 
-    if not vmax:
+    if vmax is None:
         vmax = self.map.mean()+7*self.map.std()
     elif vmax=='max':
         vmax = self.map.max()
-    imshow(self.map,vmin=self.map.mean()-2*self.map.std(),
-            vmax=vmax,interpolation='nearest',
+    if vmin is None:
+        vmin = self.map.mean()-2*self.map.std()
+    elif vmin=='min':
+        vmin = self.map.min()
+    imshow(self.map,
+            vmin=vmin,vmax=vmax,
+            interpolation='nearest',
             cmap=colormap); 
     colorbar()
     try:
@@ -304,11 +314,12 @@ class Flagger:
   def bolomap(self,bolonum):
       self.bolofig = pylab.figure(5)
       self.bolofig.clf()
-      self.bolomap = numpy.zeros(self.map.shape)
-      self.bolomap.flat[self.tstomap[:,:,bolonum].ravel()] += self.data[:,:,bolonum].ravel()
+      self.bolommap = numpy.zeros(self.map.shape)
+      self.bolonhits = numpy.zeros(self.map.shape)
+      self.bolommap.flat[self.tstomap[:,:,bolonum].ravel()] += self.data[:,:,bolonum].ravel()
       self.bolonhits.flat[self.tstomap[:,:,bolonum].ravel()] += 1
-      self.bolomap /= self.bolonhits
-      pylab.imshow(self.bolomap,interpolation='nearest',origin='lower')
+      self.bolommap /= self.bolonhits
+      pylab.imshow(self.bolommap,interpolation='nearest',origin='lower')
       pylab.colorbar()
  
   def set_plotscan_data(self,scannum,data=None,flag=True):
@@ -321,7 +332,7 @@ class Flagger:
       else:
           self.plane = self.data[scannum,:,:] 
 
-  def plotscan(self, scannum, fignum=1, button=1, data=None, flag=True):
+  def plotscan(self, scannum, fignum=1, button=1, data=None, flag=True, logscale=False):
     if self.connected:
         self.dcon()
     self.connected = True
@@ -331,6 +342,10 @@ class Flagger:
     self.flagfig = figure(fignum+1)
     clf()
     #subplot(122)
+    if logscale:
+        plotdata = log10(abs(self.plane)) * sign(self.plane)
+    else:
+        plotdata = self.plane
     title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
     xlabel('Bolometer number'); ylabel('Time (.02s)')
     imshow(self.flags[scannum,:,:],interpolation='nearest',
@@ -339,7 +354,7 @@ class Flagger:
     self.datafig = figure(fignum);clf(); #subplot(121)
     title("Scan "+str(self.scannum)+" in "+self.ncfilename);
     xlabel('Bolometer number'); ylabel('Time (.02s)')
-    imshow(self.plane,interpolation='nearest',
+    imshow(plotdata,interpolation='nearest',
             origin='lower',aspect=self.aspect)
     colorbar()
     self.showrects()
@@ -477,7 +492,12 @@ class Flagger:
           self.maparrow(x2i,y2i)
  
   def flag_bolo(self,x,button):
-      if button=='b':
+      if button=='b' and self.PCA:
+          x=round(x)
+          PCAsub = self.data[self.scannum,:,:] - outer(self.plane[:,x],ones(self.plane.shape[1]))
+          self.PCA = False
+          self.plotscan(self.scannum,data=PCAsub)
+      elif button=='b' and not self.PCA:
 #          print x,round(x),button,self.data.shape
           x=round(x)
           h=self.data.shape[1]
@@ -536,6 +556,15 @@ class Flagger:
               arr = self.flags[self.scannum,0:h,x]
               arr[arr>0] -= 1
 
+  def plot_column(self,tsx):
+      self.bolofig=figure(4)
+      self.bolofig.clf()
+      pylab.plot(self.plane[:,tsx])
+
+  def plot_line(self,tsy):
+      self.bolofig=figure(4)
+      self.bolofig.clf()
+      pylab.plot(self.plane[tsy,:])
 
   def dcon(self):
       self.connected = False
@@ -577,13 +606,19 @@ class Flagger:
            self.dcon()
            if write and self.ncfile:
                self.write_ncdf()
+           elif write:
+              self.writeflags()
 #           self.outfile.close()
-     #      self.writeflags()
-           figure(self.fignum-1); clf()
-           figure(self.fignum);   clf()
-           figure(self.fignum+1); clf()
-           if self.plotfig:
+           if self.mapfig is not None:
+               self.mapfig.clf()
+           if self.datafig is not None:
+               self.datafig.clf()
+           if self.bolofig is not None:
+               self.bolofig.clf()
+           if self.plotfig is not None:
                self.plotfig.clf()
+           if self.flagfig is not None:
+               self.flagfig.clf()
 
   def writeflags(self):
       tempdata = self.data
@@ -628,7 +663,8 @@ class Flagger:
           else:
               print "At first scan, can't go further back"
       elif event.key == 'P': # PCA
-          self.plotscan(self.scannum,data=self.efuncs(self.plane),flag=False)
+          self.plotscan(self.scannum,data=self.efuncs(self.plane),flag=False,logscale=True)
+          self.PCA = True
       elif event.key == 'q':
           self.close()
       elif event.key == 'Q':
@@ -663,6 +699,10 @@ class Flagger:
           self.unflag_bolo(event.xdata,event.key)
       elif event.key == 'c':
           self.toggle_currentscan()
+      elif event.key == 'C':
+          self.plot_column(event.xdata)
+      elif event.key == 'L':
+          self.plot_line(event.ydata)
       elif event.key == 'o':
           self.bolomap(event.xdata)
       elif event.key == 'v':
@@ -777,7 +817,7 @@ class Flagger:
     self.y2 = event.ydata
     self.event = event
     tb = get_current_fig_manager().toolbar
-    if tb.mode=='':
+    if tb.mode=='' and not self.PCA:
         self.flag_box(self.x1,self.y1,self.x2,self.y2,event.button)
 #        if abs(self.x2-self.x1) > 1 or abs(self.y2-self.y1) > 1:
 #        else:
@@ -852,6 +892,7 @@ class Flagger:
       self.flagfig.canvas.draw()
       self.datafig.canvas.draw()
       self.mapfig.canvas.draw()
+      self.PCA = False
       if self.plotfig is not None:
           self.plotfig.canvas.draw()
 
