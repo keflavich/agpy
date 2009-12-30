@@ -197,6 +197,17 @@ class Flagger:
 
   
   def set_tsplot(self,tsplot=None):
+      """
+      Options: set tsplot equal to one of these strings
+      astrosignal
+      dcbolos
+      acbolos 
+      atmosphere
+      default (ac_bolos - atmosphere)
+      scale
+      raw
+      rawscaled
+      """
       if tsplot is not None:
           self.tsplot=tsplot
       if self.tsplot == 'astrosignal' and self.astrosignal.sum() != 0:
@@ -217,6 +228,8 @@ class Flagger:
           self.data = self.raw * self.scalearr
       else:
           print "No option for %s" % self.tsplot
+          return
+      print "Set tsplot to %s" % tsplot
   
   def efuncs(self,arr):
       try:
@@ -226,7 +239,7 @@ class Flagger:
           pass
       covmat = dot(arr.T,arr)
       evals,evects = numpy.linalg.eig(covmat)
-      efuncs = dot(arr,evects)
+      self.efuncs = dot(arr,evects)
       return efuncs
 
   def readncfile(self):
@@ -564,7 +577,10 @@ class Flagger:
   def plot_line(self,tsy):
       self.bolofig=figure(4)
       self.bolofig.clf()
-      pylab.plot(self.plane[tsy,:])
+      if self.PCA:
+          pylab.plot(self.efuncs[tsy,:])
+      else:
+          pylab.plot(self.plane[tsy,:])
 
   def dcon(self):
       self.connected = False
