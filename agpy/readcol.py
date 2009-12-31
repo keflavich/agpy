@@ -122,10 +122,19 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
 
     try:
         x = numpy.asarray( splitarr , dtype='float')
-    except:
+    except ValueError:
         if verbose: 
             print "WARNING: reading as string array because %s array failed" % 'float'
-        x = numpy.asarray( splitarr , dtype='S')
+        try:
+            x = numpy.asarray( splitarr , dtype='S')
+        except ValueError:
+            if hasmode:
+                print "ValueError when converting data to array.  You have scipy.mode \
+                        on your system, so this is probably not an issue of differing \
+                        row lengths."
+            else:
+                print "Conversion to array error.  You probably have different row \
+                        lengths and scipy.mode was not imported."
 
     if nullval is not None:
         x[x==nullval] = numpy.nan
