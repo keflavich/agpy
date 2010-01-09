@@ -44,7 +44,7 @@ def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
         mylist = mylist + [width]
     return mylist
 
-def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
+def twodgaussian(inpars, circle=0, rotate=1, vheight=1, shape=None):
     """Returns a 2d gaussian function of the form:
         x' = numpy.cos(rota) * x - numpy.sin(rota) * y
         y' = numpy.sin(rota) * x + numpy.cos(rota) * y
@@ -53,6 +53,7 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
         ((y-center_y)/width_y)**2 ) / 2 )
 
         inpars = [b,a,center_x,center_y,width_x,width_y,rota]
+                 (b is background height, a is peak amplitude)
 
         where x and y are the input parameters of the returned function,
         and all other parameters are specified by this function
@@ -70,6 +71,8 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
             vheight=1 - default allows a variable height-above-zero, i.e. an
                 additive constant for the Gaussian function.  Can remove first
                 parameter by setting this to 0
+            shape=None - if shape is set (to a 2-parameter list) then returns
+                an image with the gaussian defined by inpars
         """
     inpars_old = inpars
     inpars = list(inpars)
@@ -115,7 +118,10 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1):
             -(((rcen_x-xp)/width_x)**2+
             ((rcen_y-yp)/width_y)**2)/2.)
         return g
-    return rotgauss
+    if shape is not None:
+        return rotgauss(*numpy.indices(shape))
+    else:
+        return rotgauss
 
 def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
