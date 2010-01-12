@@ -21,9 +21,14 @@ import copy
 import idlsave
 import gaussfitter
 
+matplotlib.rcParams['image.origin']='lower'
+matplotlib.rcParams['image.interpolation']='nearest'
+matplotlib.rcParams['image.aspect']=1
+matplotlib.rcParams['text.usetex']=False
 matplotlib.defaultParams['image.origin']='lower'
 matplotlib.defaultParams['image.interpolation']='nearest'
-matplotlib.defaultParams['image.aspect']=.1
+matplotlib.defaultParams['image.aspect']=1
+matplotlib.defaultParams['text.usetex']=False
 
 class Flagger:
   """
@@ -66,6 +71,7 @@ class Flagger:
   """
 
   def __init__(self, filename, **kwargs):
+      self.filename = filename
       if filename[-4:] == 'fits':
           self._loadfits(filename,**kwargs)
       elif filename[-3:] == 'sav':
@@ -137,6 +143,7 @@ class Flagger:
       self.md = 0
       self.mu = 0
       self.key = 0
+      self._lastkey = None
       self.scannum = 0
       self.fignum = 1
       self.open = 1
@@ -147,6 +154,7 @@ class Flagger:
       self.mapfig = None
       self.flagfig = None
       self.datafig = None
+      self.scanim = None
       self.PCA = False
 
       self.showmap(vmax=vmax)
@@ -164,6 +172,7 @@ class Flagger:
       self.nbolos = self.ncflags.shape[1]
       self.nscans = self.ncscans.shape[0]
       self.ncbolo_params = self.sav.variables['bgps']['bolo_params'][0]
+      self.ncbolo_indices = self.sav.variables['bgps']['bolo_indices'][0]
       self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
       self.ngoodbolos = self.bolo_indices.shape[0]
       self.whscan = asarray([arange(self.scanlen)+i for i in self.ncscans[:,0]]).ravel()
@@ -240,7 +249,7 @@ class Flagger:
       covmat = dot(arr.T,arr)
       evals,evects = numpy.linalg.eig(covmat)
       self.efuncs = dot(arr,evects)
-      return efuncs
+      return self.efuncs
 
   def readncfile(self):
         self.ncfile = netcdf.netcdf_file(self.ncfilename,'r') # NetCDF.NetCDFFile(self.ncfilename,'r')
@@ -268,7 +277,7 @@ class Flagger:
         vmin = self.map.mean()-2*self.map.std()
     elif vmin=='min':
         vmin = self.map.min()
-    imshow(self.map,
+    self.mapim = pylab.imshow(self.map,
             vmin=vmin,vmax=vmax,
             interpolation='nearest',
             cmap=colormap); 
@@ -303,10 +312,10 @@ class Flagger:
         except TypeError:
             flags = self.flags[self.scannum,tsy,:].ravel()
         flagvals = vals*(flags==0)
-        pylab.imshow(gridmap(x,y,flagvals,downsample_factor=downsample_factor)
+        self.footim = pylab.imshow(gridmap(x,y,flagvals,downsample_factor=downsample_factor)
                 ,interpolation='bilinear')
-        pylab.colorbar()
-        pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
+        self.footcb = pylab.colorbar()
+        self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
 
     else:
         try:
@@ -332,8 +341,34 @@ class Flagger:
       self.bolommap.flat[self.tstomap[:,:,bolonum].ravel()] += self.data[:,:,bolonum].ravel()
       self.bolonhits.flat[self.tstomap[:,:,bolonum].ravel()] += 1
       self.bolommap /= self.bolonhits
-      pylab.imshow(self.bolommap,interpolation='nearest',origin='lower')
+      self.bolomapim = pylab.imshow(self.bolommap,interpolation='nearest',origin='lower')
       pylab.colorbar()
+
+  def footmovie(self,y1,y2):
+      self.footscatter.set_visible(False)
+      try:
+          plotdata = self.data.data
+          allflags = self.flags.data
+      except TypeError:
+          plotdata = self.data
+          allflags = self.flags
+
+      vmin = plotdata[self.scannum,y1:y2,:].min()
+      vmax = plotdata[self.scannum,y1:y2,:].max()
+      self.footim.set_clim((vmin,vmax))
+
+      for tsy in xrange(y1,y2):
+          mappoints = asarray(self.tstomap[self.scannum,tsy,:])
+          x,y = mappoints / self.map.shape[1],mappoints % self.map.shape[1]
+          vals = plotdata[self.scannum,tsy,:].ravel()
+          flags = allflags[self.scannum,tsy,:].ravel()
+          flagvals = vals*(flags==0)
+          map = gridmap(x,y,flagvals,downsample_factor=2,smooth=False)
+          self.footim.set_array(map)
+          self.footcb = pylab.colorbar(cax=self.footcb.ax)
+          self.plotfig.show()
+          pylab.draw()
+
  
   def set_plotscan_data(self,scannum,data=None,flag=True):
       if data is not None and flag:
@@ -352,27 +387,33 @@ class Flagger:
     self.scannum = scannum
     self.set_plotscan_data(scannum,flag=flag,data=data)
     self.fignum = fignum
-    self.flagfig = figure(fignum+1)
-    clf()
-    #subplot(122)
     if logscale:
         plotdata = log10(abs(self.plane)) * sign(self.plane)
     else:
         plotdata = self.plane
-    title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
-    xlabel('Bolometer number'); ylabel('Time (.02s)')
-    imshow(self.flags[scannum,:,:],interpolation='nearest',
-            origin='lower',aspect=self.aspect)
-    colorbar()
-    self.datafig = figure(fignum);clf(); #subplot(121)
-    title("Scan "+str(self.scannum)+" in "+self.ncfilename);
-    xlabel('Bolometer number'); ylabel('Time (.02s)')
-    imshow(plotdata,interpolation='nearest',
-            origin='lower',aspect=self.aspect)
-    colorbar()
+    if self.scanim is None:
+        self.flagfig = figure(fignum+1); clf()
+        self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
+        xlabel('Bolometer number'); ylabel('Time (.02s)')
+        self.flagim = pylab.imshow(self.flags[scannum,:,:],interpolation='nearest',
+                origin='lower',aspect=self.aspect)
+        self.flagcb = pylab.colorbar()
+        self.datafig = figure(fignum);clf();
+        self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename);
+        xlabel('Bolometer number'); ylabel('Time (.02s)')
+        self.dataim = pylab.imshow(plotdata,interpolation='nearest',
+                origin='lower',aspect=self.aspect)
+        self.datacb = pylab.colorbar()
+    else:
+        self.flagim.set_array(self.flags[scannum,:,:])
+        self.flagcb = pylab.colorbar(cax=self.flagcb.ax)
+        self.flagtitle.set_text("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename)
+        self.dataim.set_array(plotdata)
+        self.datacb = pylab.colorbar(cax=self.datacb.ax)
+        self.datatitle.set_text("Scan "+str(self.scannum)+" in "+self.ncfilename)
     self.showrects()
     self.showlines()
-    self.cursor = Cursor(gca(),useblit=True,color='black',linewidth=1)
+    self.cursor = Cursor(self.dataim.axes,useblit=True,color='black',linewidth=1)
     self._refresh()
     self.md  = connect('button_press_event',self.mouse_down_event)
     self.mu  = connect('button_release_event',self.mouse_up_event)
@@ -645,6 +686,7 @@ class Flagger:
       elif self.header:
           self.flagfits = pyfits.PrimaryHDU(asarray(self.flags,dtype='int'),self.header)
           self.flagfits.writeto(self.flagfn,clobber=True)
+          print "flags_to_ncdf,'%s','%s'" % (self.flagfn,self.filename)
 
   def mapclick(self,event):
       if event.xdata == None:
@@ -667,6 +709,7 @@ class Flagger:
           self.showmap()
 
   def keypress(self,event):
+      set_lastkey=True
       if event.inaxes is None: return
       elif event.key == 'n':
           if self.scannum < self.maxscan-1:
@@ -719,6 +762,15 @@ class Flagger:
           self.plot_column(event.xdata)
       elif event.key == 'L':
           self.plot_line(event.ydata)
+      elif event.key == 'a':
+          if self._lastkey == 'a':
+              self._y2 = round(event.ydata)
+              self.footmovie(self._y1,self._y2)
+              self._lastkey = None
+              set_lastkey = False
+          else:
+              self._y1 = round(event.ydata)
+              self.footprint(round(event.xdata),round(event.ydata),scatter=True)
       elif event.key == 'o':
           self.bolomap(event.xdata)
       elif event.key == 'v':
@@ -726,6 +778,8 @@ class Flagger:
           vpt = self.data[self.scannum,y,x]
           fpt = self.flags[self.scannum,y,x]
           print "Value at %i,%i: %f  Flagged=%i" % (x,y,vpt,fpt)
+      if set_lastkey: 
+          self._lastkey = event.key
 
   def tsarrow(self,x,y):
       #      xy = [clickX,clickY]
@@ -917,6 +971,7 @@ def nantomask(arr):
     return numpy.ma.masked_where(mask,arr)
 
 def downsample(myarr,factor):
+    factor = int(factor)
     xs,ys = myarr.shape
     crarr = myarr[:xs-(xs % int(factor)),:ys-(ys % int(factor))]
     dsarr = numpy.concatenate([[crarr[i::factor,j::factor]
@@ -924,7 +979,7 @@ def downsample(myarr,factor):
         for j in xrange(factor)]).mean(axis=0)
     return dsarr 
 
-def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0):
+def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,smooth=True):
     nx = xrange = numpy.ceil(numpy.max(x)-numpy.min(x))+3
     ny = yrange = numpy.ceil(numpy.max(y)-numpy.min(y))+3
     xax = x-min(x)
@@ -932,13 +987,17 @@ def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0):
     map = zeros([yrange,xrange])
     map[numpy.round(yax),numpy.round(xax)] += v
 
-    xax,yax = numpy.indices(map.shape)
-    kernel = gaussfitter.twodgaussian([1,nx/2,ny/2,smoothpix],circle=1,rotate=0,vheight=0)(xax,yax)
-    kernelfft = numpy.fft.fft2(kernel)
-    imfft = numpy.fft.fft2(map)
-    dm = numpy.fft.fftshift(numpy.fft.ifft2(kernelfft*imfft).real)
+    if smooth:
+        xax,yax = numpy.indices(map.shape)
+        kernel = gaussfitter.twodgaussian([1,nx/2,ny/2,smoothpix],circle=1,rotate=0,vheight=0)(xax,yax)
+        kernelfft = numpy.fft.fft2(kernel)
+        imfft = numpy.fft.fft2(map)
+        dm = numpy.fft.fftshift(numpy.fft.ifft2(kernelfft*imfft).real)
+    else:
+        dm = map
 
     return downsample(dm,downsample_factor)
+
 
 def _hdr_string_to_card(str):
     name = str[:7].strip()
