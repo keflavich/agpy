@@ -12,3 +12,4 @@ from kdist import kdist,vector_kdist
 from reg_gal2cel import gal2cel
 from posang import posang
 import densitymap
+from downsample import downsample

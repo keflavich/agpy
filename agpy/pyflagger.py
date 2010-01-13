@@ -126,13 +126,13 @@ class Flagger:
       self._initialize_vars(**kwargs)
   
   def _initialize_vars(self,vmax=None):
-      print "There are %i scans" % (self.data.shape[0])
       #print >>self.outfile,"Started a new session at "+time.asctime()
       self.reset()
       self.counter = 0
       self.mouse_up = False
       self.connected = 0
       #self.renderer = matplotlib.backends.backend_agg.RendererAgg
+      print "There are %i scans" % (self.data.shape[0])
       self.maxscan = self.data.shape[0]
       self.rectangles=[[] for i in xrange(self.maxscan)]
       self.lines=[[] for i in xrange(self.maxscan)]
@@ -188,8 +188,7 @@ class Flagger:
       self.weight      = nantomask( reshape( self.sav.variables['bgps']['weight'][0][self.whscan,:]      , self.datashape) )
       self.flags       = nantomask( reshape( self.sav.variables['bgps']['flags'][0][self.whscan,:]       , self.datashape) )
 
-      self.tsplot = 'default'
-      self.set_tsplot(**kwargs)
+      self.data = self.ac_bolos
 
       self.ncfile = None
       self.flagfn = savfile.replace("sav","_flags.fits")
@@ -204,6 +203,9 @@ class Flagger:
 
       self._initialize_vars(**kwargs)
 
+      self.tsplot = 'default'
+      self.set_tsplot(**kwargs)
+
   
   def set_tsplot(self,tsplot=None):
       """
@@ -211,8 +213,9 @@ class Flagger:
       astrosignal
       dcbolos
       acbolos 
+      acbolos_noscale 
       atmosphere
-      default (ac_bolos - atmosphere)
+      default / skysub (ac_bolos - atmosphere)
       scale
       raw
       rawscaled
@@ -223,6 +226,8 @@ class Flagger:
           self.data = self.astrosignal*self.scalearr
       elif self.tsplot == 'dcbolos':
           self.data = self.dc_bolos*self.scalearr
+      elif self.tsplot == 'acbolos_noscale':
+          self.data = self.ac_bolos
       elif self.tsplot == 'acbolos':
           self.data = self.ac_bolos*self.scalearr
       elif self.tsplot == 'atmosphere':
@@ -239,6 +244,7 @@ class Flagger:
           print "No option for %s" % self.tsplot
           return
       print "Set tsplot to %s" % tsplot
+      self._refresh()
   
   def efuncs(self,arr):
       try:
@@ -248,8 +254,8 @@ class Flagger:
           pass
       covmat = dot(arr.T,arr)
       evals,evects = numpy.linalg.eig(covmat)
-      self.efuncs = dot(arr,evects)
-      return self.efuncs
+      self.efuncarr = dot(arr,evects)
+      return self.efuncarr
 
   def readncfile(self):
         self.ncfile = netcdf.netcdf_file(self.ncfilename,'r') # NetCDF.NetCDFFile(self.ncfilename,'r')
@@ -566,34 +572,35 @@ class Flagger:
 #                  "flag_manual,'%s',bolorange=[%i],scanrange=%i" \
 #                  % (self.ncfilename,x,self.scannum)
 
-  def flag_time(self,y,button):
-      if button=='t':
-          y=round(y)
-          w=self.data.shape[2]
-          self.flags[self.scannum,y,0:w] += 1
-          p = matplotlib.lines.Line2D([0,w],[y,y],\
-                  color='black',transform=gca().transData)
-          gca().add_line(p)
-          p.set_visible(True)
-          self.lines[self.scannum].append(p)
-          self._refresh()
-#          print >>self.outfile,\
-#                  "flag_manual,'%s',timerange=[%i,%i],scanrange=%i" \
-#                  % (self.ncfilename,0,w,self.scannum)
+  def flag_times(self,y1,y2):
+      y1=round(y1)
+      y2=round(y2)
+      w=self.data.shape[2]
+      self.flags[self.scannum,y1:y2,0:w] += 1
+      p1 = matplotlib.lines.Line2D([0,w],[y1,y1],\
+              color='black',transform=gca().transData)
+      p2 = matplotlib.lines.Line2D([0,w],[y2,y2],\
+              color='black',transform=gca().transData)
+      gca().add_line(p1)
+      gca().add_line(p2)
+      p1.set_visible(True)
+      p2.set_visible(True)
+      self.lines[self.scannum].append(p1)
+      self.lines[self.scannum].append(p2)
+      self._refresh()
 
-  def unflag_time(self,y,button):
-      if button=='T':
-          y=round(y)
-          w=self.data.shape[2]
+  def unflag_times(self,y,button):
+      y1=round(y1)
+      y2=round(y2)
+      w=self.data.shape[2]
+      flagarea = self.flags[self.scannum,y1:y2,0:w]
+      flagarea[flagarea>0] -= 1
+      for y in (y1,y2):
           for l in self.lines[self.scannum]:
               if l._y[0] == y and l._y[1] == y:
-                  self.flags[self.scannum,y,0:w] -= 1
                   l.set_visible(False)
                   self.lines[self.scannum].remove(l)
-                  self._refresh()
-          if self.flags[self.scannum,y,0:w].max() > 0:
-              arr = self.flags[self.scannum,y,0:w]
-              arr[arr>0] -= 1
+      self._refresh()
 
   def unflag_bolo(self,x,button):
       if button=='B':
@@ -619,7 +626,7 @@ class Flagger:
       self.bolofig=figure(4)
       self.bolofig.clf()
       if self.PCA:
-          pylab.plot(self.efuncs[tsy,:])
+          pylab.plot(self.efuncarr[tsy,:])
       else:
           pylab.plot(self.plane[tsy,:])
 
@@ -744,16 +751,23 @@ class Flagger:
           self.flags[self.scannum,:,:].flat[self.plane.argmin()] += 1
       elif event.key == 'd':
           self.flag_box(self.x1,self.y1,self.x2,self.y2,'d')
-      elif event.key == 't':
-          self.flag_time(event.ydata,event.key)
+      elif event.key == 't' or event.key == 'T':
+          if self._lastkey == 't' or self._lastkey == 'T':
+              self._y2 = numpy.round(event.ydata)
+              if event.key == 'T':
+                  self.unflag_times(self._y1,self._y2)
+              elif event.key =='t':
+                  self.flag_times(self._y1,self._y2)
+              self._lastkey = None
+              set_lastkey = False
+          else:
+              self._y1 = numpy.round(event.ydata)
       elif event.key == 's' or event.key == 'w': # "whole" scan
           self.flags[self.scannum,:,:] += 1
       elif event.key == 'S':
           self.flags[self.scannum,:,:] -= (self.flags[self.scannum,:,:] > 0)
       elif event.key == 'b':
           self.flag_bolo(event.xdata,event.key)
-      elif event.key == 'T':
-          self.unflag_time(event.ydata,event.key)
       elif event.key == 'B':
           self.unflag_bolo(event.xdata,event.key)
       elif event.key == 'c':
@@ -959,12 +973,15 @@ class Flagger:
       ncfile.close()
 
   def _refresh(self):
-      self.flagfig.canvas.draw()
-      self.datafig.canvas.draw()
-      self.mapfig.canvas.draw()
-      self.PCA = False
+      if self.flagfig is not None:
+          self.flagfig.canvas.draw()
+      if self.datafig is not None:
+          self.datafig.canvas.draw()
+      if self.mapfig is not None:
+          self.mapfig.canvas.draw()
       if self.plotfig is not None:
           self.plotfig.canvas.draw()
+      self.PCA = False
 
 def nantomask(arr):
     mask = (arr != arr)
