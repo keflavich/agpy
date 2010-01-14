@@ -308,6 +308,7 @@ class Flagger:
     if scatter:
         self.plotfig=figure(4)
         self.plotfig.clf()
+        self.plotmanager = pylab.get_current_fig_manager()
         downsample_factor = 2.
         try:
             vals = self.data.data[self.scannum,tsy,:].ravel()
@@ -318,7 +319,7 @@ class Flagger:
         except TypeError:
             flags = self.flags[self.scannum,tsy,:].ravel()
         flagvals = vals*(flags==0)
-        self.footim = pylab.imshow(gridmap(x,y,flagvals,downsample_factor=downsample_factor)
+        self.footim = pylab.imshow(gridmap(x,y,flagvals,downsample_factor=downsample_factor,xsize=72,ysize=72)
                 ,interpolation='bilinear')
         self.footcb = pylab.colorbar()
         self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
@@ -359,21 +360,27 @@ class Flagger:
           plotdata = self.data
           allflags = self.flags
 
-      vmin = plotdata[self.scannum,y1:y2,:].min()
-      vmax = plotdata[self.scannum,y1:y2,:].max()
+
+      mappoints = asarray(self.tstomap[self.scannum,y1:y2,:])
+      x,y = mappoints / self.map.shape[1],mappoints % self.map.shape[1]
+      vals = numpy.reshape( plotdata[self.scannum,y1:y2,:], [abs(y2-y1),plotdata.shape[2]] )
+      flags = numpy.reshape( allflags[self.scannum,y1:y2,:], [abs(y2-y1),plotdata.shape[2]] )
+      flagvals = vals*(flags==0)
+      mapcube = array([ gridmap(x[ii,:],y[ii,:],flagvals[ii,:],downsample_factor=2,xsize=72,ysize=72)
+          for ii in xrange(y2-y1) ])
+
+      vmin = mapcube.min()
+      vmax = mapcube.max()
       self.footim.set_clim((vmin,vmax))
 
-      for tsy in xrange(y1,y2):
-          mappoints = asarray(self.tstomap[self.scannum,tsy,:])
-          x,y = mappoints / self.map.shape[1],mappoints % self.map.shape[1]
-          vals = plotdata[self.scannum,tsy,:].ravel()
-          flags = allflags[self.scannum,tsy,:].ravel()
-          flagvals = vals*(flags==0)
-          map = gridmap(x,y,flagvals,downsample_factor=2,smooth=False)
-          self.footim.set_array(map)
+      for tsy in xrange(y2-y1):
+          self.footim.set_array(mapcube[tsy,:,:])
           self.footcb = pylab.colorbar(cax=self.footcb.ax)
-          self.plotfig.show()
-          pylab.draw()
+          #self.plotfig.show()
+          #pylab.draw()
+          self.plotmanager.canvas.draw()
+      
+      return mapcube
 
  
   def set_plotscan_data(self,scannum,data=None,flag=True):
@@ -753,7 +760,7 @@ class Flagger:
           self.flag_box(self.x1,self.y1,self.x2,self.y2,'d')
       elif event.key == 't' or event.key == 'T':
           if self._lastkey == 't' or self._lastkey == 'T':
-              self._y2 = numpy.round(event.ydata)
+              self._y2 = numpy.ceil(event.ydata)
               if event.key == 'T':
                   self.unflag_times(self._y1,self._y2)
               elif event.key =='t':
@@ -761,7 +768,7 @@ class Flagger:
               self._lastkey = None
               set_lastkey = False
           else:
-              self._y1 = numpy.round(event.ydata)
+              self._y1 = numpy.floor(event.ydata)
       elif event.key == 's' or event.key == 'w': # "whole" scan
           self.flags[self.scannum,:,:] += 1
       elif event.key == 'S':
@@ -779,7 +786,7 @@ class Flagger:
       elif event.key == 'a':
           if self._lastkey == 'a':
               self._y2 = round(event.ydata)
-              self.footmovie(self._y1,self._y2)
+              self.skymovie = self.footmovie(self._y1,self._y2)
               self._lastkey = None
               set_lastkey = False
           else:
@@ -996,12 +1003,15 @@ def downsample(myarr,factor):
         for j in xrange(factor)]).mean(axis=0)
     return dsarr 
 
-def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,smooth=True):
+def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,smooth=True,xsize=None,ysize=None):
     nx = xrange = numpy.ceil(numpy.max(x)-numpy.min(x))+3
     ny = yrange = numpy.ceil(numpy.max(y)-numpy.min(y))+3
     xax = x-min(x)
     yax = y-min(y)
-    map = zeros([yrange,xrange])
+    if xsize and ysize:
+        map = zeros([xsize,ysize])
+    else:
+        map = zeros([yrange,xrange])
     map[numpy.round(yax),numpy.round(xax)] += v
 
     if smooth:
