@@ -226,7 +226,7 @@ class Flagger:
       if tsplot is not None:
           self.tsplot=tsplot
       if self.tsplot == 'astrosignal' and self.astrosignal.sum() != 0:
-          self.data = self.astrosignal*self.scalearr
+          self.data = self.astrosignal
       elif self.tsplot == 'dcbolos':
           self.data = self.dc_bolos*self.scalearr
       elif self.tsplot == 'acbolos_noscale':
@@ -234,9 +234,15 @@ class Flagger:
       elif self.tsplot == 'acbolos':
           self.data = self.ac_bolos*self.scalearr
       elif self.tsplot == 'atmosphere':
-          self.data = self.atmosphere*self.scalearr
-      elif self.tsplot=='default' or self.tsplot=='skysub':
-          self.data = (self.ac_bolos - self.atmosphere - self.noise) *self.scalearr
+          self.data = self.atmosphere
+      elif self.tsplot=='skysub_noscale':
+          self.data = self.ac_bolos - self.atmosphere
+      elif self.tsplot=='skysub':
+          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere
+      elif self.tsplot=='default':
+          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere - self.noise
+      elif self.tsplot=='default_noscale':
+          self.data = self.ac_bolos - self.atmosphere - self.noise
       elif self.tsplot=='scale':
           self.data = self.scalearr
       elif self.tsplot=='raw':

@@ -1,3 +1,12 @@
+"""
+readcol.py by Adam Ginsburg (keflavich@gmail.com)
+
+readcol is meant to emulate IDL's readcol.pro, but is more capable and
+flexible.  It is not a particularly "pythonic" program since it is not modular.
+For a modular ascii table reader, http://cxc.harvard.edu/contrib/asciitable/ is
+probably better.  This single-function code is probably more intuitive to an
+end-user, though.
+"""
 import string,re,sys
 import numpy
 try:
