@@ -20,6 +20,7 @@ import os
 import copy
 import idlsave
 import gaussfitter
+from PCA_tools import *
 
 matplotlib.rcParams['image.origin']='lower'
 matplotlib.rcParams['image.interpolation']='nearest'
@@ -184,6 +185,7 @@ class Flagger:
       self.raw         = nantomask( reshape( self.sav.variables['bgps']['raw'][0][self.whscan,:]         , self.datashape) )
       self.ac_bolos    = nantomask( reshape( self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:]    , self.datashape) )
       self.dc_bolos    = nantomask( reshape( self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:]    , self.datashape) )
+      self.noise       = nantomask( reshape( self.sav.variables['bgps']['noise'][0][self.whscan,:]       , self.datashape) )
       self.scalearr    = nantomask( reshape( self.sav.variables['bgps']['scalearr'][0][self.whscan,:]    , self.datashape) )
       self.weight      = nantomask( reshape( self.sav.variables['bgps']['weight'][0][self.whscan,:]      , self.datashape) )
       self.flags       = nantomask( reshape( self.sav.variables['bgps']['flags'][0][self.whscan,:]       , self.datashape) )
@@ -219,6 +221,7 @@ class Flagger:
       scale
       raw
       rawscaled
+      noise
       """
       if tsplot is not None:
           self.tsplot=tsplot
@@ -233,29 +236,20 @@ class Flagger:
       elif self.tsplot == 'atmosphere':
           self.data = self.atmosphere*self.scalearr
       elif self.tsplot=='default' or self.tsplot=='skysub':
-          self.data = (self.ac_bolos - self.atmosphere) *self.scalearr
+          self.data = (self.ac_bolos - self.atmosphere - self.noise) *self.scalearr
       elif self.tsplot=='scale':
           self.data = self.scalearr
       elif self.tsplot=='raw':
           self.data = self.raw
       elif self.tsplot=='rawscaled':
           self.data = self.raw * self.scalearr
+      elif self.tsplot=='noise':
+          self.data = self.noise
       else:
           print "No option for %s" % self.tsplot
           return
       print "Set tsplot to %s" % tsplot
       self._refresh()
-  
-  def efuncs(self,arr):
-      try:
-          arr[arr.mask] = 0
-          arr.mask[:] = 0
-      except:
-          pass
-      covmat = dot(arr.T,arr)
-      evals,evects = numpy.linalg.eig(covmat)
-      self.efuncarr = dot(arr,evects)
-      return self.efuncarr
 
   def readncfile(self):
         self.ncfile = netcdf.netcdf_file(self.ncfilename,'r') # NetCDF.NetCDFFile(self.ncfilename,'r')
@@ -407,13 +401,13 @@ class Flagger:
     if self.scanim is None:
         self.flagfig = figure(fignum+1); clf()
         self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
-        xlabel('Bolometer number'); ylabel('Time (.02s)')
+        xlabel('Bolometer number'); ylabel('Time (.1s)')
         self.flagim = pylab.imshow(self.flags[scannum,:,:],interpolation='nearest',
                 origin='lower',aspect=self.aspect)
         self.flagcb = pylab.colorbar()
         self.datafig = figure(fignum);clf();
         self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename);
-        xlabel('Bolometer number'); ylabel('Time (.02s)')
+        xlabel('Bolometer number'); ylabel('Time (.1s)')
         self.dataim = pylab.imshow(plotdata,interpolation='nearest',
                 origin='lower',aspect=self.aspect)
         self.datacb = pylab.colorbar()
@@ -736,7 +730,7 @@ class Flagger:
           else:
               print "At first scan, can't go further back"
       elif event.key == 'P': # PCA
-          self.plotscan(self.scannum,data=self.efuncs(self.plane),flag=False,logscale=True)
+          self.plotscan(self.scannum,data=efuncs(self.plane),flag=False,logscale=True)
           self.PCA = True
       elif event.key == 'q':
           self.close()
@@ -1043,3 +1037,4 @@ def _hdr_string_list_to_cardlist(strlist):
     cardlist = [_hdr_string_to_card(s) for s in strlist]
     cardlist.remove(None)
     return pyfits.CardList(cardlist)
+
