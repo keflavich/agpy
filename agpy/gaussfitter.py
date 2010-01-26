@@ -24,9 +24,10 @@ def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
     x = (X*numpy.abs(data)).sum()/total
     y = (Y*numpy.abs(data)).sum()/total
     col = data[int(y),:]
-    width_x = numpy.sqrt(numpy.abs((numpy.arange(col.size)-y)**2*col).sum()/numpy.abs(col).sum())
+    # FIRST moment, not second!
+    width_x = numpy.sqrt(numpy.abs((numpy.arange(col.size)-y)*col).sum()/numpy.abs(col).sum())
     row = data[:, int(x)]
-    width_y = numpy.sqrt(numpy.abs((numpy.arange(row.size)-x)**2*row).sum()/numpy.abs(row).sum())
+    width_y = numpy.sqrt(numpy.abs((numpy.arange(row.size)-x)*row).sum()/numpy.abs(row).sum())
     width = ( width_x + width_y ) / 2.
     height = estimator(data.ravel())
     amplitude = data.max()-height
@@ -173,6 +174,11 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         params[usemoment] = moment[usemoment]
     elif params == [] or len(params)==0:
         params = (moments(data,circle,rotate,vheight,**kwargs))
+    if vheight==0:
+        vheight=1
+        params = numpy.concatenate([[0],params])
+        fixed[0] = 1
+
 
     # mpfit will fail if it is given a start parameter outside the allowed range:
     for i in xrange(len(params)): 
@@ -193,18 +199,19 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
             def f(p,fjac=None): return [0,numpy.ravel((data-twodgaussian(p,circle,rotate,vheight)\
                     (*numpy.indices(data.shape)))/err)]
         return f
+
                     
     parinfo = [ 
                 {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
                 {'n':2,'value':params[2],'limits':[minpars[2],maxpars[2]],'limited':[limitedmin[2],limitedmax[2]],'fixed':fixed[2],'parname':"XSHIFT",'error':0},
                 {'n':3,'value':params[3],'limits':[minpars[3],maxpars[3]],'limited':[limitedmin[3],limitedmax[3]],'fixed':fixed[3],'parname':"YSHIFT",'error':0},
                 {'n':4,'value':params[4],'limits':[minpars[4],maxpars[4]],'limited':[limitedmin[4],limitedmax[4]],'fixed':fixed[4],'parname':"XWIDTH",'error':0} ]
+    if vheight == 1:
+        parinfo.insert(0,{'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0})
     if circle == 0:
         parinfo.append({'n':5,'value':params[5],'limits':[minpars[5],maxpars[5]],'limited':[limitedmin[5],limitedmax[5]],'fixed':fixed[5],'parname':"YWIDTH",'error':0})
         if rotate == 1:
             parinfo.append({'n':6,'value':params[6],'limits':[minpars[6],maxpars[6]],'limited':[limitedmin[6],limitedmax[6]],'fixed':fixed[6],'parname':"ROTATION",'error':0})
-    if vheight == 1:
-        parinfo.insert(0,{'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0})
 
     if autoderiv == 0:
         # the analytic derivative, while not terribly difficult, is less
