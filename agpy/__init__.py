@@ -14,3 +14,4 @@ from posang import posang
 import densitymap
 from downsample import downsample
 from correlate2d import correlate2d
+from psds import PSD2

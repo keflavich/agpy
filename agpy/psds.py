@@ -12,7 +12,7 @@ def PSD2(image,oned=True,return_index=True):
     #acorr = scipy.stsci.convolve.correlate2d(image,image,fft=True,mode='constant')
     #acorr = correlate2d(image,image)
     #psd2 = numpy.abs( numpy.fft.fftshift( numpy.fft.fft2(acorr) ) )
-    psd2 = numpy.abs( correlate2d(image,image,psd=True)
+    psd2 = numpy.abs( correlate2d(image,image,psd=True) )
 
     xx,yy = numpy.indices(image.shape)
     rr = numpy.sqrt((xx-image.shape[0] / 2)**2+(yy-image.shape[1] / 2)**2)
