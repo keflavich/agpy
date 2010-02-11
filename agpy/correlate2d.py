@@ -1,8 +1,11 @@
 import numpy
 
-def correlate2d(im1,im2):
+def correlate2d(im1,im2,psd=False):
     """
     Cross-correlation of two images of arbitrary size
+
+    Options:
+    psd - if true, return fft(im1)*fft(im2[::-1,::-1])
     """
     shape1 = im1.shape
     shape2 = im2.shape
@@ -16,7 +19,10 @@ def correlate2d(im1,im2):
     fft1 = numpy.fft.fft2(bigim1)
     fft2 = numpy.fft.fft2(bigim2)
     fftmult = fft1*fft2
-    rifft = (numpy.fft.ifft2( fftmult )).real
-    result = rifft[ quarterx:centerx+quarterx, quartery:centery+quartery ] 
-    return result
+    if psd:
+        return fftmult
+    else:
+        rifft = (numpy.fft.ifft2( fftmult )).real
+        result = rifft[ quarterx:centerx+quarterx, quartery:centery+quartery ] 
+        return result
 

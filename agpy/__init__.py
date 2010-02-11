@@ -13,3 +13,4 @@ from reg_gal2cel import gal2cel
 from posang import posang
 import densitymap
 from downsample import downsample
+from correlate2d import correlate2d
