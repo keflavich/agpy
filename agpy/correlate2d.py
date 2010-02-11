@@ -7,6 +7,8 @@ def correlate2d(im1,im2,psd=False,psdshift=True):
     Options:
     psd - if true, return fft(im1)*fft(im2[::-1,::-1]), which is the power spectral density
     psdshift - if true, return the shifted psd so that the DC component is in the center of the image
+
+    WARNING: Normalization may be arbitrary if you use the PSD
     """
     shape1 = im1.shape
     shape2 = im2.shape
@@ -16,7 +18,8 @@ def correlate2d(im1,im2,psd=False,psdshift=True):
     bigim1 = numpy.zeros(newshape,dtype=numpy.float64)
     bigim2 = numpy.zeros(newshape,dtype=numpy.float64)
     bigim1[:im1.shape[0],:im1.shape[1]] = im1
-    bigim2[:im2.shape[0],:im2.shape[1]] = im2[::-1,::-1]
+    # cross-correlation instead of convolution: reverse the array
+    bigim2[:im2.shape[0],:im2.shape[1]] = im2[::-1,::-1] 
     fft1 = numpy.fft.fft2(bigim1)
     fft2 = numpy.fft.fft2(bigim2)
     fftmult = fft1*fft2
