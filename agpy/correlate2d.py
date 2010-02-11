@@ -1,11 +1,12 @@
 import numpy
 
-def correlate2d(im1,im2,psd=False):
+def correlate2d(im1,im2,psd=False,psdshift=True):
     """
     Cross-correlation of two images of arbitrary size
 
     Options:
-    psd - if true, return fft(im1)*fft(im2[::-1,::-1])
+    psd - if true, return fft(im1)*fft(im2[::-1,::-1]), which is the power spectral density
+    psdshift - if true, return the shifted psd so that the DC component is in the center of the image
     """
     shape1 = im1.shape
     shape2 = im2.shape
@@ -20,7 +21,13 @@ def correlate2d(im1,im2,psd=False):
     fft2 = numpy.fft.fft2(bigim2)
     fftmult = fft1*fft2
     if psd:
-        return fftmult
+        if psdshift:
+            shiftfftmult = numpy.fft.fftshift(fftmult)
+            result = shiftfftmult[ quarterx:centerx+quarterx, quartery:centery+quartery ] 
+            return result
+        else:
+            print "Warning: no fft shift - not cropped!"
+            return fftmult
     else:
         rifft = (numpy.fft.ifft2( fftmult )).real
         result = rifft[ quarterx:centerx+quarterx, quartery:centery+quartery ] 
