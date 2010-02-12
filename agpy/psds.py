@@ -1,7 +1,7 @@
 import numpy
 from correlate2d import correlate2d
 
-def PSD2(image,oned=True,return_index=True,wavenumber=False):
+def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -9,10 +9,13 @@ def PSD2(image,oned=True,return_index=True,wavenumber=False):
     return_index - if true, the first return item will be the indexes
     wavenumber - if one dimensional and return_index set, will return a normalized wavenumber instead
     """
+    
 
     image[image!=image] = 0
+    if image2 is None:
+        image2 = image
     #acorr = scipy.stsci.convolve.correlate2d(image,image,fft=True,mode='constant')
-    acorr = correlate2d(image,image)
+    acorr = correlate2d(image,image2)
     psd2 = numpy.abs( numpy.fft.fftshift( numpy.fft.fft2(acorr) ) )
     #psd2 = numpy.abs( ( correlate2d(image,image,psd=True) ) )
 
