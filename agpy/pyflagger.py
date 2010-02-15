@@ -167,7 +167,8 @@ class Flagger:
       self.tsfile = None
 
       self.ncscans = self.sav.variables['bgps']['scans_info'][0]
-      self.scanlen = self.ncscans[0,1]-self.ncscans[0,0]
+      self.scanlengths = self.ncscans[:,1]-self.ncscans[:,0]
+      self.scanlen = numpy.max(self.scanlengths)
       self.ncflags = self.sav.variables['bgps']['flags'][0] 
       self.timelen = self.ncflags.shape[0]
       self.nbolos = self.ncflags.shape[1]
@@ -176,20 +177,35 @@ class Flagger:
       self.ncbolo_indices = self.sav.variables['bgps']['bolo_indices'][0]
       self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
       self.ngoodbolos = self.bolo_indices.shape[0]
-      self.whscan = asarray([arange(self.scanlen)+i for i in self.ncscans[:,0]]).ravel()
+      self.whscan = asarray([arange(self.scanlen)+i for i,j in self.ncscans]).ravel()
+      self.whempty = concatenate([arange(j,self.scanlen+i) for i,j in self.ncscans]).ravel()
 
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
-      self.astrosignal = nantomask( reshape( self.sav.variables['bgps']['astrosignal'][0][self.whscan,:] , self.datashape) )
-      self.atmosphere  = nantomask( reshape( self.sav.variables['bgps']['atmosphere'][0][self.whscan,:]  , self.datashape) )
-      self.raw         = nantomask( reshape( self.sav.variables['bgps']['raw'][0][self.whscan,:]         , self.datashape) )
-      self.ac_bolos    = nantomask( reshape( self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:]    , self.datashape) )
-      self.dc_bolos    = nantomask( reshape( self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:]    , self.datashape) )
-      self.noise       = nantomask( reshape( self.sav.variables['bgps']['noise'][0][self.whscan,:]       , self.datashape) )
-      self.scalearr    = nantomask( reshape( self.sav.variables['bgps']['scalearr'][0][self.whscan,:]    , self.datashape) )
-      self.weight      = nantomask( reshape( self.sav.variables['bgps']['weight'][0][self.whscan,:]      , self.datashape) )
-      self.flags       = nantomask( reshape( self.sav.variables['bgps']['flags'][0][self.whscan,:]       , self.datashape) )
+      self.astrosignal = self.sav.variables['bgps']['astrosignal'][0][self.whscan,:] 
+      self.atmosphere  = self.sav.variables['bgps']['atmosphere'][0][self.whscan,:]  
+      self.raw         = self.sav.variables['bgps']['raw'][0][self.whscan,:]         
+      self.ac_bolos    = self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:]    
+      self.dc_bolos    = self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:]    
+      self.noise       = self.sav.variables['bgps']['noise'][0][self.whscan,:]       
+      self.scalearr    = self.sav.variables['bgps']['scalearr'][0][self.whscan,:]    
+      self.weight      = self.sav.variables['bgps']['weight'][0][self.whscan,:]      
+      self.flags       = self.sav.variables['bgps']['flags'][0][self.whscan,:]       
 
+      datums = [ self.astrosignal, self.atmosphere, self.raw    , self.ac_bolos , self.dc_bolos , self.noise    , self.scalearr , self.weight   , self.flags    ] 
+      for d in datums:
+          try:
+              d[self.whempty,:] = NaN
+          except ValueError:
+              d[self.whempty,:] = 0
+          d = reshape(d,self.datashape)
+          d = nantomask(d)
+          d = reshape(d,self.datashape)
+          if list(d.shape) != self.datashape:
+              import pdb; pdb.set_trace()
+
+      if list(self.ac_bolos.shape) != self.datashape:
+          import pdb; pdb.set_trace()
       self.data = self.ac_bolos
 
       self.ncfile = None
