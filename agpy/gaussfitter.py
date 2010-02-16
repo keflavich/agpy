@@ -2,7 +2,8 @@
 # created by Adam Ginsburg (adam.ginsburg@colorado.edu or keflavich@gmail.com) 3/17/08)
 import numpy
 from numpy.ma import median
-from scipy import optimize,stats,pi
+from numpy import pi
+#from scipy import optimize,stats,pi
 from mpfit import mpfit
 
 """

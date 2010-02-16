@@ -13,7 +13,7 @@ from matplotlib.lines import Line2D
 from matplotlib.widgets import Cursor, MultiCursor
 import matplotlib.cm as cm
 #from Scientific.IO import NetCDF
-from scipy.io import netcdf
+#from scipy.io import netcdf
 import time
 import re
 import os
@@ -178,7 +178,8 @@ class Flagger:
       self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
       self.ngoodbolos = self.bolo_indices.shape[0]
       self.whscan = asarray([arange(self.scanlen)+i for i,j in self.ncscans]).ravel()
-      self.whempty = concatenate([arange(j,self.scanlen+i) for i,j in self.ncscans]).ravel()
+      self.scanstarts = arange(self.nscans)*self.scanlen
+      self.whempty = concatenate([arange(i+j,i+self.scanlen) for i,j in zip(self.scanstarts,self.scanlengths) ]).ravel()
 
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
@@ -198,11 +199,9 @@ class Flagger:
               d[self.whempty,:] = NaN
           except ValueError:
               d[self.whempty,:] = 0
-          d = reshape(d,self.datashape)
+          d.shape = self.datashape
           d = nantomask(d)
-          d = reshape(d,self.datashape)
-          if list(d.shape) != self.datashape:
-              import pdb; pdb.set_trace()
+      #import pdb; pdb.set_trace()
 
       if list(self.ac_bolos.shape) != self.datashape:
           import pdb; pdb.set_trace()
@@ -338,7 +337,10 @@ class Flagger:
         self.footim = pylab.imshow(gridmap(x,y,flagvals,downsample_factor=downsample_factor,xsize=72,ysize=72)
                 ,interpolation='bilinear')
         self.footcb = pylab.colorbar()
-        self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
+        try:
+            self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
+        except TypeError:
+            self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data[self.scannum,tsy,:],s=40)
 
     else:
         try:
@@ -362,17 +364,19 @@ class Flagger:
       self.bolommap = numpy.zeros(self.map.shape)
       self.bolonhits = numpy.zeros(self.map.shape)
       self.bolommap.flat[self.tstomap[:,:,bolonum].ravel()] += self.data[:,:,bolonum].ravel()
-      self.bolonhits.flat[self.tstomap[:,:,bolonum].ravel()] += 1
+      # only add hits for non-zero, non-NAN elements
+      hits = (self.data[:,:,bolonum].ravel() != 0) * (self.data[:,:,bolonum].ravel() == self.data[:,:,bolonum].ravel())
+      self.bolonhits.flat[self.tstomap[:,:,bolonum].ravel()] += hits
       self.bolommap /= self.bolonhits
       self.bolomapim = pylab.imshow(self.bolommap,interpolation='nearest',origin='lower')
       pylab.colorbar()
 
-  def footmovie(self,y1,y2):
+  def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False):
       self.footscatter.set_visible(False)
-      try:
+      if isinstance(self.data,numpy.ma.masked_array):
           plotdata = self.data.data
           allflags = self.flags.data
-      except TypeError:
+      else:
           plotdata = self.data
           allflags = self.flags
 
@@ -384,17 +388,31 @@ class Flagger:
       flagvals = vals*(flags==0)
       mapcube = array([ gridmap(x[ii,:],y[ii,:],flagvals[ii,:],downsample_factor=2,xsize=72,ysize=72)
           for ii in xrange(y2-y1) ])
+      mapcube[mapcube!=mapcube] = 0
 
+      if logscale:
+          #mapcube-=mapcube.min()
+          mapcube=numpy.arcsinh(mapcube/logscale)
+          #self.footim.set_norm(matplotlib.colors.LogNorm())
       vmin = mapcube.min()
       vmax = mapcube.max()
-      self.footim.set_clim((vmin,vmax))
+      #self.footim.set_clim((vmin,vmax))
+      #self.footcb.set_clim((vmin,vmax))
+      #self.footim.set_array(mapcube[0,:,:])
+      figure(4)
+      self.footim = imshow(mapcube[0,:,:],vmin=vmin,vmax=vmax)
 
+      self.footcb.ax.clear()
+      self.footcb = pylab.colorbar(cax=self.footcb.ax) #self.footim,cax=self.footcb.ax,norm=matplotlib.colors.Normalize(vmin=vmin,vmax=vmax))
+
+      pylab.draw()
       for tsy in xrange(y2-y1):
           self.footim.set_array(mapcube[tsy,:,:])
-          self.footcb = pylab.colorbar(cax=self.footcb.ax)
           #self.plotfig.show()
           #pylab.draw()
           self.plotmanager.canvas.draw()
+          if movie:
+              pylab.savefig(moviedir+'%04i.png' % tsy)
       
       return mapcube
 

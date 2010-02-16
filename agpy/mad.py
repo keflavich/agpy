@@ -1,6 +1,6 @@
 import numpy as N
-from scipy.stats import norm, median
-from scipy.stats.stats import nanmedian,_nanmedian
+#from scipy.stats import norm, median
+#from scipy.stats.stats import nanmedian,_nanmedian
  	
 def MAD(a, c=0.6745, axis=0):
     """
@@ -10,18 +10,24 @@ def MAD(a, c=0.6745, axis=0):
 
     """
 
+    good = (a==a)
     a = N.asarray(a, N.float64)
     if a.ndim == 1:
-        d = _nanmedian(a)
-        m = _nanmedian(N.fabs(a - d) / c)
+        d = N.median(a[good])
+        m = N.median(N.fabs(a[good] - d) / c)
     else:
-        d = nanmedian(a, axis=axis)
+        d = N.median(a[good], axis=axis)
         # I don't want the array to change so I have to copy it?
         if axis > 0:
-            aswp = swapaxes(0,axis)
+            aswp = swapaxes(a[good],0,axis)
         else:
-            aswp = a
-        m = nanmedian(N.fabs(aswp - d) / c, axis=0)
+            aswp = a[good]
+        m = N.median(N.fabs(aswp - d) / c, axis=0)
 
     return m
 
+def nanmedian(arr):
+    """
+    Returns median ignoring NAN
+    """
+    return N.median(arr[arr==arr])
