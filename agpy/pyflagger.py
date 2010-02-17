@@ -227,12 +227,15 @@ class Flagger:
   def set_tsplot(self,tsplot=None):
       """
       Options: set tsplot equal to one of these strings
+      default (ac_bolos - atmosphere - noise)
+      residual (ac_bolos - atmosphere - noise - astrosignal)
+      skysub (ac_bolos - atmosphere)
       astrosignal
       dcbolos
       acbolos 
       acbolos_noscale 
       atmosphere
-      default / skysub (ac_bolos - atmosphere)
+      default_noscale
       scale
       raw
       rawscaled
@@ -252,6 +255,8 @@ class Flagger:
           self.data = self.atmosphere
       elif self.tsplot=='skysub_noscale':
           self.data = self.ac_bolos - self.atmosphere
+      elif self.tsplot=='residual':
+          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere - self.astrosignal
       elif self.tsplot=='skysub':
           self.data = (self.ac_bolos*self.scalearr) - self.atmosphere
       elif self.tsplot=='default':
