@@ -168,7 +168,7 @@ class Flagger:
 
       self.ncscans = self.sav.variables['bgps']['scans_info'][0]
       if len(self.ncscans.shape) == 1: self.ncscans.shape = [1,2]
-      self.scanlengths = self.ncscans[:,1]-self.ncscans[:,0]
+      self.scanlengths = self.ncscans[:,1]+1-self.ncscans[:,0]
       self.scanlen = numpy.max(self.scanlengths)
       self.ncflags = self.sav.variables['bgps']['flags'][0] 
       self.timelen = self.ncflags.shape[0]
@@ -185,24 +185,26 @@ class Flagger:
 
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
-      self.astrosignal = self.sav.variables['bgps']['astrosignal'][0][self.whscan,:] 
-      self.atmosphere  = self.sav.variables['bgps']['atmosphere'][0][self.whscan,:]  
-      self.raw         = self.sav.variables['bgps']['raw'][0][self.whscan,:]         
-      self.ac_bolos    = self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:]    
-      self.dc_bolos    = self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:]    
-      self.noise       = self.sav.variables['bgps']['noise'][0][self.whscan,:]       
-      self.scalearr    = self.sav.variables['bgps']['scalearr'][0][self.whscan,:]    
-      self.weight      = self.sav.variables['bgps']['weight'][0][self.whscan,:]      
-      self.flags       = self.sav.variables['bgps']['flags'][0][self.whscan,:]       
+      self.astrosignal = self.sav.variables['bgps']['astrosignal'][0][self.whscan,:].astype('float')
+      self.atmosphere  = self.sav.variables['bgps']['atmosphere'][0][self.whscan,:].astype('float')
+      self.raw         = self.sav.variables['bgps']['raw'][0][self.whscan,:].astype('float')
+      self.ac_bolos    = self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:].astype('float')
+      self.dc_bolos    = self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:].astype('float')
+      self.noise       = self.sav.variables['bgps']['noise'][0][self.whscan,:].astype('float')
+      self.scalearr    = self.sav.variables['bgps']['scalearr'][0][self.whscan,:].astype('float')
+      self.weight      = self.sav.variables['bgps']['weight'][0][self.whscan,:].astype('float')
+      self.flags       = self.sav.variables['bgps']['flags'][0][self.whscan,:]
+      self.flags.shape = self.datashape
 
-      datums = [ self.astrosignal, self.atmosphere, self.raw    , self.ac_bolos , self.dc_bolos , self.noise    , self.scalearr , self.weight   , self.flags    ] 
+      datums=['astrosignal','atmosphere','raw','ac_bolos','dc_bolos','noise','scalearr','weight']
       for d in datums:
+          self.__dict__[d][self.whempty,:] = NaN
+          self.__dict__[d].shape = self.datashape
+          self.__dict__[d] = nantomask(self.__dict__[d])
           try:
-              d[self.whempty,:] = NaN
-          except ValueError:
-              d[self.whempty,:] = 0
-          d.shape = self.datashape
-          d = nantomask(d)
+              self.__dict__[d].mask[self.flags > 0] = True
+          except TypeError:
+              self.__dict__[d].mask = (self.flags > 0)
       #import pdb; pdb.set_trace()
 
       if list(self.ac_bolos.shape) != self.datashape:
@@ -345,9 +347,9 @@ class Flagger:
                 ,interpolation='bilinear')
         self.footcb = pylab.colorbar()
         try:
-            self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
-        except TypeError:
             self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data[self.scannum,tsy,:],s=40)
+        except TypeError:
+            self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
 
     else:
         try:
