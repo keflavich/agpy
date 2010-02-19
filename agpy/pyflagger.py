@@ -795,10 +795,10 @@ class Flagger:
           self.plotscan(self.scannum)
       elif event.key == 'M': # flag highest point
           self.flags[self.scannum,:,:].flat[self.plane.argmax()] += 1
-          self.plane[self.scannum,:,:].flat[self.plane.argmax()] = 0
+          self.plane.flat[self.plane.argmax()] = 0
       elif event.key == 'm': # flag lowest point
           self.flags[self.scannum,:,:].flat[self.plane.argmin()] += 1
-          self.plane[self.scannum,:,:].flat[self.plane.argmin()] = 0
+          self.plane.flat[self.plane.argmin()] = 0
       elif event.key == 'd':
           self.flag_box(self.x1,self.y1,self.x2,self.y2,'d')
       elif event.key == 't' or event.key == 'T':

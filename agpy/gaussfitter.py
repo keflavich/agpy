@@ -22,8 +22,8 @@ def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
     """
     total = numpy.abs(data).sum()
     Y, X = numpy.indices(data.shape) # python convention: reverse x,y numpy.indices
-    x = (X*numpy.abs(data)).sum()/total
-    y = (Y*numpy.abs(data)).sum()/total
+    y = numpy.argmax((X*numpy.abs(data)).sum(axis=1)/total)
+    x = numpy.argmax((Y*numpy.abs(data)).sum(axis=0)/total)
     col = data[int(y),:]
     # FIRST moment, not second!
     width_x = numpy.sqrt(numpy.abs((numpy.arange(col.size)-y)*col).sum()/numpy.abs(col).sum())
