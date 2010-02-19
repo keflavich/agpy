@@ -167,6 +167,7 @@ class Flagger:
       self.tsfile = None
 
       self.ncscans = self.sav.variables['bgps']['scans_info'][0]
+      if len(self.ncscans.shape) == 1: self.ncscans.shape = [1,2]
       self.scanlengths = self.ncscans[:,1]-self.ncscans[:,0]
       self.scanlen = numpy.max(self.scanlengths)
       self.ncflags = self.sav.variables['bgps']['flags'][0] 
@@ -180,6 +181,7 @@ class Flagger:
       self.whscan = asarray([arange(self.scanlen)+i for i,j in self.ncscans]).ravel()
       self.scanstarts = arange(self.nscans)*self.scanlen
       self.whempty = concatenate([arange(i+j,i+self.scanlen) for i,j in zip(self.scanstarts,self.scanlengths) ]).ravel()
+      self.whscan[self.whempty] = 0
 
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
@@ -256,7 +258,7 @@ class Flagger:
       elif self.tsplot=='skysub_noscale':
           self.data = self.ac_bolos - self.atmosphere
       elif self.tsplot=='residual':
-          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere - self.astrosignal
+          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere - self.noise - self.astrosignal
       elif self.tsplot=='skysub':
           self.data = (self.ac_bolos*self.scalearr) - self.atmosphere
       elif self.tsplot=='default':
@@ -619,8 +621,8 @@ class Flagger:
 #                  % (self.ncfilename,x,self.scannum)
 
   def flag_times(self,y1,y2):
-      y1=round(y1)
-      y2=round(y2)
+      y1=max([round(y1),0])
+      y2=min([round(y2),self.data.shape[1]])
       w=self.data.shape[2]
       self.flags[self.scannum,y1:y2,0:w] += 1
       p1 = matplotlib.lines.Line2D([0,w],[y1,y1],\
@@ -636,8 +638,8 @@ class Flagger:
       self._refresh()
 
   def unflag_times(self,y,button):
-      y1=round(y1)
-      y2=round(y2)
+      y1=max([round(y1),0])
+      y2=min([round(y2),self.data.shape[1]])
       w=self.data.shape[2]
       flagarea = self.flags[self.scannum,y1:y2,0:w]
       flagarea[flagarea>0] -= 1
@@ -769,7 +771,7 @@ class Flagger:
               self.plotscan(self.scannum+1)
           else:
               print "At last scan, can't go further"
-      elif event.key == 'p':
+      elif event.key == 'p' or event.key == 'N':
           if self.scannum > 0:
               self.plotscan(self.scannum-1)
           else:
@@ -793,8 +795,10 @@ class Flagger:
           self.plotscan(self.scannum)
       elif event.key == 'M': # flag highest point
           self.flags[self.scannum,:,:].flat[self.plane.argmax()] += 1
+          self.plane[self.scannum,:,:].flat[self.plane.argmax()] = 0
       elif event.key == 'm': # flag lowest point
           self.flags[self.scannum,:,:].flat[self.plane.argmin()] += 1
+          self.plane[self.scannum,:,:].flat[self.plane.argmin()] = 0
       elif event.key == 'd':
           self.flag_box(self.x1,self.y1,self.x2,self.y2,'d')
       elif event.key == 't' or event.key == 'T':
