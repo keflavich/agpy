@@ -382,12 +382,12 @@ class Flagger:
 
   def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False):
       self.footscatter.set_visible(False)
-      if isinstance(self.data,numpy.ma.masked_array):
-          plotdata = self.data.data
-          allflags = self.flags.data
-      else:
-          plotdata = self.data
-          allflags = self.flags
+      #if isinstance(self.data,numpy.ma.masked_array):
+      #    plotdata = self.data.data
+      #    allflags = self.flags.data
+      #else:
+      plotdata = self.data
+      allflags = self.flags
 
 
       mappoints = asarray(self.tstomap[self.scannum,y1:y2,:])
