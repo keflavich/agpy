@@ -344,12 +344,15 @@ class Flagger:
             flags = self.flags[self.scannum,tsy,:].ravel()
         flagvals = vals*(flags==0)
         self.footim = pylab.imshow(gridmap(x,y,flagvals,downsample_factor=downsample_factor,xsize=72,ysize=72)
-                ,interpolation='bilinear')
+                ,interpolation='bilinear',extent=[0,36*7.2,0,36*7.2])
+        pylab.xlabel('Arcseconds')
+        pylab.ylabel('Arcseconds')
         self.footcb = pylab.colorbar()
         try:
-            self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data[self.scannum,tsy,:],s=40)
+            self.footscatter = pylab.scatter(7.2*(x-min(x))/downsample_factor,7.2*(y-min(y))/downsample_factor,c=self.data[self.scannum,tsy,:],s=40)
+
         except TypeError:
-            self.footscatter = pylab.scatter((x-min(x))/downsample_factor,(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
+            self.footscatter = pylab.scatter(7.2*(x-min(x))/downsample_factor,7.2*(y-min(y))/downsample_factor,c=self.data.data[self.scannum,tsy,:],s=40)
 
     else:
         try:
@@ -380,7 +383,7 @@ class Flagger:
       self.bolomapim = pylab.imshow(self.bolommap,interpolation='nearest',origin='lower')
       pylab.colorbar()
 
-  def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False):
+  def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False,smooth=True):
       self.footscatter.set_visible(False)
       #if isinstance(self.data,numpy.ma.masked_array):
       #    plotdata = self.data.data
@@ -395,7 +398,7 @@ class Flagger:
       vals = numpy.reshape( plotdata[self.scannum,y1:y2,:], [abs(y2-y1),plotdata.shape[2]] )
       flags = numpy.reshape( allflags[self.scannum,y1:y2,:], [abs(y2-y1),plotdata.shape[2]] )
       flagvals = vals*(flags==0)
-      mapcube = array([ gridmap(x[ii,:],y[ii,:],flagvals[ii,:],downsample_factor=2,xsize=72,ysize=72)
+      mapcube = array([ gridmap(x[ii,:],y[ii,:],flagvals[ii,:],downsample_factor=2,xsize=72,ysize=72,smooth=smooth)
           for ii in xrange(y2-y1) ])
       mapcube[mapcube!=mapcube] = 0
 
@@ -448,13 +451,13 @@ class Flagger:
     else:
         plotdata = self.plane
     if self.scanim is None:
-        self.flagfig = figure(fignum+1); clf()
+        self.flagfig = figure(fignum+1,figsize=[16,12]); clf()
         self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
         xlabel('Bolometer number'); ylabel('Time (.1s)')
         self.flagim = pylab.imshow(self.flags[scannum,:,:],interpolation='nearest',
                 origin='lower',aspect=self.aspect)
         self.flagcb = pylab.colorbar()
-        self.datafig = figure(fignum);clf();
+        self.datafig = figure(fignum,figsize=[16,12]);clf();
         self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename);
         xlabel('Bolometer number'); ylabel('Time (.1s)')
         self.dataim = pylab.imshow(plotdata,interpolation='nearest',
