@@ -1,4 +1,7 @@
-import coords
+try: 
+    import coords
+except ImportError:
+    print "Can't use kdist without the 'coords' package"
 from numpy import sqrt, abs, pi, cos, sin, max, ones, array
 
 def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True,regular=False,rrgal=False,verbose=False,inverse=False):
