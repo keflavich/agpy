@@ -2,7 +2,10 @@ from pylab import *
 from numpy import *
 from readcol import readcol
 import readcol
-import pyfits
+try:
+    import pyfits
+except ImportError:
+    print "pyfits required for h2fit.py"
 import timeit
 import re
 # use pylab's copy instead import copy

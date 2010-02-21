@@ -1,7 +1,10 @@
 from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum
 from math import acos,atan2,tan
 from copy import copy
-import pywcs, coords
+try:
+    import pywcs, coords
+except ImportError:
+    print "cubes.py requires pywcs and coords"
 
 dtor = pi/180.0
 

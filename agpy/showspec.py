@@ -15,7 +15,10 @@ import pyfits
 from numpy import isnan
 from mad import MAD,nanmedian
 
-import coords
+try:
+    import coords
+except ImportError:
+    print "showspec requires coords"
 
 class SpecPlotter:
   """

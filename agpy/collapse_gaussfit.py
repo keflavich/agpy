@@ -1,7 +1,10 @@
-import scipy
-from scipy import optimize,sqrt
-from scipy.optimize import leastsq
-from scipy.stats.stats import nanmedian,nanmean,_nanmedian
+try:
+    import scipy
+    from scipy import optimize,sqrt
+    from scipy.optimize import leastsq
+    from scipy.stats.stats import nanmedian,nanmean,_nanmedian
+except ImportError:
+    print "Scipy cold not be loaded.  Collapse_gaussfit may fail"
 import numpy
 from numpy import vectorize,zeros,exp,median,where,asarray,nonzero,transpose,ma,arange,square
 import matplotlib

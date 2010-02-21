@@ -1,4 +1,7 @@
-import aplpy
+try:
+    import aplpy
+except ImportError:
+    print "aplpy is required for collapseplot"
 import pyfits
 from pylab import *
 

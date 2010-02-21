@@ -2,8 +2,11 @@
 Build a density map out of a list of coordinates
 """
 
-import pyfits
-import pyregion
+try:
+    import pyfits
+    import pyregion
+except ImportError:
+    print "densitymap requires pyfits and pyregion"
 import numpy
 from agpy import gaussfitter
 

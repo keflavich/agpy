@@ -1,5 +1,8 @@
-import coords
-import pyregion
+try:
+    import coords
+    import pyregion
+except ImportError:
+    print "reg_gal2cel requires coords & pyregion"
 import posang
 
 def gal2cel(regfile):

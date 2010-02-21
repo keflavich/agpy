@@ -7,7 +7,10 @@
 #"""
 import sys
 #sys.path.append('/Users/adam/classes/probstat')  #the gaussfitter.py file is in this directory
-import pyfits
+try:
+    import pyfits
+except ImportError:
+    print "subim_gaussfit requires pyfits"
 from numpy import *
 from scipy import *
 from pylab import *

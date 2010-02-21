@@ -1,4 +1,7 @@
-import coords
+try:
+    import coords
+except ImportError:
+    print "posang requires coords"
 from numpy import pi,arctan2,sin,cos,tan
 
 def posang(l1,b1,l2,b2,system='galactic'):

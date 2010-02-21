@@ -1,5 +1,8 @@
-import pyregion
-import coords
+try:
+    import pyregion
+    import coords
+except ImportError:
+    print "regtoapo requires pyregion and coords"
 
 def regtoapo(regfile,outfile,filtercolor=None):
 
