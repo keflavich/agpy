@@ -126,8 +126,11 @@ class plfit:
                     sigma = (av-1)/numpy.sqrt(len(z)-argxmins+1)
                     goodvals = sigma<0.1
                     nmax = argmin(goodvals)
-                    dat = dat[:nmax]
-                    av = av[:nmax]
+                    if nmax > 0:
+                        dat = dat[:nmax]
+                        av = av[:nmax]
+                    else:
+                        print "Not enough data left after flagging - using all data."
                 if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
             self._av = av
             self._xmin_kstest = dat
