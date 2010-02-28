@@ -176,7 +176,8 @@ class Flagger:
       self.nscans = self.ncscans.shape[0]
       self.ncbolo_params = self.sav.variables['bgps']['bolo_params'][0]
       self.ncbolo_indices = self.sav.variables['bgps']['bolo_indices'][0]
-      self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
+      #self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
+      self.bolo_indices = self.ncbolo_indices
       self.ngoodbolos = self.bolo_indices.shape[0]
       self.whscan = asarray([arange(self.scanlen)+i for i,j in self.ncscans]).ravel()
       self.scanstarts = arange(self.nscans)*self.scanlen
@@ -189,6 +190,7 @@ class Flagger:
       self.atmosphere  = self.sav.variables['bgps']['atmosphere'][0][self.whscan,:].astype('float')
       self.raw         = self.sav.variables['bgps']['raw'][0][self.whscan,:].astype('float')
       self.ac_bolos    = self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:].astype('float')
+      self.atmo_one    = self.sav.variables['bgps']['atmo_one'][0][self.whscan,:].astype('float')
       self.dc_bolos    = self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:].astype('float')
       self.noise       = self.sav.variables['bgps']['noise'][0][self.whscan,:].astype('float')
       self.scalearr    = self.sav.variables['bgps']['scalearr'][0][self.whscan,:].astype('float')
@@ -196,7 +198,7 @@ class Flagger:
       self.flags       = self.sav.variables['bgps']['flags'][0][self.whscan,:]
       self.flags.shape = self.datashape
 
-      datums=['astrosignal','atmosphere','raw','ac_bolos','dc_bolos','noise','scalearr','weight']
+      datums=['astrosignal','atmosphere','raw','ac_bolos','atmo_one','dc_bolos','noise','scalearr','weight']
       for d in datums:
           self.__dict__[d][self.whempty,:] = NaN
           self.__dict__[d].shape = self.datashape
@@ -251,24 +253,28 @@ class Flagger:
           self.data = self.astrosignal
       elif self.tsplot == 'dcbolos':
           self.data = self.dc_bolos*self.scalearr
-      elif self.tsplot == 'acbolos_noscale':
+      elif self.tsplot == 'acbolos_noscale' or self.tsplot == 'ac_bolos_noscale':
           self.data = self.ac_bolos
-      elif self.tsplot == 'acbolos':
+      elif self.tsplot == 'atmo_one':
+          self.data = self.atmo_one
+      elif self.tsplot == 'acbolos' or self.tsplot=='ac_bolos':
           self.data = self.ac_bolos*self.scalearr
       elif self.tsplot == 'atmosphere':
           self.data = self.atmosphere
       elif self.tsplot=='skysub_noscale':
-          self.data = self.ac_bolos - self.atmosphere
+          self.data = self.atmo_one - self.atmosphere
       elif self.tsplot=='residual':
-          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere - self.noise - self.astrosignal
-      elif self.tsplot=='skysub':
-          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere
-      elif self.tsplot=='default':
-          self.data = (self.ac_bolos*self.scalearr) - self.atmosphere - self.noise
+          self.data = self.atmo_one - self.atmosphere - self.noise
+      elif self.tsplot=='skysub' or self.tsplot=='default':
+          self.data = self.atmo_one - self.atmosphere + self.astrosignal
+      elif self.tsplot=='last_astrosignal':
+          self.data = self.atmo_one - self.atmosphere - self.noise + self.astrosignal
       elif self.tsplot=='default_noscale':
-          self.data = self.ac_bolos - self.atmosphere - self.noise
+          self.data = self.ac_bolos - self.atmo_one - self.atmosphere
       elif self.tsplot=='scale':
           self.data = self.scalearr
+      elif self.tsplot=='weight':
+          self.data = self.weight
       elif self.tsplot=='raw':
           self.data = self.raw
       elif self.tsplot=='rawscaled':
@@ -371,6 +377,7 @@ class Flagger:
     self._refresh()
 
   def bolomap(self,bolonum):
+      bolonum = numpy.round(bolonum)
       self.bolofig = pylab.figure(5)
       self.bolofig.clf()
       self.bolommap = numpy.zeros(self.map.shape)
@@ -384,6 +391,8 @@ class Flagger:
       pylab.colorbar()
 
   def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False,smooth=True):
+      y1 = numpy.round(y1)
+      y2 = numpy.round(y2)
       self.footscatter.set_visible(False)
       #if isinstance(self.data,numpy.ma.masked_array):
       #    plotdata = self.data.data
@@ -431,7 +440,7 @@ class Flagger:
  
   def set_plotscan_data(self,scannum,data=None,flag=True):
       if data is not None and flag:
-          self.plane = data*(self.flags[scannum,:,:] == 0)
+          self.plane = data *(self.flags[scannum,:,:] == 0)
       elif data is not None:
           self.plane = data
       elif flag:
@@ -673,15 +682,15 @@ class Flagger:
   def plot_column(self,tsx):
       self.bolofig=figure(4)
       self.bolofig.clf()
-      pylab.plot(self.plane[:,tsx])
+      pylab.plot(self.plane[:,numpy.round(tsx)])
 
   def plot_line(self,tsy):
       self.bolofig=figure(4)
       self.bolofig.clf()
       if self.PCA:
-          pylab.plot(self.efuncarr[tsy,:])
+          pylab.plot(self.efuncarr[numpy.round(tsy),:])
       else:
-          pylab.plot(self.plane[tsy,:])
+          pylab.plot(self.plane[numpy.round(tsy),:])
 
   def dcon(self):
       self.connected = False

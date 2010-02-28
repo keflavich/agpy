@@ -130,7 +130,8 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         limitedmax=[False,False,False,False,False,False,True],
         usemoment=numpy.array([],dtype='bool'),
         minpars=numpy.repeat(0,7),maxpars=[0,0,0,0,0,0,360],
-        rotate=1,vheight=1,quiet=True,returnmp=False,**kwargs):
+        rotate=1,vheight=1,quiet=True,returnmp=False,
+        returnfitimage=False,**kwargs):
     """
     Gaussian fitter with the ability to fit a variety of different forms of
     2-dimensional gaussian.
@@ -224,12 +225,18 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
 #        p, cov, infodict, errmsg, success = optimize.leastsq(errorfunction,\
 #                params, full_output=1)
         mp = mpfit(mpfitfun(data,err),parinfo=parinfo,quiet=quiet)
+
+
     if returnmp:
-        return mp
+        returns = (mp)
     elif return_all == 0:
-        return mp.params
+        returns = mp.params
     elif return_all == 1:
-        return mp.params,mp.perror
+        returns = mp.params,mp.perror
+    if returnfitimage:
+        fitimage = twodgaussian(mp.params,circle,rotate,vheight)(*numpy.indices(data.shape))
+        returns = (returns,fitimage)
+    return returns
 
 def onedgaussian(x,H,A,dx,w):
     """
