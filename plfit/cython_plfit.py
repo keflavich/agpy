@@ -23,8 +23,13 @@ MyPL.plotpdf(log=True)
 import numpy 
 import time
 import pylab
-usefortran=False
-cyok=False
+try: 
+    import cplfit
+    cyok=True
+    print "Cython plfit module loaded successfully."
+except ImportError:
+    print "Cython plfit module could not be loaded."
+    cyok=False
 
 import numpy.random as npr
 from numpy import log,log10,sum,argmin,argmax,exp,min,max

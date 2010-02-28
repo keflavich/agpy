@@ -4,6 +4,7 @@ from numpy.distutils.core import setup
 from numpy.distutils.core import Extension
 #from numpy.distutils.core import build_ext
 from Cython.Distutils import build_ext
+import Cython
 import numpy
 
 print "To create cplfit.so (for importing), call command: "
@@ -18,13 +19,26 @@ except AttributeError:
 
 
 ext_cplfit = Extension("cplfit", ["cplfit.pyx"], include_dirs = numpy_include_dirs + \
-        ['/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/Cython/','.'],
+        ['/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/Cython/',
+            Cython.__path__,'.'],
    extra_compile_args=['-O3'])
 #ext_fplfit = Extension(name="fplfit",
 #                    sources=["fplfit.f"])
 
 if __name__=="__main__":
     setup(
+        name = "plfit",
+        version = "1.0",
+        description = "Python implementation of Aaron Clauset's power-law distribution fitter",
+        author = "Adam Ginsburg",
+        author_email = "adam.ginsburg@colorado.edu",
+        url="http://code.google.com/p/agpy/wiki/PowerLaw",
+        download_url="http://code.google.com/p/agpy/source/browse/#svn/trunk/plfit",
+        license = "MIT",
+        platforms = ["Linux","MacOS X"],
+        packages = ['plfit'],
+        package_dir={'plfit':'lib'},
+        install_requires = ["numpy","cython"],
         ext_modules = [ ext_cplfit ],
         cmdclass = {'build_ext': build_ext}
     )

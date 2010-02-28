@@ -23,8 +23,15 @@ MyPL.plotpdf(log=True)
 import numpy 
 import time
 import pylab
-usefortran=False
-cyok=False
+try:
+    import fplfit
+    usefortran=True
+    print "Fortran plfit module loaded successfully."
+except ImportError:
+    print "Fortran module could not be loaded.  plfit will load with the \
+            python module instead - it is fully functional but at least 4x \
+            slower for large arrays"
+    usefortran=False
 
 import numpy.random as npr
 from numpy import log,log10,sum,argmin,argmax,exp,min,max
