@@ -25,11 +25,11 @@ def convolve(im1,im2):
     bigim2 = numpy.zeros(newshape,dtype=numpy.float64)
     bigim1[:im1.shape[0],:im1.shape[1]] = im1
     bigim2[:im2.shape[0],:im2.shape[1]] = im2 
-    imfft1 = numpy.fft.fft2(bigim1)
-    imfft2 = numpy.fft.fft2(bigim2)
+    imfft1 = fft2(bigim1)
+    imfft2 = fft2(bigim2)
     fftmult = imfft1*imfft2
 
-    rifft = (numpy.fft.ifft2( fftmult )).real
+    rifft = (ifft2( fftmult )).real
     result = rifft[ quarter1x:quarter3x, quarter1y:quarter3y ] 
     return result
 
@@ -58,6 +58,12 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian'):
         kernel[rr<kernelwidth] = 1.0
         # normalize
         kernel /= kernel.sum()
+    elif kerneltype == 'brickwall':
+        invkernel = numpy.zeros([kernelwidth,kernelwidth],dtype='float64')
+        xx,yy = numpy.indices([kernelwidth,kernelwidth])
+        rr = numpy.sqrt((xx-kernelwidth/2.)**2+(yy-kernelwidth/2.)**2)
+        invkernel[rr<kernelwidth] = 1.0
+        kernel = fft2(invkernel)
 
     bad = (image != image)
     temp = image.copy()
