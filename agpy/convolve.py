@@ -1,5 +1,14 @@
 import numpy
 
+try:
+    print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
+    import scipy
+    fft2 = scipy.fftpack.fft2
+    ifft2 = scipy.fftpack.ifft2
+except ImportError:
+    fft2 = numpy.fft.fft2
+    ifft2 = numpy.fft.ifft2
+
 def convolve(im1,im2):
     """
     Convolve two images, assuming image 1 is the larger of the two
@@ -16,9 +25,9 @@ def convolve(im1,im2):
     bigim2 = numpy.zeros(newshape,dtype=numpy.float64)
     bigim1[:im1.shape[0],:im1.shape[1]] = im1
     bigim2[:im2.shape[0],:im2.shape[1]] = im2 
-    fft1 = numpy.fft.fft2(bigim1)
-    fft2 = numpy.fft.fft2(bigim2)
-    fftmult = fft1*fft2
+    imfft1 = numpy.fft.fft2(bigim1)
+    imfft2 = numpy.fft.fft2(bigim2)
+    fftmult = imfft1*imfft2
 
     rifft = (numpy.fft.ifft2( fftmult )).real
     result = rifft[ quarter1x:quarter3x, quarter1y:quarter3y ] 
