@@ -3,6 +3,7 @@ import numpy
 try:
     print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
     import scipy
+    import scipy.fftpack
     fft2 = scipy.fftpack.fft2
     ifft2 = scipy.fftpack.ifft2
 except ImportError:
@@ -46,24 +47,29 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian'):
 
     if kerneltype == 'gaussian':
         gp = 9 # gaussian precision in n_sigma
-        xx,yy = numpy.indices([kernelwidth*gp,kernelwidth*gp])
+        xx,yy = numpy.indices([numpy.ceil(kernelwidth*gp),numpy.ceil(kernelwidth*gp)])
         rr = numpy.sqrt((xx-kernelwidth*gp/2.)**2+(yy-kernelwidth*gp/2.)**2)
         kernel = numpy.exp(-(rr**2)/(2*kernelwidth**2)) / (kernelwidth**2 * (2*numpy.pi))
-    elif kerneltype == 'boxcar':
-        kernel = numpy.ones([kernelwidth,kernelwidth],dtype='float64') / kernelwidth**2
+#        if kernelwidth != numpy.round(kernelwidth):
+#            print "Rounding kernel width to %i pixels" % numpy.round(kernelwidth)
+#            kernelwidth = numpy.round(kernelwidth)
+
+    if kerneltype == 'boxcar':
+        print "Using boxcar kernel size %i" % numpy.ceil(kernelwidth)
+        kernel = numpy.ones([numpy.ceil(kernelwidth),numpy.ceil(kernelwidth)],dtype='float64') / kernelwidth**2
     elif kerneltype == 'tophat':
-        kernel = numpy.zeros([kernelwidth,kernelwidth],dtype='float64')
-        xx,yy = numpy.indices([kernelwidth,kernelwidth])
-        rr = numpy.sqrt((xx-kernelwidth/2.)**2+(yy-kernelwidth/2.)**2)
+        kernel = numpy.zeros(image.shape,dtype='float64')
+        xx,yy = numpy.indices(image.shape)
+        rr = numpy.sqrt((xx-image.shape[0]/2.)**2+(yy-image.shape[1]/2.)**2)
         kernel[rr<kernelwidth] = 1.0
         # normalize
         kernel /= kernel.sum()
     elif kerneltype == 'brickwall':
-        invkernel = numpy.zeros([kernelwidth,kernelwidth],dtype='float64')
-        xx,yy = numpy.indices([kernelwidth,kernelwidth])
-        rr = numpy.sqrt((xx-kernelwidth/2.)**2+(yy-kernelwidth/2.)**2)
-        invkernel[rr<kernelwidth] = 1.0
-        kernel = fft2(invkernel)
+        print "Smoothing with a %f pixel brick wall filter" % kernelwidth
+        xx,yy = numpy.indices(image.shape)
+        rr = numpy.sqrt((xx-image.shape[0]/2.)**2+(yy-image.shape[1]/2.)**2)
+        kernel = numpy.sinc(rr/kernelwidth) 
+        kernel /= kernel.sum()
 
     bad = (image != image)
     temp = image.copy()
