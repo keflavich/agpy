@@ -12,7 +12,7 @@ except ImportError:
     ifft2 = numpy.fft.ifft2
 
 
-def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,debug=False):
+def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -25,15 +25,7 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,debug=Fa
     image[image!=image] = 0
     if image2 is None:
         image2 = image
-    #acorr = scipy.stsci.convolve.correlate2d(image,image,fft=True,mode='constant')
-    acorr = correlate2d(image,image2)
-    psd2a = numpy.abs( numpy.fft.fftshift(fft2(acorr)) )
-    psd2b = numpy.abs( correlate2d(image,image2,psd=True) )
-    if debug: return psd2a,psd2b
-    #from pylab import *
-    #figure(1); clf(); imshow(log10(psd2a))
-    #figure(2); clf(); imshow(log10(psd2b))
-    #import pdb; pdb.set_trace()
+    psd2 = numpy.abs( correlate2d(image,image2,return_fft=True) ) / (numpy.abs(image)*numpy.abs(image2)).sum()
 
     xx,yy = numpy.indices(image.shape)
     rr = numpy.sqrt((xx-image.shape[0] / 2)**2+(yy-image.shape[1] / 2)**2)
