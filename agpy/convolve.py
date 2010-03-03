@@ -10,17 +10,31 @@ except ImportError:
     fft2 = numpy.fft.fft2
     ifft2 = numpy.fft.ifft2
 
-def convolve(im1,im2):
+def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
     """
     Convolve two images.  Returns the larger image size.  Assumes image & kernel are centered
 
     Options:
+    pad - Default on.  Zero-pad image to the nearest 2^n
+    crop - Default on.  Return an image of the size of the largest input image.
+        If the images are asymmetric in opposite directions, will return the largest 
+        image in both directions.
+    return_fft - Return the FFT instead of the convolution.  Useful for making PSDs.
+    fftshift - If return_fft on, will shift & crop image to appropriate dimensions
     """
+
+    # NAN catching
+    im1[im1!=im1] = 0
+    im2[im2!=im2] = 0
+
     shape1 = im1.shape
     shape2 = im2.shape
     # find ideal size (power of 2) for fft.  Can add shapes because they are tuples
-    fsize = 2**numpy.ceil(numpy.log2(numpy.max(shape1+shape2)))
-    newshape = numpy.array([fsize,fsize])
+    if pad:
+        fsize = 2**numpy.ceil(numpy.log2(numpy.max(shape1+shape2)))
+        newshape = numpy.array([fsize,fsize])
+    else:
+        newshape = numpy.array([numpy.max([shape1[0],shape2[0]]),numpy.max([shape1[1],shape2[1]])]) #numpy.array(shape1)+numpy.array(shape2)
     centerx, centery = newshape/2.
     im1quarter1x, im1quarter1y = centerx - shape1[0]/2.,centery - shape1[1]/2.
     im1quarter3x, im1quarter3y = centerx + shape1[0]/2.,centery + shape1[1]/2.
@@ -34,13 +48,25 @@ def convolve(im1,im2):
     imfft2 = fft2(bigim2)
     fftmult = imfft1*imfft2
 
-    rifft = numpy.fft.fftshift( (ifft2( fftmult )).real )
     quarter1x = numpy.min([im1quarter1x,im2quarter1x])
     quarter3x = numpy.max([im1quarter3x,im2quarter3x])
     quarter1y = numpy.min([im1quarter1y,im2quarter1y])
     quarter3y = numpy.max([im1quarter3y,im2quarter3y])
-    result = rifft[ quarter1x:quarter3x, quarter1y:quarter3y ] 
-    return result
+    if return_fft: 
+        if fftshift: # default on 
+            if crop:
+                return numpy.fft.fftshift(fftmult)[ quarter1x:quarter3x, quarter1y:quarter3y ]
+            else:
+                return numpy.fft.fftshift(fftmult)
+        else:
+            return fftmult
+
+    rifft = numpy.fft.fftshift( (ifft2( fftmult )) )
+    if crop:
+        result = numpy.abs( rifft[ quarter1x:quarter3x, quarter1y:quarter3y ] )
+        return result
+    else:
+        return numpy.abs( rifft )
 
 def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None):
     """
