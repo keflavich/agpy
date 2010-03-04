@@ -16,7 +16,7 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
-           plot(freq,zz) is a power spectrum
+           freq,zz = PSD2(image); plot(freq,zz) is a power spectrum
     return_index - if true, the first return item will be the indexes
     wavenumber - if one dimensional and return_index set, will return a normalized wavenumber instead
     """
@@ -25,13 +25,14 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False):
     image[image!=image] = 0
     if image2 is None:
         image2 = image
-    psd2 = numpy.abs( correlate2d(image,image2,return_fft=True) ) / (numpy.abs(image)*numpy.abs(image2)).sum()
+    psd2 = numpy.abs( correlate2d(image,image2,return_fft=True) ) 
+    # normalization is approximately (numpy.abs(image).sum()*numpy.abs(image2).sum())
 
     xx,yy = numpy.indices(image.shape)
     rr = numpy.sqrt((xx-image.shape[0] / 2)**2+(yy-image.shape[1] / 2)**2)
 
     if oned:
-        freq = numpy.arange( numpy.floor( numpy.sqrt((image.shape[0]/2)**2+(image.shape[1]/2)**2) ) ) 
+        freq = 1 + numpy.arange( numpy.floor( numpy.sqrt((image.shape[0]/2)**2+(image.shape[1]/2)**2) ) ) 
 
         zz = numpy.array([ psd2[xx[rr.round()==ii],yy[rr.round()==ii]].mean() for ii in freq])
 
