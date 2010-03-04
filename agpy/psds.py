@@ -12,7 +12,7 @@ except ImportError:
     ifft2 = numpy.fft.ifft2
 
 
-def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False):
+def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,pad=False):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -25,7 +25,7 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False):
     image[image!=image] = 0
     if image2 is None:
         image2 = image
-    psd2 = numpy.abs( correlate2d(image,image2,return_fft=True) ) 
+    psd2 = numpy.abs( correlate2d(image,image2,return_fft=True,pad=pad) ) 
     # normalization is approximately (numpy.abs(image).sum()*numpy.abs(image2).sum())
 
     xx,yy = numpy.indices(image.shape)
