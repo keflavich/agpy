@@ -8,7 +8,7 @@ import pyfits
 import numpy 
 from mad import MAD,nanmedian
 #from matplotlib import patches
-from matplotlib.patches import Rectangle,FancyArrow
+from matplotlib.patches import Rectangle,FancyArrow,Circle,Ellipse
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Cursor, MultiCursor
 import matplotlib.cm as cm
@@ -389,7 +389,36 @@ class Flagger:
       self.bolonhits.flat[self.tstomap[:,:,bolonum].ravel()] += hits
       self.bolommap /= self.bolonhits
       self.bolomapim = pylab.imshow(self.bolommap,interpolation='nearest',origin='lower')
+      try:
+          disconnect(self.gfit_connection)
+      except:
+          pass
+      self.gfit_connection = connect('button_press_event',self.gfit_bolomap)
       pylab.colorbar()
+      return self.bolommap
+
+  def gfit_map(self,event,map,ax=None):
+      if event.xdata and event.ydata:
+          gf = gaussfitter.gaussfit(masktozero(map),
+                  params=   [0,0,event.xdata,event.ydata,0,0,0],
+                  usemoment=[1,1,          0,          0,1,1,1],
+                  rotate=1)
+          if ax:
+              ax.add_patch(Ellipse(gf[2:4],numpy.max(gf[4:6])*2.35,numpy.min(gf[4:6])*2.35,gf[6],fill=False))
+          print "Guess: %i,%i" % (event.xdata,event.ydata)," Fit peak: %g  Background: %g  X,Y position: %f,%f  X,Y FWHM: %f,%f   Angle: %f" % (gf[1],gf[0],gf[2],gf[3],gf[4]*2.35*7.2,gf[5]*2.35*7.2,gf[6])
+
+  def gfit_bolomap(self,event):
+      self.gfit_map(event,self.bolommap,self.bolomapim.axes)
+      self.bolofig.canvas.draw()
+
+  def fiteachbolo(self):
+      self.gfits = numpy.array([ gaussfitter.gaussfit(masktozero(self.bolomap(bolonum)),return_all=1) for bolonum in range(self.nbolos)])
+      self.mapfit = gaussfitter.gaussfit(self.map,return_all=1)
+      self.distmapfig = pylab.figure(7)
+      self.distmapplot= pylab.errorbar(self.gfits[:,0,2]-self.mapfit[0,2],
+              self.gfits[:,0,3]-self.mapfit[0,3],
+              self.gfits[:,1,2],self.gfits[:,1,3],fmt=None,capsize=3)
+      return self.gfits
 
   def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False,smooth=True):
       y1 = numpy.round(y1)
@@ -769,6 +798,9 @@ class Flagger:
       if event.inaxes is None: return
       elif event.key == 'c':
           self.toggle_currentscan()
+      elif event.key == 'G':
+          self.gfit_map(event,self.map,self.mapim.axes)
+          self.mapfig.canvas.draw()
       elif event.key == '.':
           if event.xdata == None:
               return
@@ -1051,6 +1083,13 @@ class Flagger:
 def nantomask(arr):
     mask = (arr != arr)
     return numpy.ma.masked_where(mask,arr)
+
+def masktozero(arr):
+    try:
+        arr[arr.mask] = 0
+    except AttributeError:
+        arr[arr!=arr] = 0
+    return numpy.array(arr)
 
 def downsample(myarr,factor):
     factor = int(factor)

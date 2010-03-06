@@ -146,8 +146,10 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         autoderiv=1 - use the autoderiv provided in the lmder.f function (the
             alternative is to us an analytic derivative with lmdif.f: this method
             is less robust)
-        return_all=0 - Default is to return only the Gaussian parameters.  See
-            below for detail on output
+        return_all=0 - Default is to return only the Gaussian parameters.  
+                   1 - fit params, fit error
+        returnfitimage - returns (best fit params,best fit image)
+        returnmp - returns the full mpfit struct
         circle=0 - default is an elliptical gaussian (different x, y widths),
             but can reduce the input by one parameter if it's a circular gaussian
         rotate=1 - default allows rotation of the gaussian ellipse.  Can remove
