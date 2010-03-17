@@ -16,3 +16,4 @@ from downsample import downsample
 from correlate2d import correlate2d
 from psds import PSD2
 from convolve import convolve,smooth
+from asinh_norm import AsinhNorm

@@ -40,8 +40,8 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
     im1quarter3x, im1quarter3y = centerx + shape1[0]/2.,centery + shape1[1]/2.
     im2quarter1x, im2quarter1y = centerx - shape2[0]/2.,centery - shape2[1]/2.
     im2quarter3x, im2quarter3y = centerx + shape2[0]/2.,centery + shape2[1]/2.
-    bigim1 = numpy.zeros(newshape,dtype=numpy.float64)
-    bigim2 = numpy.zeros(newshape,dtype=numpy.float64)
+    bigim1 = numpy.zeros(newshape,dtype=numpy.complex128)
+    bigim2 = numpy.zeros(newshape,dtype=numpy.complex128)
     bigim1[im1quarter1x:im1quarter3x,im1quarter1y:im1quarter3y] = im1
     bigim2[im2quarter1x:im2quarter3x,im2quarter1y:im2quarter3y] = im2 
     imfft1 = fft2(bigim1)
