@@ -6,6 +6,7 @@ try:
     import scipy.fftpack
     fft2 = scipy.fftpack.fft2
     ifft2 = scipy.fftpack.ifft2
+    from scipy.special import j1
 except ImportError:
     fft2 = numpy.fft.fft2
     ifft2 = numpy.fft.ifft2
@@ -68,7 +69,7 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
     else:
         return numpy.abs( rifft )
 
-def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True):
+def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,hipass=False):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
@@ -102,9 +103,17 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True)
         if not silent: print "Smoothing with a %f pixel brick wall filter" % kernelwidth
         xx,yy = numpy.indices(image.shape)
         rr = numpy.sqrt((xx-image.shape[0]/2.)**2+(yy-image.shape[1]/2.)**2)
-        kernel = ( numpy.fft.fftshift( ifft2( numpy.asarray(rr<kernelwidth,dtype='float64')/2.0 ) ) )
-        #kernel = 0.5/kernelwidth * numpy.sinc(rr/2.0/kernelwidth) # wrong
-        #kernel /= kernel.max()
+        #if hipass:
+        #    tophat = numpy.asarray(rr>kernelwidth,dtype='float64')
+        #else:
+        #    tophat = numpy.asarray(rr<kernelwidth,dtype='float64')
+        #kernel = ( numpy.fft.fftshift( fft2( tophat/(numpy.pi*kernelwidth**2) ) ) )
+        kernel = j1(rr/kernelwidth) / (rr/kernelwidth) 
+        kernel[rr==0] = 0.5
+        #kernel /= 2*numpy.pi
+        #kernel = abs(kernel) / abs(kernel).sum()
+        #kernel = 0.5/kernelwidth * scipy.airy(rr) # wrong
+        kernel /= kernel.sum()
     elif kerneltype == 'trapezoid':
         if trapslope:
             xx,yy = numpy.indices(image.shape)
