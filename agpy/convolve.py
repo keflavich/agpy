@@ -68,7 +68,7 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
     else:
         return numpy.abs( rifft )
 
-def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None):
+def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
@@ -89,7 +89,7 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None):
 #            kernelwidth = numpy.round(kernelwidth)
 
     if kerneltype == 'boxcar':
-        print "Using boxcar kernel size %i" % numpy.ceil(kernelwidth)
+        if not silent: print "Using boxcar kernel size %i" % numpy.ceil(kernelwidth)
         kernel = numpy.ones([numpy.ceil(kernelwidth),numpy.ceil(kernelwidth)],dtype='float64') / kernelwidth**2
     elif kerneltype == 'tophat':
         kernel = numpy.zeros(image.shape,dtype='float64')
@@ -99,11 +99,12 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None):
         # normalize
         kernel /= kernel.sum()
     elif kerneltype == 'brickwall':
-        print "Smoothing with a %f pixel brick wall filter" % kernelwidth
+        if not silent: print "Smoothing with a %f pixel brick wall filter" % kernelwidth
         xx,yy = numpy.indices(image.shape)
         rr = numpy.sqrt((xx-image.shape[0]/2.)**2+(yy-image.shape[1]/2.)**2)
-        kernel = numpy.sinc(rr/kernelwidth) 
-        kernel /= kernel.sum()
+        kernel = ( numpy.fft.fftshift( ifft2( numpy.asarray(rr<kernelwidth,dtype='float64')/2.0 ) ) )
+        #kernel = 0.5/kernelwidth * numpy.sinc(rr/2.0/kernelwidth) # wrong
+        #kernel /= kernel.max()
     elif kerneltype == 'trapezoid':
         if trapslope:
             xx,yy = numpy.indices(image.shape)
@@ -113,7 +114,7 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None):
             zz[rr<kernelwidth] = 1.0
             kernel = zz/zz.sum()
         else:
-            print "trapezoid function requires a slope"
+            if not silent: print "trapezoid function requires a slope"
 
     bad = (image != image)
     temp = image.copy()
