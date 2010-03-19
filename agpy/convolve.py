@@ -69,7 +69,7 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
     else:
         return numpy.abs( rifft )
 
-def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,hipass=False):
+def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
@@ -103,16 +103,11 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,
         if not silent: print "Smoothing with a %f pixel brick wall filter" % kernelwidth
         xx,yy = numpy.indices(image.shape)
         rr = numpy.sqrt((xx-image.shape[0]/2.)**2+(yy-image.shape[1]/2.)**2)
-        #if hipass:
-        #    tophat = numpy.asarray(rr>kernelwidth,dtype='float64')
-        #else:
-        #    tophat = numpy.asarray(rr<kernelwidth,dtype='float64')
-        #kernel = ( numpy.fft.fftshift( fft2( tophat/(numpy.pi*kernelwidth**2) ) ) )
+        # airy function is first bessel(x) / x  [like the sinc]
         kernel = j1(rr/kernelwidth) / (rr/kernelwidth) 
+        # fix NAN @ center
         kernel[rr==0] = 0.5
-        #kernel /= 2*numpy.pi
-        #kernel = abs(kernel) / abs(kernel).sum()
-        #kernel = 0.5/kernelwidth * scipy.airy(rr) # wrong
+        # normalize - technically, this should work, but practically, flux is GAINED in some images.  
         kernel /= kernel.sum()
     elif kerneltype == 'trapezoid':
         if trapslope:
