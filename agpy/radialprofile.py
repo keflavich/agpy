@@ -31,12 +31,13 @@ def azimuthalAverage(image, center=None, stddev=False):
     # Find all pixels that fall within each radial bin.
     deltar = r_int[1:] - r_int[:-1]  # Assumes all radii represented
     deltar[-1] = 1                   # include outermost points
-    rind = np.where(deltar)[0]       # location of changed radius
-    nr = rind[1:] - rind[:-1]        # number of radius bin
+    rind = np.where(deltar)[0] + 1   # location of changed radius (minimum 1 point)
+    nr = np.concatenate([rind[0:1], rind[1:] - rind[:-1]]) # number of radius bin
+                                     # concatenate to include center pixel / innermost bin
     
     # Cumulative sum to figure out sums for each radius bin
     csim = np.cumsum(i_sorted, dtype=float)
-    tbin = csim[rind[1:]] - csim[rind[:-1]]
+    tbin = np.concatenate([csim[0:1], csim[rind[1:]] - csim[rind[:-1]]]) # include innermost bin
 
     radial_prof = tbin / nr
     
@@ -45,7 +46,7 @@ def azimuthalAverage(image, center=None, stddev=False):
         r_int[r_int==r_int.max()] = r_int.max() - 1  # set last bin equal to second-to-last bin
         rad_mean = radial_prof[r_int]
         rad_diffsum = np.cumsum( (i_sorted-rad_mean)**2 )
-        rad_std = (rad_diffsum[rind[1:]] - rad_diffsum[rind[:-1]]) / nr
+        rad_std = np.sqrt( ( np.concatenate([rad_diffsum[0:1], rad_diffsum[rind[1:]] - rad_diffsum[rind[:-1]]]) ) / nr )
         
         return rad_std
 
