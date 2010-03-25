@@ -18,10 +18,16 @@ except AttributeError:
     numpy_include_dirs = numpy.get_include()
 
 
-ext_cplfit = Extension("cplfit", ["cplfit.pyx"], include_dirs = numpy_include_dirs + \
-        ['/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/Cython/',
-            Cython.__path__,'.'], 
-   extra_compile_args=['-O3'])
+dirs = list(numpy_include_dirs)
+dirs.extend(Cython.__path__)
+dirs.append('.')
+
+ext_cplfit = Extension(
+		"cplfit", 
+		["cplfit.pyx"], 
+		include_dirs = dirs, 
+		extra_compile_args=['-O3'])
+
 #ext_fplfit = Extension(name="fplfit",
 #                    sources=["fplfit.f"])
 
