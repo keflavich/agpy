@@ -138,12 +138,13 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
             x = numpy.asarray( splitarr , dtype='S')
         except ValueError:
             if hasmode:
-                print "ValueError when converting data to array.  You have scipy.mode \
-                        on your system, so this is probably not an issue of differing \
-                        row lengths."
+                raise Exception( "ValueError when converting data to array." + \
+                        "  You have scipy.mode on your system, so this is " + \
+                        "probably not an issue of differing row lengths." )
             else:
-                print "Conversion to array error.  You probably have different row \
-                        lengths and scipy.mode was not imported."
+                raise Exception( "Conversion to array error.  You probably " + \
+                        "have different row lengths and scipy.mode was not " + \
+                        "imported." )
 
     if nullval is not None:
         x[x==nullval] = numpy.nan
