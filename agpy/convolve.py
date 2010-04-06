@@ -100,7 +100,7 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True)
         # normalize
         kernel /= kernel.sum()
     elif kerneltype == 'brickwall':
-        if not silent: print "Smoothing with a %f pixel brick wall filter" % kernelwidth
+        if not silent: print "Smoothing with a %f airy function" % kernelwidth
         xx,yy = numpy.indices(image.shape)
         rr = numpy.sqrt((xx-image.shape[0]/2.)**2+(yy-image.shape[1]/2.)**2)
         # airy function is first bessel(x) / x  [like the sinc]
