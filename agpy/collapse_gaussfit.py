@@ -14,7 +14,7 @@ import pickle
 import pyfits
 import time
 from mad import MAD
-from ratosexagesimal import *
+from ratosexagesimal import ratos,dectos
 
 # read in file
 # filename = sys.argv[1]
