@@ -71,8 +71,9 @@ class Flagger:
 
   """
 
-  def __init__(self, filename, **kwargs):
+  def __init__(self, filename, debug=False, **kwargs):
       self.filename = filename
+      self.debug = debug
       if filename[-4:] == 'fits':
           self._loadfits(filename,**kwargs)
       elif filename[-3:] == 'sav':
@@ -159,6 +160,7 @@ class Flagger:
       self.PCA = False
 
       self.showmap(vmax=vmax)
+      self.dcon()
   
   def _loadsav(self,savfile,**kwargs):
       self.sav = idlsave.read(savfile)
@@ -219,6 +221,8 @@ class Flagger:
       self.map      = nantomask( self.sav.variables['mapstr']['astromap'][0] )
       self.tstomap  = reshape( self.sav.variables['mapstr']['ts'][0][self.whscan,:] , self.datashape )
 
+      self.mapped_timestream = self.atmo_one - self.atmosphere + self.astrosignal
+
       if self.map.sum() == 0:
           self.map  = nantomask( self.sav.variables['mapstr']['rawmap'][0] )
 
@@ -252,6 +256,8 @@ class Flagger:
           self.tsplot=tsplot
       if self.tsplot == 'astrosignal' and self.astrosignal.sum() != 0:
           self.data = self.astrosignal
+      elif self.astrosignal.sum() == 0:
+          print "Astrosignal is zero."
       elif self.tsplot == 'dcbolos':
           self.data = self.dc_bolos*self.scalearr
       elif self.tsplot == 'acbolos_noscale' or self.tsplot == 'ac_bolos_noscale':
@@ -285,7 +291,7 @@ class Flagger:
       else:
           print "No option for %s" % self.tsplot
           return
-      print "Set tsplot to %s" % tsplot
+      print "Set tsplot to %s" % self.tsplot
       self._refresh()
 
   def readncfile(self):
@@ -318,6 +324,7 @@ class Flagger:
             vmin=vmin,vmax=vmax,
             interpolation='nearest',
             cmap=colormap); 
+    self.mapim.axes.patch.set_fc('gray')
     colorbar()
     try:
         disconnect(self.MtoT)
@@ -481,7 +488,6 @@ class Flagger:
   def plotscan(self, scannum, fignum=1, button=1, data=None, flag=True, logscale=False):
     if self.connected:
         self.dcon()
-    self.connected = True
     self.scannum = scannum
     self.set_plotscan_data(scannum,flag=flag,data=data)
     self.fignum = fignum
@@ -513,12 +519,15 @@ class Flagger:
     self.showlines()
     self.cursor = Cursor(self.dataim.axes,useblit=True,color='black',linewidth=1)
     self._refresh()
+    self.reconnect()
+    """
     self.md  = connect('button_press_event',self.mouse_down_event)
     self.mu  = connect('button_release_event',self.mouse_up_event)
     self.key = connect('key_press_event',self.keypress)
     self.connections.append(self.md)
     self.connections.append(self.mu)
     self.connections.append(self.key)
+    """
 
   def flagpoint(self, i, j, button):
       if button==1:
@@ -792,7 +801,10 @@ class Flagger:
           return
       clickX = round(event.xdata)
       clickY = round(event.ydata)
-      self.tsarrow(clickX,clickY)
+      if event.button == 1:
+          self.tsarrow(clickX,clickY)
+      elif event.button == 2:
+          self.find_all_points(clickX,clickY)
 
   def mapkeypress(self,event):
       if event.inaxes is None: return
@@ -892,7 +904,18 @@ class Flagger:
       if set_lastkey: 
           self._lastkey = event.key
 
+  def find_all_points(self,x,y):
+      mappoint = y * self.map.shape[1] + x
+      self.timepoints =  nonzero(self.tstomap == mappoint)
+      print "Map value: %f" % (self.map[y,x])
+      print "scan,bolo,time: %10s%10s%10s%10s" % ('mapped','astro','flags','weight')
+      for ii,jj,kk in transpose(self.timepoints):
+          print "%4i,%4i,%4i: %10f%10f%10f%10f" % (ii,kk,jj,
+                  self.mapped_timestream[ii,jj,kk],self.astrosignal[ii,jj,kk],
+                  self.flags[ii,jj,kk],self.weight[ii,jj,kk])
+
   def tsarrow(self,x,y):
+      if self.debug: print "tsarrow at %f,%f" % (x,y)
       #      xy = [clickX,clickY]
 
       # this took a little thinking:
@@ -914,7 +937,7 @@ class Flagger:
           for a in self.arrows:
               self.arrows.remove(a)
           for i in list(matchpts):
-#              print "i shape: ",i.shape, " matchpts ",matchpts
+              if self.debug: print "i shape: ",i.shape, " matchpts ",matchpts
               i = int(i)
               t,b = self.timepoints[1][i],self.timepoints[2][i]
 #              print "T,b,i  ",t,b,i
@@ -923,10 +946,11 @@ class Flagger:
 #              arrow = FancyArrow(t-5,b-5,5,5)
 #              self.datafig.axes[0].add_patch(arrow)
               figure(self.fignum)
-              self.datafig.sca(self.datafig.axes[0])
+              ax = self.datafig.axes[0]
+              # redundant? self.datafig.sca(self.datafig.axes[0])
               #arrow = self.datafig.axes[0].arrow(t-5,b-5,5,5)
-              a1 = arrow(b-3,t-3,6,6,head_width=0,facecolor='black')
-              a2 = arrow(b-3,t+3,6,-6,head_width=0,facecolor='black')
+              a1 = ax.arrow(b-3,t-3,6,6,head_width=0,facecolor='black')
+              a2 = ax.arrow(b-3,t+3,6,-6,head_width=0,facecolor='black')
               a1.set_visible(True)
               a2.set_visible(True)
 #              print a,t,b
@@ -947,9 +971,10 @@ class Flagger:
     for a in self.maparrows:
         self.maparrows.remove(a)
     figure(0)
-    a1 = arrow(y+2,x+2,-4,-4,head_width=0,facecolor='black',
+    ax = self.mapfig.axes[0]
+    a1 = ax.arrow(y+2,x+2,-4,-4,head_width=0,facecolor='black',
             length_includes_head=True,head_starts_at_zero=False)
-    a2 = arrow(y-2,x+2,4,-4,head_width=0,facecolor='black',
+    a2 = ax.arrow(y-2,x+2,4,-4,head_width=0,facecolor='black',
             length_includes_head=True,head_starts_at_zero=False)
     a1.set_visible(True)
     a2.set_visible(True)
