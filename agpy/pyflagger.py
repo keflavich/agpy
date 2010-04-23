@@ -200,7 +200,12 @@ class Flagger:
       self.flags       = self.sav.variables['bgps']['flags'][0][self.whscan,:]
       self.flags.shape = self.datashape
 
-      datums=['astrosignal','atmosphere','raw','ac_bolos','atmo_one','dc_bolos','noise','scalearr','weight']
+      try:
+          self.mapped_astrosignal = self.sav.variables['bgps']['mapped_astrosignal'][0][self.whscan,:].astype('float')
+      except:
+          self.mapped_astrosignal = self.astrosignal
+
+      datums=['astrosignal','atmosphere','raw','ac_bolos','atmo_one','dc_bolos','noise','scalearr','weight','mapped_astrosignal']
       for d in datums:
           self.__dict__[d][self.whempty,:] = NaN
           self.__dict__[d].shape = self.datashape
@@ -288,6 +293,8 @@ class Flagger:
           self.data = self.raw * self.scalearr
       elif self.tsplot=='noise':
           self.data = self.noise
+      elif self.tsplot=='mapped_astrosignal':
+          self.data = self.mapped_astrosignal
       else:
           print "No option for %s" % self.tsplot
           return
@@ -907,12 +914,19 @@ class Flagger:
   def find_all_points(self,x,y):
       mappoint = y * self.map.shape[1] + x
       self.timepoints =  nonzero(self.tstomap == mappoint)
-      print "Map value: %f" % (self.map[y,x])
-      print "scan,bolo,time: %10s%10s%10s%10s" % ('mapped','astro','flags','weight')
+      wtavg = (self.mapped_timestream[self.timepoints]*self.weight[self.timepoints]).sum() / self.weight[self.timepoints].sum()
+      uwtavg = self.mapped_timestream[self.timepoints].mean()
+      print "Map value: %f   Weighted average: %f   Unweighted Average: %f" % (self.map[y,x],wtavg,uwtavg)
+      print "scan,bolo,time: %12s%12s%12s%12s%12s" % ('mapped','astro','flags','weight','scale')
       for ii,jj,kk in transpose(self.timepoints):
-          print "%4i,%4i,%4i: %10f%10f%10f%10f" % (ii,kk,jj,
-                  self.mapped_timestream[ii,jj,kk],self.astrosignal[ii,jj,kk],
-                  self.flags[ii,jj,kk],self.weight[ii,jj,kk])
+          print "%4i,%4i,%4i: %12f%12f%12f%12f%12f" % (ii,kk,jj,
+                  self.mapped_timestream[ii,jj,kk],
+                  #self.mapped_astrosignal[ii,jj,kk],
+                  self.astrosignal[ii,jj,kk],
+                  self.flags[ii,jj,kk],
+                  self.weight[ii,jj,kk],
+                  self.scalearr[ii,jj,kk])
+
 
   def tsarrow(self,x,y):
       if self.debug: print "tsarrow at %f,%f" % (x,y)
