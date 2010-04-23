@@ -82,8 +82,13 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True)
 
     if kerneltype == 'gaussian':
         gp = 9 # gaussian precision in n_sigma
-        xx,yy = numpy.indices([numpy.ceil(kernelwidth*gp),numpy.ceil(kernelwidth*gp)])
-        rr = numpy.sqrt((xx-kernelwidth*gp/2.)**2+(yy-kernelwidth*gp/2.)**2)
+        if kernelwidth*gp < image.shape[0] and kernelwidth*gp < image.shape[1]:
+            xx,yy = numpy.indices([numpy.ceil(kernelwidth*gp),numpy.ceil(kernelwidth*gp)])
+            sz1,sz2 = kernelwidth*gp,kernelwidth*gp
+        else:
+            xx,yy = numpy.indices(image.shape)
+            sz1,sz2 = image.shape
+        rr = numpy.sqrt((xx-sz1/2.)**2+(yy-sz2/2.)**2)
         kernel = numpy.exp(-(rr**2)/(2*kernelwidth**2)) / (kernelwidth**2 * (2*numpy.pi))
 #        if kernelwidth != numpy.round(kernelwidth):
 #            print "Rounding kernel width to %i pixels" % numpy.round(kernelwidth)

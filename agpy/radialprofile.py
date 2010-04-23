@@ -1,6 +1,6 @@
 import numpy as np
 
-def azimuthalAverage(image, center=None, stddev=False):
+def azimuthalAverage(image, center=None, stddev=False, returnradii=False ):
     """
     Calculate the azimuthally averaged radial profile.
 
@@ -48,7 +48,13 @@ def azimuthalAverage(image, center=None, stddev=False):
         rad_diffsum = np.cumsum( (i_sorted-rad_mean)**2 )
         rad_std = np.sqrt( ( np.concatenate([rad_diffsum[0:1], rad_diffsum[rind[1:]] - rad_diffsum[rind[:-1]]]) ) / nr )
         
-        return rad_std
+        if returnradii: 
+            return np.unique(r_int),rad_std
+        else:
+            return rad_std
 
     else:
-        return radial_prof
+        if returnradii: 
+            return np.unique(r_int),radial_prof
+        else:
+            return radial_prof
