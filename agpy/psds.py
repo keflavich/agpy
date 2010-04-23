@@ -1,5 +1,6 @@
 import numpy
 from correlate2d import correlate2d
+from radialprofile import azimuthalAverage
 
 try:
     #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
@@ -34,7 +35,7 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,pad=Fals
     if oned:
         freq = 1 + numpy.arange( numpy.floor( numpy.sqrt((image.shape[0]/2)**2+(image.shape[1]/2)**2) ) ) 
 
-        zz = numpy.array([ psd2[xx[rr.round()==ii],yy[rr.round()==ii]].mean() for ii in freq])
+        zz = azimuthalAverage(psd2)
 
         if return_index:
             if wavenumber:
