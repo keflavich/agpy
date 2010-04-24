@@ -69,7 +69,7 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
     else:
         return numpy.abs( rifft )
 
-def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True):
+def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,**kwargs):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
@@ -89,7 +89,8 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True)
             xx,yy = numpy.indices(image.shape)
             sz1,sz2 = image.shape
         rr = numpy.sqrt((xx-sz1/2.)**2+(yy-sz2/2.)**2)
-        kernel = numpy.exp(-(rr**2)/(2*kernelwidth**2)) / (kernelwidth**2 * (2*numpy.pi))
+        kernel = numpy.exp(-(rr**2)/(2*kernelwidth**2))
+        kernel /= kernel.sum() #/ (kernelwidth**2 * (2*numpy.pi))
 #        if kernelwidth != numpy.round(kernelwidth):
 #            print "Rounding kernel width to %i pixels" % numpy.round(kernelwidth)
 #            kernelwidth = numpy.round(kernelwidth)
@@ -128,7 +129,7 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True)
     bad = (image != image)
     temp = image.copy()
     temp[bad] = 0
-    temp = convolve(temp,kernel)
+    temp = convolve(temp,kernel,**kwargs)
     temp[bad] = image[bad]
 
     return temp

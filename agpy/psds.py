@@ -29,9 +29,6 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,pad=Fals
     psd2 = numpy.abs( correlate2d(image,image2,return_fft=True,pad=pad) ) 
     # normalization is approximately (numpy.abs(image).sum()*numpy.abs(image2).sum())
 
-    #xx,yy = numpy.indices(image.shape)
-    #rr = numpy.sqrt((xx-image.shape[0] / 2)**2+(yy-image.shape[1] / 2)**2)
-
     if oned:
         #freq = 1 + numpy.arange( numpy.floor( numpy.sqrt((image.shape[0]/2)**2+(image.shape[1]/2)**2) ) ) 
 
@@ -46,7 +43,4 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,pad=Fals
         else:
             return zz
     else:
-        if return_index:
-            return rr,psd2
-        else:
-            return psd2
+        return psd2
