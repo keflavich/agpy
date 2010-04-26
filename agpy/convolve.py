@@ -64,10 +64,10 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
 
     rifft = numpy.fft.fftshift( (ifft2( fftmult )) )
     if crop:
-        result = numpy.abs( rifft[ quarter1x:quarter3x, quarter1y:quarter3y ] )
+        result = rifft[ quarter1x:quarter3x, quarter1y:quarter3y ].real
         return result
     else:
-        return numpy.abs( rifft )
+        return rifft.real
 
 def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,**kwargs):
     """
