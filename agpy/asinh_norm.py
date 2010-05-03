@@ -1,6 +1,7 @@
 from matplotlib.colors import Normalize
 from matplotlib.cm import cbook
 from numpy import ma
+import numpy as np
 
 class AsinhNorm(Normalize):
     def __call__(self,value,clip=None):
