@@ -8,7 +8,7 @@ def plot_radex(filename,ngridpts=100,ncontours=50,plottype='ratio',transition="n
     cutnumber=None,cutvalue=10,vmin=None,vmax=None,logscale=False,**kwargs):
 
     names,props = readcol(filename,twod=False,names=True)
-    temperature,density,column,tex1,tex2,tau1,tau2,ratio = props
+    temperature,density,column,tex1,tex2,tau1,tau2,tline1,tline2,flux1,flux2 = props
 
 
     if thirdvarname == "Temperature":
@@ -89,38 +89,53 @@ def plot_radex(filename,ngridpts=100,ncontours=50,plottype='ratio',transition="n
     cb.set_ticklabels([1e-3,1e-2,1e-1,1,1e1])
     savefig("%s_%s_%s.png" % (savetype,plottype,transition))
 
-def gridcube(filename,outfilename,plottype='tau1',transition='noname'):
+def gridcube(filename,outfilename,var1="density",var2="column",var3="temperature",plotvar="tau1"):
 
     names,props = readcol(filename,twod=False,names=True)
-    temperature,density,column,tex1,tex2,tau1,tau2,ratio = props
+    temperature,density,column,tex1,tex2,tau1,tau2,tline1,tline2,flux1,flux2 = props
+    ratio = tau1 / tau2
 
-    exec('plotdata = %s' % plottype)
+    vardict = {
+      "temperature":temperature,
+      "density":density,
+      "column":column,
+      "tex1":tex1,
+      "tex2":tex2,
+      "tau1":tau1,
+      "tau2":tau2,
+      "tline1":tline1,
+      "tline2":tline2,
+      "flux1":flux1,
+      "flux2":flux2,
+      "ratio":ratio,
+      }
 
-    nx = len(unique(density))
-    ny = len(unique(column))
-    nz = len(unique(temperature))
+    nx = len(unique(vardict[var1]))
+    ny = len(unique(vardict[var2]))
+    nz = len(unique(vardict[var3]))
 
-    densarr = linspace(density.min(),density.max(),nx)
-    colarr  = linspace(column.min(),column.max(),ny)
+    xarr = (unique(vardict[var1])) #linspace(vardict[var1].min(),vardict[var1].max(),nx)
+    yarr = (unique(vardict[var2])) #linspace(vardict[var2].min(),vardict[var2].max(),ny)
 
     newarr = zeros([nz,ny,nx])
 
-    for iT,T in enumerate(unique(temperature)):
-      varfilter = temperature==T
-      newarr[iT,:,:] = griddata(density[varfilter],column[varfilter],plotdata[varfilter],densarr,colarr)
+    for ival,val in enumerate(unique(vardict[var3])):
+      varfilter = vardict[var3]==val
+      newarr[ival,:,:] = griddata((vardict[var1][varfilter]),(vardict[var2][varfilter]),vardict[plotvar][varfilter],xarr,yarr)
 
     newfile = pyfits.PrimaryHDU(newarr)
-    newfile.header.update('CRVAL3' ,  log10(min(temperature)) )
+    newfile.header.update('BTYPE' ,  plotvar )
+    newfile.header.update('CRVAL3' ,  (min(temperature)) )
     newfile.header.update('CRPIX3' ,  1 )
-    newfile.header.update('CTYPE3' ,  'LOG-TEMP' )
-    newfile.header.update('CD3_3' , log10(unique(temperature)[1]) - log10(unique(temperature)[0]) )
-    newfile.header.update('CRVAL1' ,  min(densarr) )
+    newfile.header.update('CTYPE3' ,  'LIN-TEMP' )
+    newfile.header.update('CD3_3' , (unique(temperature)[1]) - (unique(temperature)[0]) )
+    newfile.header.update('CRVAL1' ,  min(xarr) )
     newfile.header.update('CRPIX1' ,  1 )
-    newfile.header.update('CD1_1' , densarr[1]-densarr[0] )
+    newfile.header.update('CD1_1' , xarr[1]-xarr[0] )
     newfile.header.update('CTYPE1' ,  'LOG-DENS' )
-    newfile.header.update('CRVAL2' ,  min(colarr) )
+    newfile.header.update('CRVAL2' ,  min(yarr) )
     newfile.header.update('CRPIX2' ,  1 )
-    newfile.header.update('CD2_2' , colarr[1]-colarr[0] )
+    newfile.header.update('CD2_2' , yarr[1]-yarr[0] )
     newfile.header.update('CTYPE2' ,  'LOG-COLU' )
     newfile.writeto(outfilename,clobber=True)
 
@@ -133,18 +148,32 @@ if __name__ == "__main__":
     else:
         transition = filename[:7]
 
-    if len(sys.argv) > 3:
-        plottype = sys.argv[3]
+    # allow %run to just run a script
+    if transition == "script":
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_tau1.fits',plotvar='tau1')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_tau2.fits',plotvar='tau2')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_tex1.fits',plotvar='tex1')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_tex2.fits',plotvar='tex2')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_tline1.fits',plotvar='tline1')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_tline2.fits',plotvar='tline2')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_flux1.fits',plotvar='flux1')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_flux2.fits',plotvar='flux2')
+        gridcube('1-1_2-2_T=5to55_lvg.dat','1-1_2-2_T=5to55_lvg_ratio.fits',plotvar='ratio')
+      
+
     else:
-        plottype = 'ratio'
+      if len(sys.argv) > 3:
+          plottype = sys.argv[3]
+      else:
+          plottype = 'ratio'
 
-    if len(sys.argv) > 4:
-        cutnumber = sys.argv[4]
-    else:
-        cutnumber = 0
+      if len(sys.argv) > 4:
+          cutnumber = sys.argv[4]
+      else:
+          cutnumber = 0
 
-    plot_radex(filename,transition=transition,plottype=plottype,cutnumber=cutnumber,thirdvarname="Temperature")
-    plot_radex(filename,transition=transition,plottype=plottype,cutnumber=cutnumber,thirdvarname="Density")
-    plot_radex(filename,transition=transition,plottype=plottype,cutnumber=cutnumber,thirdvarname="Column")
+      plot_radex(filename,transition=transition,plottype=plottype,cutnumber=cutnumber,thirdvarname="Temperature")
+      plot_radex(filename,transition=transition,plottype=plottype,cutnumber=cutnumber,thirdvarname="Density")
+      plot_radex(filename,transition=transition,plottype=plottype,cutnumber=cutnumber,thirdvarname="Column")
 
-    show()
+      show()

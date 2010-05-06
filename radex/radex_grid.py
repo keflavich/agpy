@@ -18,26 +18,28 @@ import time
 # is redirected to a log file.
 
 # Naming suffix to append to line name defined in "acts" below
-suffix = "_T=5to55_lvg"
+suffix = "_T=5to55_morepoints_lvg"
 
 # Grid boundaries
 #
 tmin = 5.0  # minimum kinetic temperature (K)
 tmax = 55.0 # maximum kinetic temperature (K)
-nmin = 1e2   # minimum H2 density (cm^-3)
+nmin = 1e1   # minimum H2 density (cm^-3)
 nmax = 1e7   # maximum H2 density (cm^-3)
 cmin = 1e11  # minimum molecular column density
 cmax = 1e16  # maximum molecular column density
 
-ntemp = 11   # number of temperature points
-ndens = 101  # number of density points
-ncol  = 101  # number of column points
+ntemp = 11    # number of temperature points
+ndens = 1001   # number of density points
+ncol  = 1001   # number of column points
 
 # user does not need to modify these formulae
 # they are equivalent to temperatures = numpy.linspace(tmin,tmax,ntemp).tolist()
 temperatures = [ tmin + (ii) / float(ntemp-1) * (tmax-tmin)  for ii in range(ntemp) ]
-densities    = [ nmin + (ii) / float(ndens-1) * (nmax-nmin)  for ii in range(ndens) ]
-columns      = [ cmin + (ii) / float(ncol-1) * (cmax-cmin)  for ii in range(ncol) ]
+# LINEAR densities    = [ nmin + (ii) / float(ndens-1) * (nmax-nmin)  for ii in range(ndens) ] # LINEAR
+densities    = [ 10**( math.log10(nmin) + (ii) / float(ndens-1) * (math.log10(nmax)-math.log10(nmin)) )  for ii in range(ndens) ]  # LOG
+# LINEAR columns      = [ cmin + (ii) / float(ncol-1) * (cmax-cmin)  for ii in range(ncol) ] # LINEAR
+columns      = [ 10**( math.log10(cmin) + (ii) / float(ncol-1) * (math.log10(cmax)-math.log10(cmin)) )  for ii in range(ncol) ]  # LOG
 
 #
 # Parameters to keep constant
@@ -151,6 +153,9 @@ if mpisize > 1:
         print "%s exists, continuing" % newdir
     os.chdir(newdir)
 
+print "Running code ",executable," with temperatures ",temperatures," densities ",densities," and columns ",columns
+
+
 for iact,act in enumerate(acts):
     lowfreq = act[0]
     uppfreq = act[1]
@@ -208,7 +213,8 @@ for iact,act in enumerate(acts):
 stop = time.time()
 dure = stop - start
 print "Processor %i Run time = %f seconds" % (mpirank,dure)
-os.chdir(pwd)
+if mpisize > 1:
+    os.chdir(pwd)
 
 MPI.COMM_WORLD.Barrier()
 if mpisize > 1 and mpirank == 0:
@@ -219,5 +225,13 @@ if mpisize > 1 and mpirank == 0:
         os.system("cp %s %s" % (file,file.replace("radex_temp_00/","") ) )
         for ii in xrange(1,mpisize):
             os.system("tail +2 %s >> %s" % (file.replace("_00","_%02i" % ii),file.replace("radex_temp_00/","") ) )
+    radexoutlist = glob.glob("radex_temp_*/radex.out")
+    try:
+        os.system("mv radex.out radex.out.old")
+        os.system("touch radex.out")
+    except OSError:
+        pass
+    for file in radexoutlist:
+        os.system("cat %s >> radex.out" % file)
     os.system("rm -r radex_temp_*")
     print "Cleanup completed"
