@@ -98,16 +98,21 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
         nms=nameline.split(fsep)
 
     null=[f.pop(0) for i in range(skipafter)]
+
+    commentfilter = make_commentfilter(comment)
     
     if fixedformat:
         myreadff = lambda(x): readff(x,fixedformat)
         splitarr = map(myreadff,f)
+        splitarr = filter(commentfilter,splitarr)
     else:
         fstrip = map(string.strip,f)
         fseps = [ fsep for i in range(len(f)) ]
         splitarr = map(string.split,fstrip,fseps)
         for i in xrange(splitarr.count([''])):
             splitarr.remove([''])
+
+        splitarr = filter(commentfilter,splitarr)
 
         # check to make sure each line has the same number of columns to avoid 
         # "ValueError: setting an array element with a sequence."
@@ -121,13 +126,6 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
                 for i in xrange(len(splitarr)-1,-1,-1):  # need to go backwards
                     if nperline[i] != ncols:
                         splitarr.pop(i)
-
-    # remove comment lines
-    if comment is not None:
-        def commentfilter(a):
-            try: return comment.find(a[0][0])
-            except: return -1
-        splitarr = filter(commentfilter,splitarr)
 
     try:
         x = numpy.asarray( splitarr , dtype='float')
@@ -210,4 +208,13 @@ def readff(s,format):
     strarr = [s[l:u] for l,u in bothF]
 
     return strarr
+
+def make_commentfilter(comment):
+    if comment is not None:
+        def commentfilter(a):
+            try: return comment.find(a[0][0])
+            except: return -1
+        return commentfilter
+    else: # always return false 
+        return lambda(x): -1
 
