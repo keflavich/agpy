@@ -4,37 +4,44 @@ except ImportError:
     print "Can't use kdist without the 'coords' package"
 from numpy import sqrt, abs, pi, cos, sin, max, ones, array
 
-def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True,regular=False,rrgal=False,verbose=False,inverse=False):
+def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
+        kinematic=True,regular=False,rrgal=False,verbose=False,
+        inverse=False,silent=False):
     """
-    ; NAME:
-    ;   KINDIST 
-    ; PURPOSE:
-    ;   To return the distance to an object given l,b,v
-    ;
-    ; CALLING SEQUENCE:
-    ;   dist = KDIST (L, B, V)
-    ;
-    ; INPUTS:
-    ;   L, B -- Galactic Longitude and Latitude (decimal degrees)
-    ;   V - Velocity w.r.t. LSR in km/s
-    ; KEYWORD PARAMETERS:
-    ;   /NEAR, /FAR -- Report the near/far kinematic distances for Q1 and
-    ;                  Q4 data.
-    ;   RO, VO -- Force values for galactocentric distance for sun and
-    ;             velocity of the LSR around the GC.  Default to 8.4 kpc
-    ;             and 254 km/s (Reid et al., 2009)
-    ;   RGAL -- Named keyword containing galactocentric radius of sources.
-    ;   /DYNAMICAL -- Use the dynamical definition of the LSR
-    ;   /KINEMATIC -- Use the kinematic definition of the LSR (default)
-    ;   /REGULAR -- Do not apply the rotation correction for High mass
-    ;               star forming regions.
-    ; OUTPUTS:
-    ;   DIST -- the kinematic distance in units of R0 (defaults to pc).
-    ;
-    ; MODIFICATION HISTORY:
-    ;
-    ;       Fri Feb 27 00:47:18 2009, Erik <eros@orthanc.local>
-    ;		 Adapted from kindist.pro
+     NAME:
+       KINDIST 
+     PURPOSE:
+       To return the distance to an object given l,b,v
+    
+     CALLING SEQUENCE:
+       dist = KDIST (L, B, V)
+    
+     INPUTS:
+       L, B -- Galactic Longitude and Latitude (decimal degrees)
+       V - Velocity w.r.t. LSR in km/s
+     KEYWORD PARAMETERS:
+       /NEAR, /FAR -- Report the near/far kinematic distances for Q1 and
+                      Q4 data.
+       RO, VO -- Force values for galactocentric distance for sun and
+                 velocity of the LSR around the GC.  Default to 8.4 kpc
+                 and 254 km/s (Reid et al., 2009)
+       RGAL -- Named keyword containing galactocentric radius of sources.
+       rrgal  - return galactocentric distance in addition to distance from us
+       /DYNAMICAL -- Use the dynamical definition of the LSR
+       /KINEMATIC -- Use the kinematic definition of the LSR (default)
+       /REGULAR -- Do not apply the rotation correction for High mass
+                   star forming regions.
+        INVERSE -- If set, pass DISTANCE instead of velocity, and output is
+                   velocity
+     OUTPUTS:
+       DIST -- the kinematic distance in units of R0 (defaults to pc).
+    
+     MODIFICATION HISTORY:
+    
+           Fri Feb 27 00:47:18 2009, Erik <eros@orthanc.local>
+    		 Adapted from kindist.pro
+                 Translated from IDL to Python by Adam Ginsburg (adam.ginsburg@colorado.edu)
+
     """
 
     dtor = pi/180.
@@ -66,6 +73,12 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True
 
     v = vhelio+(bigu*cos(l*dtor)+bigv*sin(l*dtor))*cos(b*dtor)+bigw*sin(b*dtor)
 
+    # Compute tangent distance and velocity
+    rtan = r0*(cos(l*dtor))/(cos(b*dtor))
+    vTEMP = (1/sin(l*dtor) - v0/(v0-vs)) * ((v0-vs)*sin(l*dtor)*cos(b*dtor))
+    vhelioTEMP = vTEMP - ((bigu*cos(l*dtor)+bigv*sin(l*dtor))*cos(b*dtor)+bigw*sin(b*dtor))
+    vtan = vhelioTEMP+solarmotion_mag*cos(theta/206265.)
+
     # This is r/r0
     null = (v0/(v0-vs)+v/((v0-vs)*sin(l*dtor)*cos(b*dtor)))**(-1)
 
@@ -77,6 +90,10 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,kinematic=True
         vlsr = vhelio+solarmotion_mag*cos(theta/206265.)
         return vlsr
     else:
+        if vin > vtan:
+            if not silent:
+                print "Velocity is greater than tangent velocity v=%f.  Returning tangent distance." % vtan
+            return rtan
         #  The > 0 traps things near the tangent point and sets them to the
         #  tangent distance.  So quietly.  Perhaps this should pitch a flag?
         radical = max(sqrt(((cos(l*dtor))**2-(1-null**2)) ),0)
