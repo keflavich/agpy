@@ -203,7 +203,7 @@ class Flagger:
       try:
           self.mapped_astrosignal = self.sav.variables['bgps']['mapped_astrosignal'][0][self.whscan,:].astype('float')
       except:
-          self.mapped_astrosignal = self.astrosignal
+          self.mapped_astrosignal = copy.copy(self.astrosignal)
 
       datums=['astrosignal','atmosphere','raw','ac_bolos','atmo_one','dc_bolos','noise','scalearr','weight','mapped_astrosignal']
       for d in datums:

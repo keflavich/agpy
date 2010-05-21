@@ -93,6 +93,7 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
         if vin > vtan:
             if not silent:
                 print "Velocity is greater than tangent velocity v=%f.  Returning tangent distance." % vtan
+            if rrgal: return rtan,null*r0
             return rtan
         #  The > 0 traps things near the tangent point and sets them to the
         #  tangent distance.  So quietly.  Perhaps this should pitch a flag?

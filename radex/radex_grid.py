@@ -8,38 +8,47 @@ import time
 # Run a series of Radex models to estimate temperature & density
 # from observed ratios of H2CO 1-1/2-2, 1-1/3-3, and 2-2/3-3 lines
 #
-# Adam Ginsburg (adam.ginsburg@colorado.edu, or keflavich@gmail.com)
-# May 2010
+# Original comes from the RADEX team:
+# https://www.sron.rug.nl/~vdtak/radex/index.shtml#script
+#
+# This version has been heavily modified by Adam Ginsburg
+# (adam.ginsburg@colorado.edu, or keflavich@gmail.com)
+# in May 2010
 #
 # Directions:
 # To call this code, run:
 # mpirun -np 8 ./radex_grid.py > mpi_radex_grid.log &
 # In the above statement, "-np 8" means "use 8 processors".  Output
-# is redirected to a log file.
-
-# Naming suffix to append to line name defined in "acts" below
-suffix = "_T=5to55_morepoints_lvg"
+# is redirected to a log file (recommended - the logging is verbose).
+#
+# The outputs will include .dat files with names specified by the "acts" list
+# and "suffix" below, and columns Temperature, log10(dens), log10(col),
+# Tex_low, Tex_hi, TauLow, TauUpp, TrotLow, TrotUpp, FluxLow, FluxUpp
+# Additionally, it will create a radex.out file.
+#
+# The code creates (# processors) subdirectories, reformats that data, and
+# removes the temporary subdirectories.
 
 # Grid boundaries
 #
-tmin = 5.0  # minimum kinetic temperature (K)
-tmax = 55.0 # maximum kinetic temperature (K)
+tmin = 5.0   # minimum kinetic temperature (K)
+tmax = 55.0  # maximum kinetic temperature (K)
 nmin = 1e1   # minimum H2 density (cm^-3)
 nmax = 1e7   # maximum H2 density (cm^-3)
 cmin = 1e11  # minimum molecular column density
 cmax = 1e16  # maximum molecular column density
 
-ntemp = 11    # number of temperature points
-ndens = 1001   # number of density points
-ncol  = 1001   # number of column points
+ntemp = 11     # number of temperature points
+ndens = 11     # number of density points
+ncol  = 11     # number of column points
 
 # user does not need to modify these formulae
 # they are equivalent to temperatures = numpy.linspace(tmin,tmax,ntemp).tolist()
 temperatures = [ tmin + (ii) / float(ntemp-1) * (tmax-tmin)  for ii in range(ntemp) ]
-# LINEAR densities    = [ nmin + (ii) / float(ndens-1) * (nmax-nmin)  for ii in range(ndens) ] # LINEAR
 densities    = [ 10**( math.log10(nmin) + (ii) / float(ndens-1) * (math.log10(nmax)-math.log10(nmin)) )  for ii in range(ndens) ]  # LOG
-# LINEAR columns      = [ cmin + (ii) / float(ncol-1) * (cmax-cmin)  for ii in range(ncol) ] # LINEAR
 columns      = [ 10**( math.log10(cmin) + (ii) / float(ncol-1) * (math.log10(cmax)-math.log10(cmin)) )  for ii in range(ncol) ]  # LOG
+# LINEAR densities    = [ nmin + (ii) / float(ndens-1) * (nmax-nmin)  for ii in range(ndens) ] # LINEAR
+# LINEAR columns      = [ cmin + (ii) / float(ncol-1) * (cmax-cmin)  for ii in range(ncol) ] # LINEAR
 
 #
 # Parameters to keep constant
@@ -49,6 +58,9 @@ cdmol_default = 1e12 # low enough to be optically thin
 dv    = 1.0          # line width (km/s)
 
 mole = 'o-h2co'  # molecular data name
+
+# Naming suffix to append to line name defined in "acts" below
+suffix = "_T=5to55_lvg"
 # acts = list of lines to ratio.  Filenames must include ".dat" in order for suffix to be applied
 acts = ([4.8,14.5,'1-1_2-2.dat'],[4.8,29.0,'1-1_3-3.dat'],[14.5,29.0,'2-2_3-3.dat'])
 flow = 4.0     # lowest frequency transition to include in output file
@@ -60,6 +72,12 @@ bw    = 0.01   # "bandwidth": free spectral range around line (used to say which
 # and they must be in your path or you can specify the full path)
 executable = "radex_lvg"
 # executable = "radex_sphere"
+
+# verbosity
+# 2 = output 1 line for every RADEX run (redirect to log file!)
+# 1 = just output major statements (OK to print to screen)
+# 0 = silent (only prints exceptions)
+verbose = 2
 
 #
 # No user changes needed below this point.
@@ -133,9 +151,14 @@ start = time.time()
 
 # Allow for parallel running.  If mpirun is not used, will operate in
 # single-processor mode
-from mpi4py import MPI
-mpirank = MPI.COMM_WORLD.rank  # processor ID
-mpisize = MPI.COMM_WORLD.size  # number of processors
+try:
+    from mpi4py import MPI
+    mpirank = MPI.COMM_WORLD.rank  # processor ID
+    mpisize = MPI.COMM_WORLD.size  # number of processors
+except ImportError:
+    print "mpi4py not found.  Using a single processor."
+    mpirank = 0
+    mpisize = 1
 if mpisize > 1:
     # each processor gets 1/n_processors of the temperatures, in order
     # If you want to run in parallel with just 1 temperature, 
@@ -153,8 +176,7 @@ if mpisize > 1:
         print "%s exists, continuing" % newdir
     os.chdir(newdir)
 
-print "Running code ",executable," with temperatures ",temperatures," densities ",densities," and columns ",columns
-
+if verbose > 0: print "Running code ",executable," with temperatures ",temperatures," densities ",densities," and columns ",columns
 
 for iact,act in enumerate(acts):
     lowfreq = act[0]
@@ -162,7 +184,7 @@ for iact,act in enumerate(acts):
     gfil = act[2].replace(".dat",suffix+".dat")
     
     infile = open('radex.inp','w')
-    print "Processor %i: Starting " % mpirank,gfil
+    if verbose > 0: print "Processor %i: Starting " % mpirank,gfil
 
     for temp in temperatures:
         for dens in densities:
@@ -176,18 +198,18 @@ for iact,act in enumerate(acts):
                     infile.write('1\n')
 
                 # DEBUG logging
-                print "Processor %i " % mpirank,
-                print "temp : %g" % (temp),
-                print "Column : %g" % (col),
-                print "dens : %g" % (dens)
+                if verbose > 1: print "Processor %i " % mpirank,
+                if verbose > 1: print "temp : %g" % (temp),
+                if verbose > 1: print "Column : %g" % (col),
+                if verbose > 1: print "dens : %g" % (dens)
 
-    print "Processor %i: Finished writing infiles." % mpirank
+    if verbose > 0: print "Processor %i: Finished writing infiles." % mpirank
     if iact == 0:
-        print "Processor %i: Starting radex code." % mpirank
+        if verbose > 0: print "Processor %i: Starting radex code." % mpirank
         os.system('%s < radex.inp > /dev/null' % executable)
-        print "Processor %i: Finished Radex." % mpirank
+        if verbose > 0: print "Processor %i: Finished Radex." % mpirank
 
-    print "Processor %i: Beginning output parsing." % mpirank
+    if verbose > 0: print "Processor %i: Beginning output parsing." % mpirank
     grid = open(gfil,'w')
     fmt  = '%10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e \n'
     grid.write(fmt.replace('.3e','s') % ("Temperature","log10(dens)",
@@ -212,13 +234,13 @@ for iact,act in enumerate(acts):
 
 stop = time.time()
 dure = stop - start
-print "Processor %i Run time = %f seconds" % (mpirank,dure)
+if verbose > 0: print "Processor %i Run time = %f seconds" % (mpirank,dure)
 if mpisize > 1:
     os.chdir(pwd)
 
 MPI.COMM_WORLD.Barrier()
 if mpisize > 1 and mpirank == 0:
-    print "Starting cleanup"
+    if verbose > 0: print "Starting cleanup"
     import glob
     filelist = glob.glob("radex_temp_00/*.dat")
     for file in filelist:
@@ -227,6 +249,7 @@ if mpisize > 1 and mpirank == 0:
             os.system("tail +2 %s >> %s" % (file.replace("_00","_%02i" % ii),file.replace("radex_temp_00/","") ) )
     radexoutlist = glob.glob("radex_temp_*/radex.out")
     try:
+        # if a radex.out file exists, move it to radex.out.old
         os.system("mv radex.out radex.out.old")
         os.system("touch radex.out")
     except OSError:
@@ -234,4 +257,4 @@ if mpisize > 1 and mpirank == 0:
     for file in radexoutlist:
         os.system("cat %s >> radex.out" % file)
     os.system("rm -r radex_temp_*")
-    print "Cleanup completed"
+    if verbose > 0: print "Cleanup completed"
