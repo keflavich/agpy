@@ -11,6 +11,8 @@ def ds9_photometry(xpapoint):
     pf = D.get_pyfits()
     mask = reg.get_mask(pf[0])
     arr = pf[0].data
+    wherenotnan = (arr == arr)
+    mask = mask*wherenotnan
     hdr = pf[0].header
     wcs = pywcs.WCS(hdr)
     try:
