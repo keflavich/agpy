@@ -25,11 +25,13 @@ from PCA_tools import *
 matplotlib.rcParams['image.origin']='lower'
 matplotlib.rcParams['image.interpolation']='nearest'
 matplotlib.rcParams['image.aspect']=1
-matplotlib.rcParams['text.usetex']=False
 matplotlib.defaultParams['image.origin']='lower'
 matplotlib.defaultParams['image.interpolation']='nearest'
 matplotlib.defaultParams['image.aspect']=1
-matplotlib.defaultParams['text.usetex']=False
+if matplotlib.rcParams['text.usetex']:
+  texOn = True
+# matplotlib.rcParams['text.usetex']=False
+# matplotlib.defaultParams['text.usetex']=False
 
 class Flagger:
   """
@@ -163,7 +165,10 @@ class Flagger:
       self.dcon()
   
   def _loadsav(self,savfile,**kwargs):
+      print "Beginning IDLsave file read."
+      t0 = time.time()
       self.sav = idlsave.read(savfile)
+      print "Completed IDLsave file read in %f seconds." % (time.time() - t0)
 
       self.ncfilename = savfile
       self.tsfile = None
@@ -504,24 +509,34 @@ class Flagger:
         plotdata = self.plane
     if self.scanim is None:
         self.flagfig = figure(fignum+1,figsize=[16,12]); clf()
-        self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
-        xlabel('Bolometer number'); ylabel('Time (.1s)')
+        if texOn:
+          self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename.replace("_","\\_"));
+        else:
+          self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
+        xlabel('Bolometer number'); ylabel('Time (0.1s)')
         self.flagim = pylab.imshow(self.flags[scannum,:,:],interpolation='nearest',
                 origin='lower',aspect=self.aspect)
         self.flagcb = pylab.colorbar()
         self.datafig = figure(fignum,figsize=[16,12]);clf();
-        self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename);
-        xlabel('Bolometer number'); ylabel('Time (.1s)')
+        if texOn:
+          self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename.replace("_","\\_"));
+        else:
+          self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename);
+        xlabel('Bolometer number'); ylabel('Time (0.1s)')
         self.dataim = pylab.imshow(plotdata,interpolation='nearest',
                 origin='lower',aspect=self.aspect)
         self.datacb = pylab.colorbar()
     else:
         self.flagim.set_array(self.flags[scannum,:,:])
         self.flagcb = pylab.colorbar(cax=self.flagcb.ax)
-        self.flagtitle.set_text("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename)
         self.dataim.set_array(plotdata)
         self.datacb = pylab.colorbar(cax=self.datacb.ax)
-        self.datatitle.set_text("Scan "+str(self.scannum)+" in "+self.ncfilename)
+        if texOn:
+          self.flagtitle.set_text("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename.replace("_","\\_"))
+          self.datatitle.set_text("Scan "+str(self.scannum)+" in "+self.ncfilename.replace("_","\\_"))
+        else:
+          self.flagtitle.set_text("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename)
+          self.datatitle.set_text("Scan "+str(self.scannum)+" in "+self.ncfilename)
     self.showrects()
     self.showlines()
     self.cursor = Cursor(self.dataim.axes,useblit=True,color='black',linewidth=1)

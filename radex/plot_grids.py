@@ -41,7 +41,7 @@ def plot_radex(filename,ngridpts=100,ncontours=50,plottype='ratio',
 
     names,props = readcol(filename,twod=False,names=True)
     temperature,density,column,tex1,tex2,tau1,tau2,tline1,tline2,flux1,flux2 = props
-
+    ratio = flux1 / flux2
 
     if thirdvarname == "Temperature":
       firstvar = density
@@ -188,9 +188,13 @@ if __name__ == "__main__":
     Command-line calls will plot cuts of temperature, density, and column.
 
     transition - name of transition (if not specified, defaults to the first 7
-        characters of the filename)
-    plottype - Which value will be plotted?  defaults to "ratio"
+                 characters of the filename)
+    plottype - Which value will be plotted?  defaults to "ratio", which is the 
+               ratio of line-integrated flux
     cutnumber - which tem/den/col to use?
+
+    Note that the plot labels default to H2CO labels; you'll have to hack the
+    source code above in order to get the right transition labels to show up
     """
     
     filename = sys.argv[1]
@@ -218,6 +222,7 @@ if __name__ == "__main__":
           plottype = sys.argv[3]
       else:
           plottype = 'ratio'
+          print "Warning: Defaulting to 'ratio', which will plot the ratio of the integrated flux of line 1 to line 2"
 
       if len(sys.argv) > 4:
           cutnumber = sys.argv[4]
