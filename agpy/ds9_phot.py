@@ -4,6 +4,7 @@ import pyfits
 import pywcs
 import ds9
 import numpy
+import sys
 
 def ds9_photometry(xpapoint):
     D = ds9.ds9(xpapoint)
@@ -23,7 +24,7 @@ def ds9_photometry(xpapoint):
         cd2 = cdelt2 * wcs.wcs.cd[1,1]
         ppbeam = 2*numpy.pi*bmin*bmaj / abs(cd1*cd2) / (8*numpy.log(2))
         # print "CD1: %g  CD2: %g" % (cd1, cd2)
-        print "BMAJ: %g  BMIN: %g  PPBEAM: %g   SUM/PPBEAM: %g" % (bmaj,bmin,ppbeam,arr[mask].sum()/ppbeam)
+        sys.stdout.write( "BMAJ: %g  BMIN: %g  PPBEAM: %g   SUM/PPBEAM: %g\n" % (bmaj,bmin,ppbeam,arr[mask].sum()/ppbeam) )
     except:
         pass
     return arr[mask].sum(),arr[mask].mean(),numpy.median(arr[mask]),arr[mask].std(),mask.sum()
@@ -33,5 +34,5 @@ if __name__ == "__main__":
     import sys
     xpaname = sys.argv[1]
 
-    print "Sum: %g  Mean: %g  Median: %g  RMS: %g  NPIX: %i" % ds9_photometry(xpaname)
+    sys.stdout.write( "Sum: %g  Mean: %g  Median: %g  RMS: %g  NPIX: %i\n" % ds9_photometry(xpaname) )
 

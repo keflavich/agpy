@@ -6,4 +6,4 @@ ds9_phot $xpa_method | $text
 Region Photometry Key
 *
 bind p
-ds9_phot $xpa_method | $text
+ds9_phot $xpa_method | $null
