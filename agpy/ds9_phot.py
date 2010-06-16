@@ -21,7 +21,7 @@ def ds9_photometry(xpapoint):
         cdelt1,cdelt2 = wcs.wcs.cdelt[:2]
         cd1 = cdelt1 * wcs.wcs.cd[0,0]
         cd2 = cdelt2 * wcs.wcs.cd[1,1]
-        ppbeam = bmin*bmaj / abs(cd1*cd2)
+        ppbeam = 2*numpy.pi*bmin*bmaj / abs(cd1*cd2) / (8*numpy.log(2))
         # print "CD1: %g  CD2: %g" % (cd1, cd2)
         print "BMAJ: %g  BMIN: %g  PPBEAM: %g   SUM/PPBEAM: %g" % (bmaj,bmin,ppbeam,arr[mask].sum()/ppbeam)
     except:
