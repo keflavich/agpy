@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Wrapper to mosaic a *subset* of images in the current directory
+#
+# Usage:
+# mGetHdr template_fitsfile.fit mosaic.hdr
+# montage outfile=l089_reference_montage.fits 0*_indiv13pca*_map01.fits combine=median &
+#
+# Keyword parameters:
+#   combine - 'median', 'average', or 'sum'
+#   header  - Filename of fits file from which to create mosaic.hdr
+#   outfile - Output fits filename
+#
+
 #export PATH=$PATH:/usr/local/bin/montage
 
 origdir=`pwd`
