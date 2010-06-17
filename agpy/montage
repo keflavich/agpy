@@ -1,0 +1,67 @@
+#!/bin/bash
+
+#export PATH=$PATH:/usr/local/bin/montage
+
+origdir=`pwd`
+
+#echo $# $*
+
+if [ $# -gt 0 ]
+then
+    for ii in $*
+    do
+        if [ ${ii%=*} == 'header' ]
+        then
+            /usr/local/bin/montage/mGetHdr ${ii#*=} mosaic.hdr
+        elif [ ${ii%=*} == 'outfile' ]
+        then
+            outfile=${ii#*=}
+        elif [ `echo $ii | grep =` ] 
+        then
+            params="$params,${ii%=*}='${ii#*=}'"
+        elif [ `echo $ii | grep ".fits"` ] 
+        then
+            files=( ${files[@]} $ii )
+        fi
+    done
+fi
+echo ${files[@]} ${#files} 
+if [ ${#files} -gt 0 ] 
+then
+    mkdir tmp
+    cp ${files[@]} tmp/
+    cp mosaic.hdr tmp/
+    cd tmp/
+fi
+
+if [ -f mosaic.hdr ] 
+then 
+    echo "mosaic.hdr exists, continuing"
+
+    dir=`pwd`
+    echo python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/mosaic.hdr'$params)"
+    python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/mosaic.hdr'$params)"
+
+    cd $origdir
+    if [ -d tmp ]
+    then
+        if [ $outfile ]
+        then
+            mv tmp/mosaic/mosaic.fits $outfile
+        else
+            mv tmp/mosaic mosaic
+        fi
+        rm -r tmp
+    fi
+
+else
+    echo "mosaic.hdr does not exist.  Quitting."
+    cd $origdir
+fi
+
+#for ii in $*
+#do
+#    var="from agpy import pyflagger; f=pyflagger.Flagger('"$ii"'); f.plotscan(0)"
+#    echo ipython -i -c \"$var\"
+#    ipython -i -c "from pylab import *; from agpy import pyflagger; f=pyflagger.Flagger('"$ii"'); f.plotscan(0);"
+#done
