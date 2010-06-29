@@ -24,7 +24,18 @@ then
     do
         if [ ${ii%=*} == 'header' ]
         then
-            /usr/local/bin/montage/mGetHdr ${ii#*=} mosaic.hdr
+            hdrfile=${ii#*=}
+            if [ ${hdrfile#*.} == 'hdr' ]
+            then
+              headerfile=$hdrfile
+            elif [ ${hdrfile#*.} == 'fits' ]
+            then
+              /usr/local/bin/montage/mGetHdr $hdrfile mosaic.hdr
+              headerfile=mosaic.hdr
+            else
+              echo "ERROR: $ii is not a valid header setting"
+              headerfile="does_not_exist_I_hope.noooo"
+            fi
         elif [ ${ii%=*} == 'outfile' ]
         then
             outfile=${ii#*=}
@@ -42,17 +53,21 @@ if [ ${#files} -gt 0 ]
 then
     mkdir tmp
     cp ${files[@]} tmp/
-    cp mosaic.hdr tmp/
+    cp $headerfile tmp/
     cd tmp/
 fi
 
-if [ -f mosaic.hdr ] 
+if [ -f $headerfile ] 
 then 
-    echo "mosaic.hdr exists, continuing"
+    echo "$headerfile exists, continuing"
 
     dir=`pwd`
-    echo python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/mosaic.hdr'$params)"
-    python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/mosaic.hdr'$params)"
+    echo python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
+    python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
+    if [ $? != 0 ]
+    then
+      echo "There was a python error!"
+    fi
 
     cd $origdir
     if [ -d tmp ]
@@ -67,7 +82,7 @@ then
     fi
 
 else
-    echo "mosaic.hdr does not exist.  Quitting."
+    echo "$headerfile does not exist.  Quitting."
     cd $origdir
 fi
 
