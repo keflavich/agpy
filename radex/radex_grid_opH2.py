@@ -39,8 +39,8 @@ cmin = 1e11  # minimum molecular column density
 cmax = 1e16  # maximum molecular column density
 
 ntemp = 11     # number of temperature points
-ndens = 11     # number of density points
-ncol  = 11     # number of column points
+ndens = 101     # number of density points
+ncol  = 101     # number of column points
 
 # user does not need to modify these formulae
 # they are equivalent to temperatures = numpy.linspace(tmin,tmax,ntemp).tolist()
@@ -57,10 +57,12 @@ tbg   = 2.73         # background radiation temperature
 cdmol_default = 1e12 # low enough to be optically thin
 dv    = 1.0          # line width (km/s)
 
-mole = 'o-h2co'  # molecular data name
+mole = 'o-h2co_troscompt'  # molecular data name
+
+orthopararatio = 3 # H2 ortho-to-para ratio
 
 # Naming suffix to append to line name defined in "acts" below
-suffix = "_T=5to55_lvg"
+suffix = "_T=5to55_lvg_troscompt_100square"
 # acts = list of lines to ratio.  Filenames must include ".dat" in order for suffix to be applied
 acts = ([4.8,14.5,'1-1_2-2.dat'],[4.8,29.0,'1-1_3-3.dat'],[14.5,29.0,'2-2_3-3.dat'])
 flow = 4.0     # lowest frequency transition to include in output file
@@ -90,9 +92,11 @@ def write_input(infile,tkin,nh2,cdmol=cdmol_default):
     infile.write('radex.out\n')
     infile.write(str(flow*(1-bw))+' '+str(fupp/(1-bw))+'\n')
     infile.write(str(tkin)+'\n')
-    infile.write('1\n')
-    infile.write('H2\n')
-    infile.write(str(nh2)+'\n')
+    infile.write('2\n')
+    infile.write('o-H2\n')
+    infile.write(str(nh2/(orthopararatio+1.0)*orthopararatio)+'\n')
+    infile.write('p-H2\n')
+    infile.write(str(nh2/(orthopararatio+1.0))+'\n')
     infile.write(str(tbg)+'\n')
     infile.write(str(cdmol)+'\n')
     infile.write(str(dv)+'\n')

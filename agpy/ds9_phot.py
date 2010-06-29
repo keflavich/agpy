@@ -26,6 +26,7 @@ def ds9_photometry(xpapoint):
         # print "CD1: %g  CD2: %g" % (cd1, cd2)
         sys.stdout.write( "BMAJ: %g  BMIN: %g  PPBEAM: %g   SUM/PPBEAM: %g\n" % (bmaj,bmin,ppbeam,arr[mask].sum()/ppbeam) )
     except:
+        print "ds9_phot failed - check for BMAJ/BMIN in header"
         pass
     return arr[mask].sum(),arr[mask].mean(),numpy.median(arr[mask]),arr[mask].std(),mask.sum()
 

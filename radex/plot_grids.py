@@ -92,7 +92,7 @@ def plot_radex(filename,ngridpts=100,ncontours=50,plottype='ratio',
     nx = len(unique(firstvar))
     ny = len(unique(secondvar))
     if firstvar is temperature:
-      firstarr = logspace(log10(firstvar.min()),log10(firstvar.max()),nx)
+      firstarr = linspace((firstvar.min()),(firstvar.max()),nx)
     else:
       firstarr = linspace(firstvar.min(),firstvar.max(),nx)
     secondarr = linspace(secondvar.min(),secondvar.max(),ny)
@@ -206,15 +206,16 @@ if __name__ == "__main__":
     # allow %run to just run a script
     # Users, change this code to fit your needs!
     if transition == "script":
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_tau1.fits',plotvar='tau1')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_tau2.fits',plotvar='tau2')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_tex1.fits',plotvar='tex1')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_tex2.fits',plotvar='tex2')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_tline1.fits',plotvar='tline1')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_tline2.fits',plotvar='tline2')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_flux1.fits',plotvar='flux1')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_flux2.fits',plotvar='flux2')
-        gridcube('1-1_3-3_T=5to55_morepoints_lvg.dat','1-1_3-3_T=5to55_morepoints_lvg_ratio.fits',plotvar='ratio')
+        prefix = filename.replace(".dat","")
+        gridcube(prefix+'.dat',prefix+'_tau1.fits',plotvar='tau1')
+        gridcube(prefix+'.dat',prefix+'_tau2.fits',plotvar='tau2')
+        gridcube(prefix+'.dat',prefix+'_tex1.fits',plotvar='tex1')
+        gridcube(prefix+'.dat',prefix+'_tex2.fits',plotvar='tex2')
+        gridcube(prefix+'.dat',prefix+'_tline1.fits',plotvar='tline1')
+        gridcube(prefix+'.dat',prefix+'_tline2.fits',plotvar='tline2')
+        gridcube(prefix+'.dat',prefix+'_flux1.fits',plotvar='flux1')
+        gridcube(prefix+'.dat',prefix+'_flux2.fits',plotvar='flux2')
+        gridcube(prefix+'.dat',prefix+'_ratio.fits',plotvar='ratio')
       
 
     else:
