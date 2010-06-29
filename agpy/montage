@@ -16,8 +16,6 @@
 
 origdir=`pwd`
 
-#echo $# $*
-
 if [ $# -gt 0 ]
 then
     for ii in $*
@@ -42,6 +40,7 @@ then
         elif [ `echo $ii | grep =` ] 
         then
             params="$params,${ii%=*}='${ii#*=}'"
+        # note that you can say "header=blah.fits" because it is checked for earlier
         elif [ `echo $ii | grep ".fits"` ] 
         then
             files=( ${files[@]} $ii )
