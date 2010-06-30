@@ -19,14 +19,19 @@ def ds9_photometry(xpapoint):
     try:
         bmaj = float(hdr['BMAJ'])
         bmin = float(hdr['BMIN'])
-        cdelt1,cdelt2 = wcs.wcs.cdelt[:2]
-        cd1 = cdelt1 * wcs.wcs.cd[0,0]
-        cd2 = cdelt2 * wcs.wcs.cd[1,1]
+        try:
+            cd1 = wcs.wcs.cd[0,0]
+            cd2 = wcs.wcs.cd[1,1]
+        except AttributeError:
+            cd1,cd2 = wcs.wcs.cdelt[:2]
         ppbeam = 2*numpy.pi*bmin*bmaj / abs(cd1*cd2) / (8*numpy.log(2))
-        # print "CD1: %g  CD2: %g" % (cd1, cd2)
+        #print "CD1: %g  CD2: %g" % (cd1, cd2)
         sys.stdout.write( "BMAJ: %g  BMIN: %g  PPBEAM: %g   SUM/PPBEAM: %g\n" % (bmaj,bmin,ppbeam,arr[mask].sum()/ppbeam) )
-    except:
+    except KeyError:
         print "ds9_phot failed - check for BMAJ/BMIN in header"
+        pass
+    except:
+        print "ds9_phot failed - not a header KeyError, something else"
         pass
     return arr[mask].sum(),arr[mask].mean(),numpy.median(arr[mask]),arr[mask].std(),mask.sum()
 
