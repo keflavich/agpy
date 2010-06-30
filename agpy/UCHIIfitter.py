@@ -122,10 +122,10 @@ class HIIregion:
         self.em,self.nutau,self.normfac,self.chi2 = emtau(self.nu,self.flux,self.fluxerr,Te=self.Te,**kwargs)
 
     def refit(self,**kwargs):
-        """ refit, presumable using different inputs to emtau """
+        """ refit, presumably using different inputs to emtau """
         self.em,self.nutau,self.normfac,self.chi2 = emtau(self.nu,self.flux,self.fluxerr,Te=self.Te,**kwargs)
 
-    def loglogplot(self,numin=1.0,numax=10.0,plottitle='',**kwargs):
+    def loglogplot(self,numin=1.0,numax=10.0,plottitle='',do_annotations=True,**kwargs):
         x = linspace(numin,numax,500)
         y = inufit(x,self.em,self.normfac)
         loglog(x,y)
@@ -136,13 +136,14 @@ class HIIregion:
         errorbar(self.nu,self.flux,yerr=self.fluxerr,fmt=',',**kwargs)
 
         self.physprops()
-        annotate("size (as): %0.2g" % (self.srcsize/au), [.8, .3],textcoords='axes fraction',xycoords='axes fraction')
-        annotate("size (au): %0.2g" % (self.srcsize/au), [.8, .3],textcoords='axes fraction',xycoords='axes fraction')
-        annotate("mass (msun): %0.2g" % self.mass, [.8, .25],textcoords='axes fraction',xycoords='axes fraction')
-        annotate("EM: %0.2g" % self.em, [.8, .2],textcoords='axes fraction',xycoords='axes fraction')
-        annotate("Nu(Tau=1): %0.2g" % self.nutau, [.8, .15],textcoords='axes fraction',xycoords='axes fraction')
-        annotate("N_lyc: %0.2g" % self.Nlyc, [.8,.1],textcoords='axes fraction',xycoords='axes fraction')
-        annotate("dens: %0.2g" % self.dens, [.8,.05],textcoords='axes fraction',xycoords='axes fraction')
+        if do_annotations:
+            annotate("size (as): %0.2g" % (self.srcsize/au), [.8, .3],textcoords='axes fraction',xycoords='axes fraction')
+            annotate("size (au): %0.2g" % (self.srcsize/au), [.8, .3],textcoords='axes fraction',xycoords='axes fraction')
+            annotate("mass (msun): %0.2g" % self.mass, [.8, .25],textcoords='axes fraction',xycoords='axes fraction')
+            annotate("EM: %0.2g" % self.em, [.8, .2],textcoords='axes fraction',xycoords='axes fraction')
+            annotate("Nu(Tau=1): %0.2g" % self.nutau, [.8, .15],textcoords='axes fraction',xycoords='axes fraction')
+            annotate("N(lyc): %0.2g" % self.Nlyc, [.8,.1],textcoords='axes fraction',xycoords='axes fraction')
+            annotate("dens: %0.2g" % self.dens, [.8,.05],textcoords='axes fraction',xycoords='axes fraction')
 
     def physprops(self):
         """
