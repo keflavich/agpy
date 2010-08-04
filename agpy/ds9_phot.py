@@ -42,3 +42,4 @@ if __name__ == "__main__":
 
     sys.stdout.write( "Sum: %g  Mean: %g  Median: %g  RMS: %g  NPIX: %i\n" % ds9_photometry(xpaname) )
 
+    sys.exit()
