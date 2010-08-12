@@ -2,11 +2,11 @@ try:
     import scipy
     from scipy import optimize,sqrt
     from scipy.optimize import leastsq
-    from scipy.stats.stats import nanmedian,nanmean,_nanmedian
+    #from scipy.stats.stats import nanmedian,nanmean,_nanmedian
 except ImportError:
     print "Scipy cold not be loaded.  Collapse_gaussfit may fail"
 import numpy
-from numpy import vectorize,zeros,exp,median,where,asarray,nonzero,transpose,ma,arange,square
+from numpy import vectorize,zeros,exp,median,where,asarray,array,nonzero,ma,arange,square
 import matplotlib
 #matplotlib.use('Agg')
 from pylab import indices,figure,clf,savefig,plot,legend,text,axes,title
@@ -15,6 +15,11 @@ import pyfits
 import time
 from mad import MAD
 from ratosexagesimal import ratos,dectos
+
+def nanmedian(arr):
+    return median(arr[arr==arr])
+def nanmean(arr):
+    return (arr[arr==arr]).mean()
 
 # read in file
 # filename = sys.argv[1]
@@ -144,15 +149,13 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',v
             print "in %f seconds (average: %f)" % (dt,dt/float(nspec))
         else: 
             print 
-#    resids = sqrt(chi2_arr)
     chi2_arr = resid_arr**2
-    resids = ma.masked_where(numpy.isnan(chi2_arr),chi2_arr)
-#    residcut = (resids.mean() + (resids.std() * nrsig) )
-    residcut = (_nanmedian(chi2_arr.ravel()) + (MAD(chi2_arr.ravel()) * nrsig) )
-#    import pdb; pdb.set_trace()
-    to_refit = (resids > residcut).astype('int')
+    resids = ma.masked_where(numpy.isnan(chi2_arr),chi2_arr) # hide bad values
+#    residcut = (resids.mean() + (resids.std() * nrsig) )  # Old versino - used standard deviation and mean
+    residcut = (_nanmedian(chi2_arr.ravel()) + (MAD(chi2_arr.ravel()) * nrsig) ) # New version: set cutoff by median + nrsig * MAD
+    to_refit = (resids > residcut).astype('bool')
 #    to_refit[numpy.isnan(to_refit)] = 0
-    inds = (nonzero(to_refit)).transpose()
+    inds = array(nonzero(to_refit)).transpose()
     dgc,tgc = 0,0
     print "Refitting a total of %i spectra with peak residual above %f" % (to_refit.sum(),residcut)
     f=open("%s_triples.txt" % prefix,'w')
