@@ -78,7 +78,8 @@ def return_triple_param(xarr,params=None):
 
 
 
-def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
+def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',
+        vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x,doplot=True):
     """
     Attempts to fit one or two Gaussians to each spectrum in a data cube and returns the parameters of the fits.
     Adaptively determines where to fit two Gaussian components based on residuals.  Will fit 3 gaussians if a
@@ -90,7 +91,11 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',v
     cube - a data cube with two spatial and one spectral dimensions
     axis - the axis of the spectral dimension
     nsig - number of sigma over the mean residual to trigger double-gaussian fitting
+           also, cutoff to do any fitting at all
     prefix - the prefix (including directory name) of the output images from 3-gaussian fitting
+    doplot - option to turn off plotting of triple-gaussian fits
+
+    vconv,xtora,ytodec - functions to convert the axes from pixel coordinates to ra/dec/velocity coordinates
 
     returns:
     width_arr1,width_arr2,chi2_arr,offset_arr1,offset_arr2,amp_arr1,amp_arr2
@@ -119,7 +124,7 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',v
     offset_arr = zeros(cube.shape[1:])  # define gaussian param arrays 
     offset_arr1 = zeros(cube.shape[1:])  # define gaussian param arrays 
     offset_arr2 = zeros(cube.shape[1:])  # define gaussian param arrays 
-    ncarr = (cube.max(axis=0) > mean_std*nsig)        # number of components fit
+    ncarr = (cube.max(axis=0) > mean_std*nsig)        # cutoff: don't fit no-signal spectra
     starttime = time.time()              # timing for output
     print cube.shape
     print "Fitting a total of %i spectra with peak signal above %f" % (ncarr.sum(),mean_std*nsig)
@@ -184,21 +189,22 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',v
             tpguess = [doublepars[0],doublepars[1],(doublepars[0]+doublepars[1])/2.,doublepars[2],doublepars[3],doublepars[2]*5.,doublepars[4],doublepars[5],doublepars[4]/5.]
             triplepars = return_triple_param(cube[:,i,j],params=tpguess)
             pars = [offset_arr[i,j],width_arr[i,j],amp_arr[i,j]]
-            ax = axes([.05,.05,.7,.9])
-            plot(vind,cube[:,i,j],color='black',linestyle='steps',linewidth='.5')
-            plot(vind,gaussian(*pars)(xind),'r-.',label="Single %f" % ( (gerr(cube[:,i,j])(pars)).sum() ) )
-            plot(vind,double_gaussian(*doublepars)(xind),'g--',label="Double %f" % ( (double_gerr(cube[:,i,j])(doublepars)).sum() ))
-            plot(vind,triple_gaussian(*triplepars)(xind),'b:',label="Triple %f" % ( (triple_gerr(cube[:,i,j])(triplepars)).sum() ),linewidth=2)
-            pars[0] = vconv(pars[0])
-            text(1.05,.8,"c1 %3.2f w1 %3.2f a1 %3.2f" % tuple(pars),transform=ax.transAxes,size='smaller')
-            dp = [ vconv(doublepars[0]) , doublepars[2], doublepars[4], vconv(doublepars[1]), doublepars[3], doublepars[5] ]
-            text(1.05,.6,"c1 %3.2f w1 %3.2f a1 %3.2f\nc2 %3.2f w2 %3.2f a2 %3.2f" % tuple(dp),transform=ax.transAxes,size='smaller')
-            tp = [ vconv(triplepars[0]) , triplepars[3], triplepars[6], vconv(triplepars[1]), triplepars[4], triplepars[7], vconv(triplepars[2]), triplepars[5], triplepars[8]  ]
-            text(1.05,.4,"c1 %3.2f w1 %3.2f a1 %3.2f\nc2 %3.2f w2 %3.2f a2 %3.2f\nc3 %3.2f w3 %3.2f a3 %3.2f" % tuple(tp),transform=ax.transAxes,size='smaller')
-            title("Spectrum at %s %s" % (ratos(xtora(i)),dectos(ytodec(j))) ) 
-            legend(loc='best')
-            savefig("%s%s.%s.png" % (prefix,i,j))
-            clf()
+            if doplot:
+                ax = axes([.05,.05,.7,.9])
+                plot(vind,cube[:,i,j],color='black',linestyle='steps',linewidth='.5')
+                plot(vind,gaussian(*pars)(xind),'r-.',label="Single %f" % ( (gerr(cube[:,i,j])(pars)).sum() ) )
+                plot(vind,double_gaussian(*doublepars)(xind),'g--',label="Double %f" % ( (double_gerr(cube[:,i,j])(doublepars)).sum() ))
+                plot(vind,triple_gaussian(*triplepars)(xind),'b:',label="Triple %f" % ( (triple_gerr(cube[:,i,j])(triplepars)).sum() ),linewidth=2)
+                pars[0] = vconv(pars[0])
+                text(1.05,.8,"c1 %3.2f w1 %3.2f a1 %3.2f" % tuple(pars),transform=ax.transAxes,size='smaller')
+                dp = [ vconv(doublepars[0]) , doublepars[2], doublepars[4], vconv(doublepars[1]), doublepars[3], doublepars[5] ]
+                text(1.05,.6,"c1 %3.2f w1 %3.2f a1 %3.2f\nc2 %3.2f w2 %3.2f a2 %3.2f" % tuple(dp),transform=ax.transAxes,size='smaller')
+                tp = [ vconv(triplepars[0]) , triplepars[3], triplepars[6], vconv(triplepars[1]), triplepars[4], triplepars[7], vconv(triplepars[2]), triplepars[5], triplepars[8]  ]
+                text(1.05,.4,"c1 %3.2f w1 %3.2f a1 %3.2f\nc2 %3.2f w2 %3.2f a2 %3.2f\nc3 %3.2f w3 %3.2f a3 %3.2f" % tuple(tp),transform=ax.transAxes,size='smaller')
+                title("Spectrum at %s %s" % (ratos(xtora(i)),dectos(ytodec(j))) ) 
+                legend(loc='best')
+                savefig("%s_%s.%s.png" % (prefix,i,j))
+                clf()
             ncarr[i,j] += 1
             print >>f,triplepars
         dgc += 1
@@ -360,7 +366,7 @@ def wrap_collapse_gauss(filename,outprefix,redo='no'):
     return singleB,doubleB
 
 
-def wrap_collapse_adaptive(filename,outprefix,redo='no',nsig=3,nrsig=2):
+def wrap_collapse_adaptive(filename,outprefix,redo='no',nsig=5,nrsig=2,doplot=True):
     """
     redo - if not equal to 'no', then...
     if collapse_gaussfit succeeded (to the extent that the .pysav files were written),
@@ -379,7 +385,8 @@ def wrap_collapse_adaptive(filename,outprefix,redo='no',nsig=3,nrsig=2):
     cube = where(numpy.isnan(cube),0,cube)
 
     if redo=='no':
-        adaptB = asarray(adaptive_collapse_gaussfit(cube,axis=0,prefix=outprefix+'_triple_',nsig=nsig,nrsig=nrsig,vconv=vconv,xtora=xtora,ytodec=ytodec))
+        adaptB = asarray(adaptive_collapse_gaussfit(cube,axis=0,prefix=outprefix+'_triple',
+            nsig=nsig,nrsig=nrsig,vconv=vconv,xtora=xtora,ytodec=ytodec,doplot=doplot))
         adaptB[numpy.isnan(adaptB)] = 0
         pickle.dump(adaptB,open('%s_adaptB.pysav' % outprefix,'w'))
     else:
