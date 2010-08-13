@@ -4,6 +4,7 @@ Generate a cutout image from a .fits file
 import pyfits
 import copy
 import numpy
+import pywcs
 
 def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
     """
@@ -39,8 +40,12 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
     lonarr = ((numpy.arange(head['NAXIS1'])-head['CRPIX1'])*cd1 + head['CRVAL1'] )
     latarr = ((numpy.arange(head['NAXIS2'])-head['CRPIX2'])*cd2 + head['CRVAL2'] )
 
-    xx = numpy.argmin(numpy.abs(xc-lonarr))
-    yy = numpy.argmin(numpy.abs(yc-latarr))
+    wcs = pywcs.WCS(head)
+
+    #xx = numpy.argmin(numpy.abs(xc-lonarr))
+    #yy = numpy.argmin(numpy.abs(yc-latarr))
+    xx,yy = wcs.wcs_sky2pix([xc,yc],0)
+
 
     if units=='pixels':
         xmin,xmax = numpy.max([0,xx-xw]),numpy.min([head['NAXIS1'],xx+xw])
