@@ -74,7 +74,9 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean)
 
     """
 
-    subim = average(cube[vrange[0]:vrange[1],ycen-ywidth:ycen+ywidth,xcen-xwidth:xcen+xwidth],axis=0)
+    xlo = min([xcen-xwidth,0])
+    ylo = min([ycen-ywidth,0])
+    subim = average(cube[vrange[0]:vrange[1],ylo:ycen+ywidth,xlo:xcen+xwidth],axis=0)
 
     if header is None:
         return subim
@@ -104,7 +106,7 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean)
 
         wcs = pywcs.WCS(header=hd)
 
-        crv1,crv2 = wcs.wcs_pix2sky(xcen-xwidth,ycen-ywidth,0)
+        crv1,crv2 = wcs.wcs_pix2sky(xlo,ylo,0)
 
         hd['CRVAL1'] = crv1[0]
         hd['CRVAL2'] = crv2[0]
