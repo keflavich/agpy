@@ -8,6 +8,9 @@ def MAD(a, c=0.6745, axis=0):
 
     median(abs(a - median(a))) / c
 
+    c = 0.6745 is the constant to convert from MAD to std; it is used by
+    default
+
     """
 
     good = (a==a)
