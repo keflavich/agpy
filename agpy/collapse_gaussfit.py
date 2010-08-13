@@ -159,7 +159,7 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',
     chi2_arr = resid_arr**2
     resids = ma.masked_where(numpy.isnan(chi2_arr),chi2_arr) # hide bad values
 #    residcut = (resids.mean() + (resids.std() * nrsig) )  # Old versino - used standard deviation and mean
-    residcut = (_nanmedian(chi2_arr.ravel()) + (MAD(chi2_arr.ravel()) * nrsig) ) # New version: set cutoff by median + nrsig * MAD
+    residcut = (nanmedian(chi2_arr.ravel()) + (MAD(chi2_arr.ravel()) * nrsig) ) # New version: set cutoff by median + nrsig * MAD
     to_refit = (resids > residcut).astype('bool')
 #    to_refit[numpy.isnan(to_refit)] = 0
     inds = array(nonzero(to_refit)).transpose()
