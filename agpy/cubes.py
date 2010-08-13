@@ -74,8 +74,8 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean)
 
     """
 
-    xlo = min([xcen-xwidth,0])
-    ylo = min([ycen-ywidth,0])
+    xlo = max([xcen-xwidth,0])
+    ylo = max([ycen-ywidth,0])
     subim = average(cube[vrange[0]:vrange[1],ylo:ycen+ywidth,xlo:xcen+xwidth],axis=0)
 
     if header is None:
