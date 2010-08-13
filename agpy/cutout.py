@@ -44,7 +44,7 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
 
     #xx = numpy.argmin(numpy.abs(xc-lonarr))
     #yy = numpy.argmin(numpy.abs(yc-latarr))
-    xx,yy = wcs.wcs_sky2pix([xc,yc],0)
+    xx,yy = wcs.wcs_sky2pix(xc,yc,0)
 
 
     if units=='pixels':
