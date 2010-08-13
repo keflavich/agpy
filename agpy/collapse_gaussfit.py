@@ -17,8 +17,10 @@ from mad import MAD
 from ratosexagesimal import ratos,dectos
 
 def nanmedian(arr):
+    """ nanmedian - this version is NOT capable of broadcasting (operating along axes) """
     return median(arr[arr==arr])
 def nanmean(arr):
+    """ nanmean - this version is NOT capable of broadcasting (operating along axes) """
     return (arr[arr==arr]).mean()
 
 # read in file
@@ -172,7 +174,7 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',
         doublepars = return_double_param(cube[:,i,j])
         old_chi2 = chi2_arr[i,j]
         new_chi2 = sum(square( double_gerr(cube[:,i,j])(doublepars) )) 
-        if new_chi2 < old_chi2:
+        if new_chi2 < old_chi2: # if 2 gaussians is an improvement, use it!
             chi2_arr[i,j] = new_chi2
             width_arr1[i,j] = doublepars[2]
             width_arr2[i,j] = doublepars[3]
@@ -181,7 +183,7 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',
             offset_arr1[i,j] = doublepars[0]
             offset_arr2[i,j] = doublepars[1]
             ncarr[i,j] += 1
-        if new_chi2 > residcut:
+        if new_chi2 > residcut: # Even if double was better, see if a triple might be better yet [but don't store it in the params arrays!]
             print >>f,"Triple-gaussian fitting at %i,%i (%i'th double, %i'th triple)" % (i,j,dgc,tgc)
             if tgc % 100 == 0:
                 print "Triple-gaussian fitting at %i,%i (%i'th double, %i'th triple)" % (i,j,dgc,tgc)
@@ -189,7 +191,7 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',
             tpguess = [doublepars[0],doublepars[1],(doublepars[0]+doublepars[1])/2.,doublepars[2],doublepars[3],doublepars[2]*5.,doublepars[4],doublepars[5],doublepars[4]/5.]
             triplepars = return_triple_param(cube[:,i,j],params=tpguess)
             pars = [offset_arr[i,j],width_arr[i,j],amp_arr[i,j]]
-            if doplot:
+            if doplot: # if you don't, there's really no point in fitting at all...
                 ax = axes([.05,.05,.7,.9])
                 plot(vind,cube[:,i,j],color='black',linestyle='steps',linewidth='.5')
                 plot(vind,gaussian(*pars)(xind),'r-.',label="Single %f" % ( (gerr(cube[:,i,j])(pars)).sum() ) )

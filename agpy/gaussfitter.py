@@ -290,6 +290,9 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
     mpperr = mp.perror
     chi2 = mp.fnorm
 
+    if mp.status == 0:
+        raise Exception(mp.errmsg)
+
     if not shh:
         for i,p in enumerate(mpp):
             parinfo[i]['value'] = p
@@ -299,4 +302,109 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
     return mpp,onedgaussian(xax,*mpp),mpperr,chi2
 
 
+def n_gaussian(pars=None,a=None,dx=None,sigma=None):
+    """
+    Returns a function that sums over N gaussians, where N is the length of
+    dx,sigma,a *OR* N = len(pars) / 3
+
+    The background "height" is assumed to be zero (you must "baseline" your
+    spectrum before fitting)
+
+    pars  - a list with len(pars) = 3n, assuming dx,sigma,a repeated
+    dx    - offset (velocity center) values
+    sigma - line widths
+    a     - amplitudes
+    """
+    if len(pars) % 3 == 0:
+        a = [pars[ii] for ii in xrange(0,len(pars),3)]
+        dx = [pars[ii] for ii in xrange(1,len(pars),3)]
+        sigma = [pars[ii] for ii in xrange(2,len(pars),3)]
+    elif not(len(dx) == len(sigma) == len(a)):
+        raise ValueError("Wrong array lengths! dx: %i  sigma: %i  a: %i" % (len(dx),len(sigma),len(a)))
+
+    def g(x):
+        v = numpy.zeros(len(x))
+        for i in range(len(dx)):
+            v += a[i] * numpy.exp( - ( x - dx[i] )**2 / sigma[i]**2 )
+        return v
+    return g
+
+def multigaussfit(xax,data,ngauss=1,err=None,params=[1,0,1],fixed=[False,False,False],limitedmin=[False,False,True],
+        limitedmax=[False,False,False],minpars=[0,0,0],maxpars=[0,0,0],
+        quiet=True,shh=True):
+    """
+    An improvement on onedgaussfit.  Lets you fit multiple gaussians.
+
+    Inputs:
+       xax - x axis
+       data - y axis
+       ngauss - How many gaussians to fit?  Default 1 (this could supercede onedgaussfit)
+       err - error corresponding to data
+
+     These parameters need to have length = 3*ngauss.  If ngauss > 1 and length = 3, they will
+     be replicated ngauss times, otherwise they will be reset to defaults:
+       params - Fit parameters: [amplitude, offset, width] * ngauss
+              If len(params) % 3 == 0, ngauss will be set to len(params) / 3
+       fixed - Is parameter fixed?
+       limitedmin/minpars - set lower limits on each parameter (default: width>0)
+       limitedmax/maxpars - set upper limits on each parameter
+
+       quiet - should MPFIT output each iteration?
+       shh - output final parameters?
+
+    Returns:
+       Fit parameters
+       Model
+       Fit errors
+       chi2
+    """
+
+    if len(params) != ngauss and (len(params) / 3) > ngauss:
+        ngauss = len(params) / 3 
+
+    # make sure all various things are the right length; if they're not, fix them using the defaults
+    for parlist in (params,fixed,limitedmin,limitedmax,minpars,maxpars):
+        if len(parlist) != 3*ngauss:
+            # if you leave the defaults, or enter something that can be multiplied by 3 to get to the
+            # right number of gaussians, it will just replicate
+            if len(parlist) == 3: 
+                parlist *= ngauss 
+            elif parlist==params:
+                parlist[:] = [1,0,1] * ngauss
+            elif parlist==fixed or parlist==limitedmax:
+                parlist[:] = [False,False,False] * ngauss
+            elif parlist==limitedmin:
+                parlist[:] = [False,False,True] * ngauss
+            elif parlist==minpars or parlist==maxpars:
+                parlist[:] = [0,0,0] * ngauss
+
+    def mpfitfun(x,y,err):
+        if err == None:
+            def f(p,fjac=None): return [0,(y-n_gaussian(pars=p)(x))]
+        else:
+            def f(p,fjac=None): return [0,(y-n_gaussian(pars=p)(x))/err]
+        return f
+
+    if xax == None:
+        xax = numpy.arange(len(data))
+
+    parnames = {0:"SHIFT",1:"WIDTH",2:"AMPLITUDE"}
+
+    parinfo = [ {'n':ii,'value':params[ii],'limits':[minpars[ii],maxpars[ii]],'limited':[limitedmin[ii],limitedmax[ii]],'fixed':fixed[ii],'parname':parnames[ii/3]+str(ii/3),'error':ii} for ii in xrange(len(params)) ]
+
+    mp = mpfit(mpfitfun(xax,data,err),parinfo=parinfo,quiet=quiet)
+    mpp = mp.params
+    mpperr = mp.perror
+    chi2 = mp.fnorm
+
+    if mp.status == 0:
+        raise Exception(mp.errmsg)
+
+    if not shh:
+        for i,p in enumerate(mpp):
+            parinfo[i]['value'] = p
+            print parinfo[i]['parname'],p," +/- ",mpperr[i]
+        print "Chi2: ",mp.fnorm," Reduced Chi2: ",mp.fnorm/len(data)," DOF:",len(data)-len(mpp)
+
+    return mpp,n_gaussian(pars=mpp)(xax),mpperr,chi2
 
