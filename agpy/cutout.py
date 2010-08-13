@@ -17,8 +17,9 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
 
     if isinstance(file,str):
         file = pyfits.open(file)
+        opened=True
     elif isinstance(file,pyfits.HDUList):
-        file = copy.copy(file)
+        opened=False
     else:
         raise Exception("cutout: Input file is wrong type (string or HDUList are acceptable).")
 
@@ -52,14 +53,17 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
 
     img = file[0].data[ymin:ymax,xmin:xmax]
 
-    file[0].data = img
-
     head['CRPIX1']-=xmin
     head['CRPIX2']-=ymin
     head['NAXIS1']=img.shape[1]
     head['NAXIS2']=img.shape[0]
 
-    if isinstance(outfile,str):
-        file.writeto(outfile,clobber=clobber)
+    newfile = pyfits.PrimaryHDU(data=img,header=head)
 
-    return file
+    if isinstance(outfile,str):
+        newfile.writeto(outfile,clobber=clobber)
+
+    if opened:
+        file.close()
+
+    return newfile
