@@ -5,7 +5,7 @@ import pyfits
 import copy
 import numpy
 
-def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None):
+def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
     """
     Inputs:
         file  - .fits filename or pyfits HDUList (must be 2D)
@@ -60,6 +60,6 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None):
     head['NAXIS2']=img.shape[0]
 
     if isinstance(outfile,str):
-        file.writeto(outfile)
+        file.writeto(outfile,clobber=clobber)
 
     return file
