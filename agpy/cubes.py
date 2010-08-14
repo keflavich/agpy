@@ -1,6 +1,6 @@
 from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum
 from math import acos,atan2,tan
-from copy import copy
+import copy
 import pyfits
 try:
     import pywcs, coords
@@ -20,7 +20,7 @@ def flatten_header(header):
     if not isinstance(header,pyfits.Header):
         raise Exception("flatten_header requires a pyfits.Header instance")
 
-    newheader = pyfits.Header(cards=header.ascard)
+    newheader = header.copy()
 
     for key in newheader.keys():
         try:
@@ -176,7 +176,7 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
         width  = ap[2] / conv / abs(wcs.wcs.cdelt[0])  # first is width, second is height in DS9 PA convention
         height = ap[3] / conv / abs(wcs.wcs.cdelt[0])
     PA = ap[4] 
-    apold = copy(ap)
+    apold = copy.copy(ap)
     ap = [x,y,width,height,PA]
 
     return ap

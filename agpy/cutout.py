@@ -2,7 +2,6 @@
 Generate a cutout image from a .fits file
 """
 import pyfits
-import copy
 import numpy
 import pywcs
 
@@ -24,17 +23,18 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
     else:
         raise Exception("cutout: Input file is wrong type (string or HDUList are acceptable).")
 
-    head = file[0].header
+    head = file[0].header.copy()
+
     if head['NAXIS'] > 2:
         raise Exception("Too many (%i) dimensions!" % head['NAXIS'])
     try:
         cd1 = head['CDELT1']
         cd2 = head['CDELT2']
-    except:
+    except KeyError:
         try:
             cd1 = head['CD1_1']
             cd2 = head['CD2_2']
-        except:
+        except KeyError:
             raise Exception("No CD or CDELT keywords in header")
 
     lonarr = ((numpy.arange(head['NAXIS1'])-head['CRPIX1'])*cd1 + head['CRVAL1'] )
@@ -57,7 +57,7 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
         raise Exception("Can't use units %s." % units)
 
     if xmax < 0 or ymax < 0:
-        raise Exception("Coordinate is outside of map.")
+        raise ValueError("Coordinate is outside of map: %f,%f." % (xmax,ymax))
 
     img = file[0].data[ymin:ymax,xmin:xmax]
 
