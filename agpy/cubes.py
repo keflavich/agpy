@@ -29,6 +29,9 @@ def flatten_header(header):
         except ValueError:
             # if key[-1] is not an int
             pass
+        except IndexError:
+            # if len(key) < 2
+            pass
     newheader.update('NAXIS',2)
 
     return newheader
