@@ -56,6 +56,9 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
     else:
         raise Exception("Can't use units %s." % units)
 
+    if xmax < 0 or ymax < 0:
+        raise Exception("Coordinate is outside of map.")
+
     img = file[0].data[ymin:ymax,xmin:xmax]
 
     head['CRPIX1']-=xmin

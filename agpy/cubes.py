@@ -1,12 +1,37 @@
 from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum
 from math import acos,atan2,tan
 from copy import copy
+import pyfits
 try:
     import pywcs, coords
 except ImportError:
     print "cubes.py requires pywcs and coords"
 
 dtor = pi/180.0
+
+def flatten_header(header):
+    """
+    Attempt to turn an N-dimensional fits header into a 2-dimensional header
+    Turns all CRPIX[>2] etc. into new keywords with suffix 'A'
+
+    header must be a pyfits.Header instance
+    """
+
+    if not isinstance(header,pyfits.Header):
+        raise Exception("flatten_header requires a pyfits.Header instance")
+
+    newheader = pyfits.Header(cards=header.ascard)
+
+    for key in newheader.keys():
+        try:
+            if int(key[-1]) >= 3 and key[:2] in ['CD','CR','CT','CU','NA']:
+                newheader.rename_key(key,key+'A',force=True)
+        except ValueError:
+            # if key[-1] is not an int
+            pass
+    newheader.update('NAXIS',2)
+
+    return newheader
 
 def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='arcsec'):
     """
@@ -83,26 +108,7 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean)
 
     else:
 
-        hd = header.copy()
-
-        # Header cleanup: must make output 2D.
-        try: del hd['CDELT3']
-        except: pass
-        try: del hd['CD3_3']
-        except: pass
-        try: del hd['CRVAL3']
-        except: pass
-        try: del hd['CRPIX3']
-        except: pass
-        try: del hd['CTYPE3']
-        except: pass
-        try: del hd['NAXIS3']
-        except: pass
-        try: del hd['LBOUND3']
-        except: pass
-        try: del hd['CUNIT3']
-        except: pass
-        hd['NAXIS']=2
+        hd = flatten_header(header.copy())
 
         wcs = pywcs.WCS(header=hd)
 
