@@ -32,11 +32,15 @@ class SpecPlotter:
   connect('button_press_event', af)
   """
 
-  def __init__(self, cube, axis=None, xtol=None, ytol=None,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
+  def __init__(self, cube, axis=None, xtol=None, ytol=None,
+          vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x,
+          specname=None,dv=None):
     self.vconv = vconv
     self.xtora = xtora
     self.ytodec = ytodec
     self.cube = where(numpy.isnan(cube),0,cube)
+    self.specname=specname
+    self.dv=dv
     if axis is None:
       self.axis = pylab.gca()
     else:
@@ -50,71 +54,38 @@ class SpecPlotter:
       if ((self.axis is None) or (self.axis==event.inaxes)) and tb.mode=='':
         self.plotspec(clickY,clickX,button=event.button)
 
-  def plotspec(self, i, j, fignum=1, button=1, dv=None,ivconv=None,
-          vguess1=None,vguess2=None,vguess3=None,wguess1=None,wguess2=None,wguess3=None,
-          screenprint=True,fprint=None):
+  def plotspec(self, i, j, fig=None, fignum=1, 
+          button=1, dv=None,ivconv=None,clear=True,color='k',
+          **kwargs):
     """
     """
-    f=figure(fignum)
-    f.clf()
-    ax = axes([.05,.05,.7,.85])
+    if dv is None:
+        dv = self.dv
 
-    vind = self.vconv(arange(self.cube[:,0,0].shape[0]))
-    xind = arange(self.cube[:,0,0].shape[0])
+    if fig is None and clear:
+        fig=figure(fignum)
+        fig.clf()
+        self.axis = fig.gca()
+    elif fig is None:
+        self.axis = pylab.gca()
+    elif clear:
+        fig.clf()
+        self.axis = fig.gca()
+    #ax = axes([.05,.05,.7,.85])
 
-    pars = return_param(self.cube[:,i,j])
-    doublepars = return_double_param(self.cube[:,i,j])
-    if vguess1 is None: vguess1 = (doublepars[0])
-    elif ivconv is not None: vguess1=ivconv(vguess1)
-    if vguess2 is None: vguess2 = (doublepars[1])
-    elif ivconv is not None: vguess2=ivconv(vguess2)
-    if vguess3 is None: vguess3 = ((doublepars[0]+doublepars[1])/2.)
-    elif ivconv is not None: vguess3=ivconv(vguess3)
-    if wguess1 is None: wguess1 = doublepars[2]    /dv
-    if wguess2 is None: wguess2 = doublepars[3]    /dv
-    if wguess3 is None: wguess3 = doublepars[2]*5. /dv
-    tpguess = [vguess1,vguess2,vguess3,wguess1,wguess2,wguess3,doublepars[4],doublepars[5],doublepars[4]/5.]
-    triplepars = return_triple_param(self.cube[:,i,j],params=tpguess)
+    vind = self.vconv(arange(self.cube.shape[0]))
+    xind = arange(self.cube.shape[0])
 
-    plot(vind,self.cube[:,i,j],color='black',linestyle='steps',linewidth='.5')
+    self.axis.plot(vind,self.cube[:,i,j],color=color,linestyle='steps-mid',linewidth='.5',
+            **kwargs)
 
-    chi2_1 = (((gerr(self.cube[:,i,j])(pars))**2).sum() )
-    chi2_2 = ((double_gerr(self.cube[:,i,j])(doublepars))**2).sum()
-    chi2_3 = ((triple_gerr(self.cube[:,i,j])(triplepars))**2).sum()
-
-    if button==1:
-        plot(vind,gaussian(*pars)(xind),'r-.',label="Single %f" % ( chi2_1 ))
-        plot(vind,double_gaussian(*doublepars)(xind),'g:',label="Double %f" % ( chi2_2 ))
-    elif button==2:
-        plot(vind,gaussian(triplepars[0],triplepars[3],triplepars[6])(xind),'r:')
-        plot(vind,gaussian(triplepars[1],triplepars[4],triplepars[7])(xind),'r:')
-        plot(vind,gaussian(triplepars[2],triplepars[5],triplepars[8])(xind),'r:')
-
-    plot(vind,triple_gaussian(*triplepars)(xind),'b--',label="Triple %f" % ( chi2_3 ),linewidth=2)
-
-    pars[0] = self.vconv(pars[0])
-    text(1.05,.8,"c1 %3.2f w1 %3.2f a1 %3.2f" % tuple(pars),transform=ax.transAxes,size='smaller')
-    dp = [ self.vconv(doublepars[0]) , doublepars[2]/dv, doublepars[4],
-            self.vconv(doublepars[1]), doublepars[3]/dv, doublepars[5] ]
-    text(1.05,.6,"c1 %3.2f w1 %3.2f a1 %3.2f\nc2 %3.2f w2 %3.2f a2 %3.2f" % tuple(dp),transform=ax.transAxes,size='smaller')
-    tp = [ self.vconv(triplepars[0]) , triplepars[3]/dv, triplepars[6],
-            self.vconv(triplepars[1]), triplepars[4]/dv, triplepars[7],
-            self.vconv(triplepars[2]), triplepars[5]/dv, triplepars[8]  ]
-    text(1.05,.4,"c1 %3.2f w1 %3.2f a1 %3.2f\nc2 %3.2f w2 %3.2f a2 %3.2f\nc3 %3.2f w3 %3.2f a3 %3.2f" % tuple(tp),transform=ax.transAxes,size='smaller')
-
-    if screenprint:
-        print "%12.2f%12.2f%3.2f" % tuple(pars) + \
-                "%12.2f%12.2f%12.2f  %12.2f%12.2f%3.2f" % tuple(dp) + \
-                "%12.2f%12.2f%12.2f  %12.2f%12.2f%12.2f   %12.2f%12.2f%3.2f" % tuple(tp) + \
-                "%12.2f%12.2f%12.2f" % (chi2_1,chi2_2,chi2_3)
-    if fprint is not None:
-        print >>fprint,"%12.2f%12.2f%3.2f" % tuple(pars) + \
-                "%12.2f%12.2f%12.2f  %12.2f%12.2f%3.2f" % tuple(dp) + \
-                "%12.2f%12.2f%12.2f  %12.2f%12.2f%12.2f   %12.2f%12.2f%3.2f" % tuple(tp) +\
-                "%12.2f%12.2f%12.2f" % (chi2_1,chi2_2,chi2_3)
-
-    title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
-    legend(loc='best')
+    if self.xtora and self.ytodec:
+        title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
+    elif self.specname:
+        title("Spectrum of %s" % self.specname)
+    xlabel("V$_{LSR}$ km s$^{-1}$")
+    ylabel("$T_A^*")
+    #legend(loc='best')
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
     
@@ -125,7 +96,13 @@ def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
     sp = SpecPlotter(cube,vconv=vconv,xtora=xtora,ytodec=ytodec)
     connect('button_press_event',sp)
  
-def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,smooth=None,order=1,savepre=None,**kwargs):
+def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
+        smooth=None,smoothtype='gaussian',order=1,savepre=None,**kwargs):
+    """
+    Inputs:
+        vmin,vmax - range over which to baseline and plot
+        exclude - (internal) range to exclude from baseline fit
+    """
     f = pyfits.open(filename)
     hdr = f[0].header
     cube = f[0].data
@@ -159,11 +136,25 @@ def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,sm
     else: specplot = cube[argvmin:argvmax]
 
     if smooth:
-        specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
+        #specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
+        # change fitter first
+        if smoothtype == 'hanning': 
+            specplot = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')[::smooth,newaxis,newaxis]
+        elif smoothtype == 'gaussian':
+            speclen = specplot.shape[0]
+            xkern  = linspace(-1*smooth,smooth,smooth*3)
+            kernel = exp(-xkern**2/(2*(smooth/sqrt(8*log(2)))**2))
+            kernel /= kernel.sum()
+            specplot = convolve(specplot[:,0,0],kernel,'same')[::smooth,newaxis,newaxis] 
+        dv *= smooth
+        vconv = lambda v: (v-(p3-argvmin)/smooth+1)*dv+v0
+        ivconv = lambda V: (p3-argvmin)/smooth-1+(V-v0)/dv
 
     sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec)
 
+    sp.dv = dv
     sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,**kwargs)
+    sp.axis.set_xlim(vmin,vmax)
 
     if savepre is not None:
         glon,glat = coords.Position([xtora(0),ytodec(0)]).galactic()
@@ -248,4 +239,55 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
     return (spectrum-bestfit)
 
+def splat_a3(filename,vmin=None,vmax=None,button=1,dobaseline=False,
+        exclude=None,smooth=None,order=1,savepre=None,**kwargs):
+    """
+    OBSOLETE: if you find yourself using this, try running makecube and
+    reducing the data first
+    """
+    f = pyfits.open(filename)
+    hdr = f[0].header
+    cube = f[0].data
+    cube = reshape(cube.mean(axis=1).mean(axis=0),[cube.shape[2],1,1])
+    dv,v0,p3 = hdr['IFCHANSP'],0,hdr['REFCHAN']
+    specname = hdr['OBJECT'] + hdr['MOLECULE'] + hdr['TRANSITI']
+    vconv = lambda v: (v-p3+1)*dv+v0
+    xtora=None
+    ytodec=None
+
+    varr = vconv(arange(cube.shape[0]))
+    if vmin is None: argvmin = 0
+    else: argvmin = argmin(abs(varr-vmin))
+    if vmax is None: argvmax = cube.shape[0]
+    else: argvmax = argmin(abs(varr-vmax))
+
+    if argvmin > argvmax:
+        argvmin,argvmax = argvmax,argvmin
+        if exclude is not None: exclude = exclude[::-1]
+
+    if exclude is not None:
+        exclude[0] = argmin(abs(varr-exclude[0]))
+        exclude[1] = argmin(abs(varr-exclude[1]))
+        exclude = array(exclude) - argvmin
+
+    vconv = lambda v: (v-p3+argvmin+1)*dv+v0
+    ivconv = lambda V: p3-1-argvmin+(V-v0)/dv
+    if dobaseline: specplot = array([[baseline(cube[argvmin:argvmax].squeeze(),exclude=exclude,order=order)]]).T
+    else: specplot = cube[argvmin:argvmax]
+
+    if smooth:
+        specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
+
+    sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname)
+
+    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,**kwargs)
+
+    if savepre is not None:
+        glon,glat = coords.Position([xtora(0),ytodec(0)]).galactic()
+        if glat < 0: pm="" 
+        else: pm = "+"
+        savename = savepre + "G%07.3f%0s%07.3f_" % (glon,pm,glat) + hdr['MOLECULE'].replace(' ','') + hdr['TRANSITI'].replace(' ','')
+        savefig(savename+'.png')
+
+    return sp
 
