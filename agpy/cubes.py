@@ -44,8 +44,8 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
     Cube should have shape [z,y,x], e.g. 
     cube = pyfits.getdata('datacube.fits')
 
-    Apertures are specified in PIXEL units with an origin of 0,0 
-    (NOT the 1,1 fits standard!) unless wcs and coordsys are specified
+    Apertures are specified in PIXEL units with an origin of 0,0 (NOT the 1,1
+    fits standard!) unless wcs and coordsys are specified
     
     INPUTS:
         wcs - a pywcs.WCS instance associated with the data cube
@@ -66,7 +66,7 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
     if wcs is not None and coordsys is not None:
         ap = aper_world2pix(ap,wcs,coordsys=coordsys,wunit=wunit)
 
-    if len(ap) == 2:
+    if len(ap) == 3:
         sh = cube.shape
         yind,xind = indices(sh[1:3]) # recall that python indices are backwards
         dis = sqrt((xind-ap[0])**2+(yind-ap[1])**2)
@@ -169,15 +169,23 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
     except:
         pass
     # cd is default, cdelt is backup
-    try:
-        width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
-        height = ap[3] / conv / abs(wcs.wcs.cd[0,0])
-    except:
-        width  = ap[2] / conv / abs(wcs.wcs.cdelt[0])  # first is width, second is height in DS9 PA convention
-        height = ap[3] / conv / abs(wcs.wcs.cdelt[0])
-    PA = ap[4] 
-    apold = copy.copy(ap)
-    ap = [x,y,width,height,PA]
+    if len(ap) == 5:
+        try:
+            width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
+            height = ap[3] / conv / abs(wcs.wcs.cd[0,0])
+        except:
+            width  = ap[2] / conv / abs(wcs.wcs.cdelt[0])  # first is width, second is height in DS9 PA convention
+            height = ap[3] / conv / abs(wcs.wcs.cdelt[0])
+        PA = ap[4] 
+        apold = copy.copy(ap)
+        ap = [x,y,width,height,PA]
+    elif len(ap) == 3:
+        try:
+            width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
+        except:
+            width  = ap[2] / conv / abs(wcs.wcs.cdelt[0])  # first is width, second is height in DS9 PA convention
+        apold = copy.copy(ap)
+        ap = [x,y,width]
 
     return ap
 
