@@ -84,13 +84,14 @@ class SpecPlotter:
         self.axis.plot(vind,self.cube,color=color,
                 linestyle='steps-mid',linewidth='.5',
                 **kwargs)
+    self.axis.set_xlim(min(vind),max(vind))
 
     if self.xtora and self.ytodec:
         title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
     elif self.specname:
         title("Spectrum of %s" % self.specname)
     xlabel("V$_{LSR}$ km s$^{-1}$")
-    ylabel("$T_A^*")
+    ylabel("$T_A^*$")
     #legend(loc='best')
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
@@ -246,7 +247,8 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
     return (spectrum-bestfit)
 
 def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
-        exclude=None,smooth=None,order=1,savepre=None,**kwargs):
+        exclude=None,smooth=None,order=1,savepre=None,
+        smoothtype='hanning',**kwargs):
     """
     """
     f = pyfits.open(filename)
@@ -259,7 +261,11 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
         specname = "%s %s" % (hdr.get('GLON'),hdr.get('GLAT'))
     else:
         specname = filename.remove(".fits")
-    vconv = lambda v: (v-p3+1)*dv+v0
+    if hdr.get('CUNIT1') == 'm/s':
+        conversion_factor = 1000.0
+    else:
+        conversion_factor = 1.0
+    vconv = lambda v: ((v-p3+1)*dv+v0)/conversion_factor
     xtora=None
     ytodec=None
 
@@ -278,15 +284,28 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude[1] = argmin(abs(varr-exclude[1]))
         exclude = array(exclude) - argvmin
 
-    vconv = lambda v: (v-p3+argvmin+1)*dv+v0
-    ivconv = lambda V: p3-1-argvmin+(V-v0)/dv
+    vconv = lambda v: ((v-p3+argvmin+1)*dv+v0) / conversion_factor
+    ivconv = lambda V: p3-1-argvmin+(V*conversion_factor-v0)/dv
     if dobaseline: specplot = array([[baseline(spec[argvmin:argvmax].squeeze(),exclude=exclude,order=order)]]).T
     else: specplot = spec[argvmin:argvmax]
 
     if smooth:
-        specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
+        specplot = convolve(specplot,hanning(smooth)/hanning(smooth).sum(),'same')
+    if smooth:
+        # change fitter first
+        if smoothtype == 'hanning': 
+            specplot = convolve(specplot,hanning(smooth)/hanning(smooth).sum(),'same')[::smooth]
+        elif smoothtype == 'gaussian':
+            speclen = specplot.shape[0]
+            xkern  = linspace(-1*smooth,smooth,smooth*3)
+            kernel = exp(-xkern**2/(2*(smooth/sqrt(8*log(2)))**2))
+            kernel /= kernel.sum()
+            specplot = convolve(specplot,kernel,'same')[::smooth] 
+        dv *= smooth
+        vconv = lambda v: ((v-(p3-argvmin)/smooth+1)*dv+v0)/conversion_factor
+        ivconv = lambda V: (p3-argvmin)/smooth-1+(V*conversion_factor-v0)/dv
 
-    sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname)
+    sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor)
 
     sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,**kwargs)
 
