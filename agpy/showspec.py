@@ -56,7 +56,7 @@ class SpecPlotter:
 
   def plotspec(self, i, j, fig=None, fignum=1, cube=True,
           button=1, dv=None,ivconv=None,clear=True,color='k',
-          **kwargs):
+          axis=None, **kwargs):
     """
     """
     if dv is None:
@@ -66,23 +66,32 @@ class SpecPlotter:
         fig=figure(fignum)
         fig.clf()
         self.axis = fig.gca()
-    elif fig is None:
+    elif fig is None and axis is None:
         self.axis = pylab.gca()
     elif clear:
         fig.clf()
         self.axis = fig.gca()
+    elif axis is None:
+        self.axis = fig.gca()
+    else:
+        self.axis = axis
     #ax = axes([.05,.05,.7,.85])
 
     vind = self.vconv(arange(self.cube.shape[0]))
     xind = arange(self.cube.shape[0])
 
+    if kwargs.has_key('linewidth'):
+        linewidth = kwargs.pop('linewidth')
+    else:
+        linewidth="0.5"
+
     if cube:
         self.axis.plot(vind,self.cube[:,i,j],color=color,
-                linestyle='steps-mid',linewidth='.5',
+                linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     else:
         self.axis.plot(vind,self.cube,color=color,
-                linestyle='steps-mid',linewidth='.5',
+                linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     self.axis.set_xlim(min(vind),max(vind))
 
@@ -254,7 +263,10 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
     f = pyfits.open(filename)
     hdr = f[0].header
     spec = f[0].data
-    dv,v0,p3 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
+    if hdr.get('CD1_1'):
+        dv,v0,p3 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
+    else:
+        dv,v0,p3 = hdr['CDELT1'],hdr['CRVAL1'],hdr['CRPIX1']
     if hdr.get('OBJECT'):
         specname = hdr['OBJECT']
     elif hdr.get('GLON') and hdr.get('GLAT'):
@@ -308,9 +320,13 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
     sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor)
 
     sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,**kwargs)
+    
+    if hdr.get('GLON') and hdr.get('GLAT'):
+        sp.glon = hdr.get('GLON')
+        sp.glat = hdr.get('GLAT')
 
     if savepre is not None:
-        glon,glat = coords.Position([xtora(0),ytodec(0)]).galactic()
+        glon,glat = sp.glon,sp.glat
         if glat < 0: pm="" 
         else: pm = "+"
         savename = savepre + "G%07.3f%0s%07.3f_" % (glon,pm,glat) + hdr['MOLECULE'].replace(' ','') + hdr['TRANSITI'].replace(' ','')
