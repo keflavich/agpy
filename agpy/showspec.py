@@ -54,7 +54,7 @@ class SpecPlotter:
       if ((self.axis is None) or (self.axis==event.inaxes)) and tb.mode=='':
         self.plotspec(clickY,clickX,button=event.button)
 
-  def plotspec(self, i, j, fig=None, fignum=1, 
+  def plotspec(self, i, j, fig=None, fignum=1, cube=True,
           button=1, dv=None,ivconv=None,clear=True,color='k',
           **kwargs):
     """
@@ -76,8 +76,14 @@ class SpecPlotter:
     vind = self.vconv(arange(self.cube.shape[0]))
     xind = arange(self.cube.shape[0])
 
-    self.axis.plot(vind,self.cube[:,i,j],color=color,linestyle='steps-mid',linewidth='.5',
-            **kwargs)
+    if cube:
+        self.axis.plot(vind,self.cube[:,i,j],color=color,
+                linestyle='steps-mid',linewidth='.5',
+                **kwargs)
+    else:
+        self.axis.plot(vind,self.cube,color=color,
+                linestyle='steps-mid',linewidth='.5',
+                **kwargs)
 
     if self.xtora and self.ytodec:
         title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
@@ -239,26 +245,28 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
     return (spectrum-bestfit)
 
-def splat_a3(filename,vmin=None,vmax=None,button=1,dobaseline=False,
+def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,**kwargs):
     """
-    OBSOLETE: if you find yourself using this, try running makecube and
-    reducing the data first
     """
     f = pyfits.open(filename)
     hdr = f[0].header
-    cube = f[0].data
-    cube = reshape(cube.mean(axis=1).mean(axis=0),[cube.shape[2],1,1])
-    dv,v0,p3 = hdr['IFCHANSP'],0,hdr['REFCHAN']
-    specname = hdr['OBJECT'] + hdr['MOLECULE'] + hdr['TRANSITI']
+    spec = f[0].data
+    dv,v0,p3 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
+    if hdr.get('OBJECT'):
+        specname = hdr['OBJECT']
+    elif hdr.get('GLON') and hdr.get('GLAT'):
+        specname = "%s %s" % (hdr.get('GLON'),hdr.get('GLAT'))
+    else:
+        specname = filename.remove(".fits")
     vconv = lambda v: (v-p3+1)*dv+v0
     xtora=None
     ytodec=None
 
-    varr = vconv(arange(cube.shape[0]))
+    varr = vconv(arange(spec.shape[0]))
     if vmin is None: argvmin = 0
     else: argvmin = argmin(abs(varr-vmin))
-    if vmax is None: argvmax = cube.shape[0]
+    if vmax is None: argvmax = spec.shape[0]
     else: argvmax = argmin(abs(varr-vmax))
 
     if argvmin > argvmax:
@@ -272,15 +280,15 @@ def splat_a3(filename,vmin=None,vmax=None,button=1,dobaseline=False,
 
     vconv = lambda v: (v-p3+argvmin+1)*dv+v0
     ivconv = lambda V: p3-1-argvmin+(V-v0)/dv
-    if dobaseline: specplot = array([[baseline(cube[argvmin:argvmax].squeeze(),exclude=exclude,order=order)]]).T
-    else: specplot = cube[argvmin:argvmax]
+    if dobaseline: specplot = array([[baseline(spec[argvmin:argvmax].squeeze(),exclude=exclude,order=order)]]).T
+    else: specplot = spec[argvmin:argvmax]
 
     if smooth:
         specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
 
     sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname)
 
-    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,**kwargs)
+    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,**kwargs)
 
     if savepre is not None:
         glon,glat = coords.Position([xtora(0),ytodec(0)]).galactic()
