@@ -56,7 +56,7 @@ class SpecPlotter:
 
   def plotspec(self, i, j, fig=None, fignum=1, cube=True,
           button=1, dv=None,ivconv=None,clear=True,color='k',
-          axis=None, **kwargs):
+          axis=None, offset=0.0, **kwargs):
     """
     """
     if dv is None:
@@ -86,11 +86,11 @@ class SpecPlotter:
         linewidth="0.5"
 
     if cube:
-        self.axis.plot(vind,self.cube[:,i,j],color=color,
+        self.axis.plot(vind,self.cube[:,i,j]+offset,color=color,
                 linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     else:
-        self.axis.plot(vind,self.cube,color=color,
+        self.axis.plot(vind,self.cube+offset,color=color,
                 linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     self.axis.set_xlim(min(vind),max(vind))
@@ -257,7 +257,7 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
 def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,
-        smoothtype='hanning',**kwargs):
+        smoothtype='hanning',offset=0.0,**kwargs):
     """
     """
     f = pyfits.open(filename)
@@ -319,7 +319,7 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
 
     sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor)
 
-    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,**kwargs)
+    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,offset=offset,**kwargs)
     
     if hdr.get('GLON') and hdr.get('GLAT'):
         sp.glon = hdr.get('GLON')
