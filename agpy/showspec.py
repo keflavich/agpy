@@ -56,7 +56,7 @@ class SpecPlotter:
 
   def plotspec(self, i, j, fig=None, fignum=1, cube=True,
           button=1, dv=None,ivconv=None,clear=True,color='k',
-          axis=None, offset=0.0, **kwargs):
+          axis=None, offset=0.0, scale=1.0, voff=0.0, **kwargs):
     """
     """
     if dv is None:
@@ -77,7 +77,7 @@ class SpecPlotter:
         self.axis = axis
     #ax = axes([.05,.05,.7,.85])
 
-    vind = self.vconv(arange(self.cube.shape[0]))
+    vind = self.vconv(arange(self.cube.shape[0])) + voff
     xind = arange(self.cube.shape[0])
 
     if kwargs.has_key('linewidth'):
@@ -86,11 +86,11 @@ class SpecPlotter:
         linewidth="0.5"
 
     if cube:
-        self.axis.plot(vind,self.cube[:,i,j]+offset,color=color,
+        self.axis.plot(vind,self.cube[:,i,j]*scale+offset,color=color,
                 linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     else:
-        self.axis.plot(vind,self.cube+offset,color=color,
+        self.axis.plot(vind,self.cube*scale+offset,color=color,
                 linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     self.axis.set_xlim(min(vind),max(vind))
@@ -99,8 +99,8 @@ class SpecPlotter:
         title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
     elif self.specname:
         title("Spectrum of %s" % self.specname)
-    xlabel("V$_{LSR}$ km s$^{-1}$")
-    ylabel("$T_A^*$")
+    xlabel("V$_{LSR}$ (km s$^{-1}$)")
+    ylabel("$T_A^*$ (K)")
     #legend(loc='best')
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
@@ -257,7 +257,7 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
 def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,
-        smoothtype='hanning',offset=0.0,**kwargs):
+        smoothtype='gaussian',**kwargs):
     """
     """
     f = pyfits.open(filename)
@@ -273,7 +273,7 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
         specname = "%s %s" % (hdr.get('GLON'),hdr.get('GLAT'))
     else:
         specname = filename.remove(".fits")
-    if hdr.get('CUNIT1') == 'm/s':
+    if hdr.get('CUNIT1') in ['m/s','M/S']:
         conversion_factor = 1000.0
     else:
         conversion_factor = 1.0
@@ -302,8 +302,6 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
     else: specplot = spec[argvmin:argvmax]
 
     if smooth:
-        specplot = convolve(specplot,hanning(smooth)/hanning(smooth).sum(),'same')
-    if smooth:
         # change fitter first
         if smoothtype == 'hanning': 
             specplot = convolve(specplot,hanning(smooth)/hanning(smooth).sum(),'same')[::smooth]
@@ -319,7 +317,7 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
 
     sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor)
 
-    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,offset=offset,**kwargs)
+    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,**kwargs)
     
     if hdr.get('GLON') and hdr.get('GLAT'):
         sp.glon = hdr.get('GLON')
