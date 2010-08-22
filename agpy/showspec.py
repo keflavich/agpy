@@ -162,6 +162,7 @@ def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
             kernel = exp(-xkern**2/(2*(smooth/sqrt(8*log(2)))**2))
             kernel /= kernel.sum()
             specplot = convolve(specplot[:,0,0],kernel,'same')[::smooth,newaxis,newaxis] 
+        v0 += dv/2.0 # pixel center moves by half the original pixel size
         dv *= smooth
         vconv = lambda v: (v-(p3-argvmin)/smooth+1)*dv+v0
         ivconv = lambda V: (p3-argvmin)/smooth-1+(V-v0)/dv
