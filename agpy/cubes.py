@@ -1,4 +1,4 @@
-from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum
+from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum,nansum
 from math import acos,atan2,tan
 import copy
 import pyfits
@@ -70,8 +70,7 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         sh = cube.shape
         yind,xind = indices(sh[1:3]) # recall that python indices are backwards
         dis = sqrt((xind-ap[0])**2+(yind-ap[1])**2)
-        dis3d = repeat(dis[newaxis,:,:],sh[0],axis=0)
-        spec = (cube* (dis3d < ap[2])).sum(axis=2).sum(axis=1)
+        mask = dis < ap[2]
     elif len(ap) == 5:
         yinds,xinds = indices(cube.shape[1:3])
         th = (ap[4])*dtor
@@ -79,13 +78,14 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
         yindr = (xinds-ap[0])*-sin(th) + (yinds-ap[1])*cos(th)
         ratio = max(ap[2:4])/min(ap[2:4])
         mask = sqrt( (xindr*ratio)**2 + yindr**2) < max(ap[2:4])
-        npixinmask = mask.sum()
-        mask3d = repeat(mask[newaxis,:,:],cube.shape[0],axis=0)
-        spec = (mask3d*cube).sum(axis=2).sum(axis=1) / npixinmask
     else:
         raise Exception("Wrong number of parameters.  Need either 3 parameters "+
                 "for a circular aperture or 5 parameters for an elliptical "+ 
                 "aperture.")
+
+    npixinmask = mask.sum()
+    mask3d = repeat(mask[newaxis,:,:],cube.shape[0],axis=0)
+    spec = nansum(nansum((cube*mask3d),axis=2),axis=1) / npixinmask
 
     if r_mask:
         return spec,mask
