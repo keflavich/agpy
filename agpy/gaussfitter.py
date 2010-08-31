@@ -1,5 +1,6 @@
 # gaussfitter.py
 # created by Adam Ginsburg (adam.ginsburg@colorado.edu or keflavich@gmail.com) 3/17/08)
+# latest version available at http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py
 import numpy
 from numpy.ma import median
 from numpy import pi
