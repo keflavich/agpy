@@ -92,7 +92,7 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
     else:
         return spec
 
-def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean):
+def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,units="pixels"):
     """
     Returns a sub-image from a data cube integrated over the specified velocity range
 
@@ -100,29 +100,50 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean)
 
     cube has dimensions (velocity, y, x)
 
+    xwidth and ywidth are "radius" values, i.e. half the length that will be extracted
+
     """
 
-    xlo = max([xcen-xwidth,0])
-    ylo = max([ycen-ywidth,0])
-    subim = average(cube[vrange[0]:vrange[1],ylo:ycen+ywidth,xlo:xcen+xwidth],axis=0)
+    if header:
+        flathead = flatten_header(header.copy())
+        wcs = pywcs.WCS(header=flathead)
+
+    if units=="pixels":
+        xlo = int( max([xcen-xwidth,0])              )
+        ylo = int( max([ycen-ywidth,0])              )
+        xhi = int( min([xcen+xwidth,cube.shape[2]])  )
+        yhi = int( min([ycen+ywidth,cube.shape[1]])  )
+        zrange = vrange
+    elif units=="wcs" and header:
+        newxcen,newycen = wcs.wcs_sky2pix(xcen,ycen,0)
+        try:
+            newxwid,newywid = xwidth / abs(wcs.wcs.cd[0,0]), ywidth / abs(wcs.wcs.cd[1,1])
+        except AttributeError:
+            newxwid,newywid = xwidth / abs(wcs.wcs.cdelt[0]), ywidth / abs(wcs.wcs.cdelt[1])
+        xlo = int( max([newxcen-newxwid,0]) )
+        ylo = int( max([newycen-newywid,0]) )
+        xhi = int( min([newxcen+newxwid,cube.shape[2]]) )
+        yhi = int( min([newycen+newywid,cube.shape[1]]) )
+        if header.get('CD3_3'):
+            zrange = ( array(vrange)-header.get('CRVAL3') ) / header.get('CD3_3') - 1 + header.get('CRPIX3')
+        else:
+            zrange = ( array(vrange)-header.get('CRVAL3') ) / header.get('CDELT3') - 1 + header.get('CRPIX3')
+    else:
+        print "Can only use wcs if you pass a header."
+
+    subim = average(cube[zrange[0]:zrange[1],ylo:yhi,xlo:xhi],axis=0)
 
     if header is None:
         return subim
-
     else:
-
-        hd = flatten_header(header.copy())
-
-        wcs = pywcs.WCS(header=hd)
-
         crv1,crv2 = wcs.wcs_pix2sky(xlo,ylo,0)
 
-        hd['CRVAL1'] = crv1[0]
-        hd['CRVAL2'] = crv2[0]
-        hd['CRPIX1'] = 1
-        hd['CRPIX2'] = 1
+        flathead['CRVAL1'] = crv1[0]
+        flathead['CRVAL2'] = crv2[0]
+        flathead['CRPIX1'] = 1
+        flathead['CRPIX2'] = 1
 
-        return subim,hd
+        return subim,flathead
 
 def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
     """

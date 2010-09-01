@@ -21,7 +21,7 @@ except ValueError:
 
 def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
         fixedformat=None,asdict=False,comment='#',verbose=True,nullval=None,
-        asStruct=False):
+        asStruct=False,namecomment=True):
     """
     The default return is a two dimensional float array.  If you want a list of
     columns output instead of a 2D array, pass 'twod=False'.  In this case,
@@ -77,6 +77,8 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
             that if you specify the wrong fixed format, you will get junk; if your
             format total is greater than the line length, the last entries will all
             be blank but readcol will not report an error.
+        namecomment - assumed that "Name" row is on a comment line.  If it is not - 
+            e.g., it is the first non-comment line, change this to False
 
     If you get this error: "scipy could not be imported.  Your table must have
     full rows." it means readcol cannot automatically guess which columns
@@ -87,19 +89,29 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
     
     null=[f.pop(0) for i in range(skipline)]
 
-    if names or asdict or asStruct:
-        # can specify name line 
-        if type(names) == type(1):
-            nameline = f.pop(names)
-        else:
-            nameline = f.pop(0)
-        if nameline[0]==comment:
-            nameline = nameline[1:]
-        nms=nameline.split(fsep)
+    commentfilter = make_commentfilter(comment)
+
+    if namecomment is False and (names or asdict or asStruct):
+        while 1:
+            line = f.pop(0)
+            if line[0] != comment:
+                nameline = line
+                nms=nameline.split(fsep)
+                break
+            elif len(f) == 0:
+                raise Exception("No uncommented lines found.")
+    else:
+        if names or asdict or asStruct:
+            # can specify name line 
+            if type(names) == type(1):
+                nameline = f.pop(names)
+            else:
+                nameline = f.pop(0)
+            if nameline[0]==comment:
+                nameline = nameline[1:]
+            nms=nameline.split(fsep)
 
     null=[f.pop(0) for i in range(skipafter)]
-
-    commentfilter = make_commentfilter(comment)
     
     if fixedformat:
         myreadff = lambda(x): readff(x,fixedformat)
