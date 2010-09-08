@@ -235,13 +235,24 @@ if mpisize > 1:
 
 MPI.COMM_WORLD.Barrier()
 if mpisize > 1 and mpirank == 0:
-    if verbose > 0: print "Starting cleanup"
+    if verbose > 0: print "Processor %i: Starting cleanup" % mpirank
     import glob
     filelist = glob.glob("radex_temp_00/*.dat")
     for file in filelist:
-        os.system("cp %s %s" % (file,file.replace("radex_temp_00/","") ) )
+        status = os.system("cp %s %s" % (file,file.replace("radex_temp_00/","") ) )
+        if status != 0:
+            print "Processor %i: " % mpirank,"Command ",("cp %s %s" % (file,file.replace("radex_temp_00/","") ) )," failed with status ",status
         for ii in xrange(1,mpisize):
-            os.system("tail +2 %s >> %s" % (file.replace("_00","_%02i" % ii),file.replace("radex_temp_00/","") ) )
+            if verbose > 1: 
+                wc = os.popen('wc %s' % file.replace("_00","_%02i" % ii)).readline().split()[0]
+                print "Processor %i merging file %s with length %s onto %s" % (mpirank, 
+                        file.replace("_00","_%02i" % ii),wc,file.replace("radex_temp_00/",""))
+            status = os.system("tail -n +2 %s >> %s" % (file.replace("_00","_%02i" % ii),file.replace("radex_temp_00/","") ) )
+            if status != 0:
+                print "Processor %i: " % mpirank,"Command ",\
+                  ("tail -n +2 %s >> %s" % (file.replace("_00","_%02i" % ii),
+                      file.replace("radex_temp_00/","") ) ),\
+                  " failed with status ",status
     radexoutlist = glob.glob("radex_temp_*/radex.out")
     try:
         # if a radex.out file exists, move it to radex.out.old
@@ -252,4 +263,4 @@ if mpisize > 1 and mpirank == 0:
     for file in radexoutlist:
         os.system("cat %s >> radex.out" % file)
     os.system("rm -r radex_temp_*")
-    if verbose > 0: print "Cleanup completed"
+    if verbose > 0: print "Processor %i: " % mpirank,"Cleanup completed"

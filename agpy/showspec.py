@@ -34,13 +34,14 @@ class SpecPlotter:
 
   def __init__(self, cube, axis=None, xtol=None, ytol=None,
           vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x,
-          specname=None,dv=None):
+          specname=None,dv=None,hdr=None):
     self.vconv = vconv
     self.xtora = xtora
     self.ytodec = ytodec
     self.cube = where(numpy.isnan(cube),0,cube)
     self.specname=specname
     self.dv=dv
+    if hdr: self.header = hdr
     if axis is None:
       self.axis = pylab.gca()
     else:
@@ -56,19 +57,23 @@ class SpecPlotter:
 
   def plotspec(self, i, j, fig=None, fignum=1, cube=True,
           button=1, dv=None,ivconv=None,clear=True,color='k',
-          axis=None, offset=0.0, scale=1.0, voff=0.0, **kwargs):
+          axis=None, offset=0.0, scale=1.0, voff=0.0, vmin=None,
+          vmax=None, units='K', **kwargs):
     """
+    Plot a spectrum
+    Originally written to plot spectra from data cubes, hence the i,j parameter
+    to specify the location in the cube
     """
     if dv is None:
         dv = self.dv
 
-    if fig is None and clear:
+    if fig is None and clear and axis is None:
         fig=figure(fignum)
         fig.clf()
         self.axis = fig.gca()
     elif fig is None and axis is None:
         self.axis = pylab.gca()
-    elif clear:
+    elif clear and fig:
         fig.clf()
         self.axis = fig.gca()
     elif axis is None:
@@ -93,15 +98,33 @@ class SpecPlotter:
         self.axis.plot(vind,self.cube*scale+offset,color=color,
                 linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
-    self.axis.set_xlim(min(vind),max(vind))
+
+    if vmin is not None: xlo = vmin
+    else: xlo=min(vind)
+    if vmax is not None: xhi = vmax
+    else: xhi=max(vind)
+    self.axis.set_xlim(xlo,xhi)
 
     if self.xtora and self.ytodec:
         title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
     elif self.specname:
         title("Spectrum of %s" % self.specname)
     xlabel("V$_{LSR}$ (km s$^{-1}$)")
-    ylabel("$T_A^*$ (K)")
+    self.units = units
+    if units in ['Ta*','Tastar','K']:
+      ylabel("$T_A^*$ (K)")
+    elif units == 'mJy':
+      ylabel("$S_\\nu$ (mJy)")
+    elif units == 'Jy':
+      ylabel("$S_\\nu$ (Jy)")
     #legend(loc='best')
+
+  def save(self,fname,**kwargs):
+    """
+    Save the current spectrum (useful for saving baselined data)
+    """
+    newfile = pyfits.PrimaryHDU(data=self.cube,header=self.header)
+    newfile.writeto(fname,**kwargs)
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
     
@@ -111,14 +134,9 @@ def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
 
     sp = SpecPlotter(cube,vconv=vconv,xtora=xtora,ytodec=ytodec)
     connect('button_press_event',sp)
- 
-def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
-        smooth=None,smoothtype='gaussian',order=1,savepre=None,**kwargs):
-    """
-    Inputs:
-        vmin,vmax - range over which to baseline and plot
-        exclude - (internal) range to exclude from baseline fit
-    """
+
+
+def open_3d(filename):
     f = pyfits.open(filename)
     hdr = f[0].header
     cube = f[0].data
@@ -130,12 +148,24 @@ def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
     ytodec = lambda y: (y-p2+1)*dd+d0
     vconv = lambda v: (v-p3+1)*dv+v0
 
+    return dv,v0,p3,hdr,cube,xtora,ytodec,vconv
+ 
+def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
+        smooth=None,smoothtype='gaussian',order=1,savepre=None,**kwargs):
+    """
+    Inputs:
+        vmin,vmax - range over which to baseline and plot
+        exclude - (internal) range to exclude from baseline fit
+    """
+    dv,v0,p3,hdr,cube,xtora,ytodec,vconv = open_3d(filename)
+
+    splat_1d(vpars=[dv,v0,p3],hdr=hdr,cube=cube[:,0,0],xtora=xtora,ytodec=ytodec,vconv=vconv)
+
     varr = vconv(arange(cube.shape[0]))
     if vmin is None: argvmin = 0
     else: argvmin = argmin(abs(varr-vmin))
     if vmax is None: argvmax = cube.shape[0]
     else: argvmax = argmin(abs(varr-vmax))
-
 
     if argvmin > argvmax:
         argvmin,argvmax = argvmax,argvmin
@@ -155,17 +185,24 @@ def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
         #specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
         # change fitter first
         if smoothtype == 'hanning': 
-            specplot = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')[::smooth,newaxis,newaxis]
+            specplot = convolve(specplot[:,0,0],hanning(2+smooth)/hanning(2+smooth).sum(),'same')[::smooth,newaxis,newaxis]
+        elif smoothtype == 'boxcar':
+            specplot = convolve(specplot[:,0,0],ones(smooth)/float(smooth),'same')[::smooth,newaxis,newaxis]
         elif smoothtype == 'gaussian':
             speclen = specplot.shape[0]
             xkern  = linspace(-1*smooth,smooth,smooth*3)
             kernel = exp(-xkern**2/(2*(smooth/sqrt(8*log(2)))**2))
             kernel /= kernel.sum()
             specplot = convolve(specplot[:,0,0],kernel,'same')[::smooth,newaxis,newaxis] 
-        v0 += dv/2.0 # pixel center moves by half the original pixel size
+        # this bit of code may also make sense, but I'm shifting the center pixel instead
+        # b/c it's easier (?) to deal with velocity range
+        #v0 += (abs(dv)*smooth - abs(dv))/2.0 # pixel center moves by half the original pixel size
         dv *= smooth
-        vconv = lambda v: (v-(p3-argvmin)/smooth+1)*dv+v0
-        ivconv = lambda V: (p3-argvmin)/smooth-1+(V-v0)/dv
+        newrefpix = (p3-0.5-argvmin)/smooth  # this was resolved by advanced guess-and check
+        # but also, sort of makes sense: FITS refers to the *center* of a pixel.  You want to 
+        # shift 1/2 pixel to the right so that the first pixel goes from 0 to 1
+        vconv = lambda v: ((v-newrefpix)*dv+v0)/conversion_factor
+        ivconv = lambda V: newrefpix+(V*conversion_factor-v0)/dv
 
     sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec)
 
@@ -231,6 +268,11 @@ def baseline_file(filename,outfilename,vmin=None,vmax=None,order=1,crop=False):
 
 def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=None):
     """
+    Subtract a baseline from a spectrum
+    If vmin,vmax are not specified, defaults to ignoring first and last 10% of spectrum
+
+    exclude is a set of start/end indices to ignore when baseline fitting
+    (ignored by setting error to infinite in fitting procedure)
     """
     if vmin is None:
         vmin = floor( spectrum.shape[-1]*0.1 )
@@ -256,11 +298,7 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
     return (spectrum-bestfit)
 
-def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
-        exclude=None,smooth=None,order=1,savepre=None,
-        smoothtype='gaussian',**kwargs):
-    """
-    """
+def open_1d(filename):
     f = pyfits.open(filename)
     hdr = f[0].header
     spec = f[0].data
@@ -281,12 +319,37 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
     vconv = lambda v: ((v-p3+1)*dv+v0)/conversion_factor
     xtora=None
     ytodec=None
+    units = hdr.get('BUNIT')
+
+    return dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units
+
+def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
+        exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
+        vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
+        specname=None,quiet=True,
+        smoothtype='gaussian',convmode='valid',**kwargs):
+    """
+    Inputs:
+        vmin,vmax - range over which to baseline and plot
+        exclude - (internal) range to exclude from baseline fit
+        vcrop - will vmin/vmax crop out data, or just set the plot limits?
+    """
+    if vpars and vconv and hdr and spec and xtora and ytora:
+        dv,v0,p3 = vpars
+    else:
+        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units = open_1d(filename)
 
     varr = vconv(arange(spec.shape[0]))
-    if vmin is None: argvmin = 0
-    else: argvmin = argmin(abs(varr-vmin))
-    if vmax is None: argvmax = spec.shape[0]
-    else: argvmax = argmin(abs(varr-vmax))
+    if vmin is None or vcrop==False: argvmin = 0
+    else: 
+      argvmin = argmin(abs(varr-vmin))
+      if dv > 0:
+        hdr.update('CRPIX1',p3-argvmin)
+    if vmax is None or vcrop==False: argvmax = spec.shape[0]
+    else: 
+      argvmax = argmin(abs(varr-vmax))
+      if dv < 0:
+        hdr.update('CRPIX1',p3-argvmax)
 
     if argvmin > argvmax:
         argvmin,argvmax = argvmax,argvmin
@@ -299,26 +362,45 @@ def splat_1d(filename,vmin=None,vmax=None,button=1,dobaseline=False,
 
     vconv = lambda v: ((v-p3+argvmin+1)*dv+v0) / conversion_factor
     ivconv = lambda V: p3-1-argvmin+(V*conversion_factor-v0)/dv
-    if dobaseline: specplot = array([[baseline(spec[argvmin:argvmax].squeeze(),exclude=exclude,order=order)]]).T
+    if dobaseline: specplot = baseline(spec[argvmin:argvmax].squeeze(),exclude=exclude,order=order,quiet=quiet)
     else: specplot = spec[argvmin:argvmax]
 
     if smooth:
         # change fitter first
         if smoothtype == 'hanning': 
-            specplot = convolve(specplot,hanning(smooth)/hanning(smooth).sum(),'same')[::smooth]
+            specplot = convolve(specplot,hanning(2+smooth)/hanning(2+smooth).sum(),convmode)[::smooth]
+            kernsize = smooth
+        elif smoothtype == 'boxcar':
+            specplot = convolve(specplot,ones(smooth)/float(smooth),convmode)[::smooth]
+            kernsize = smooth
         elif smoothtype == 'gaussian':
             speclen = specplot.shape[0]
             xkern  = linspace(-1*smooth,smooth,smooth*3)
             kernel = exp(-xkern**2/(2*(smooth/sqrt(8*log(2)))**2))
             kernel /= kernel.sum()
-            specplot = convolve(specplot,kernel,'same')[::smooth] 
+            kernsize = len(kernel)
+            specplot = convolve(specplot,kernel,convmode)[::smooth] 
+        # this bit of code may also make sense, but I'm shifting the center pixel instead
+        # b/c it's easier (?) to deal with velocity range
+        #v0 += (abs(dv)*smooth - abs(dv))/2.0 # pixel center moves by half the original pixel size
         dv *= smooth
-        vconv = lambda v: ((v-(p3-argvmin)/smooth+1)*dv+v0)/conversion_factor
-        ivconv = lambda V: (p3-argvmin)/smooth-1+(V*conversion_factor-v0)/dv
+        if convmode == 'same':
+          newrefpix = (p3-argvmin)/smooth  
+        elif convmode == 'full':
+          newrefpix = (p3-0.5-argvmin+kernsize/2.0)/smooth  
+        elif convmode == 'valid':
+          newrefpix = (p3-0.5-argvmin-kernsize/2.0)/smooth  
+        # this was resolved by advanced guess-and check
+        # but also, sort of makes sense: FITS refers to the *center* of a pixel.  You want to 
+        # shift 1/2 pixel to the right so that the first pixel goes from 0 to 1
+        vconv = lambda v: ((v-newrefpix)*dv+v0)/conversion_factor
+        ivconv = lambda V: newrefpix+(V*conversion_factor-v0)/dv
+        hdr.update('CRPIX1',newrefpix+1)
+        hdr.update('CDELT1',dv)
 
-    sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor)
+    sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor,hdr=hdr)
 
-    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,**kwargs)
+    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,vmin=vmin,vmax=vmax,units=units,**kwargs)
     
     if hdr.get('GLON') and hdr.get('GLAT'):
         sp.glon = hdr.get('GLON')

@@ -1,3 +1,4 @@
+#!/Library/Frameworks/Python.framework/Versions/Current/bin/python
 from pylab import *
 import pyfits
 from agpy import readcol,asinh_norm
@@ -8,7 +9,7 @@ import sys
 """
 Two procedures:
     plot_radex is for contour plotting a subset of a radex cube
-    grid_cube is to turn a parameter cube into a .fits data cube
+    gridcube is to turn a parameter cube into a .fits data cube
 
 Dependencies: 
     agpy
@@ -53,7 +54,6 @@ def plot_radex(filename,ngridpts=100,ncontours=50,plottype='ratio',
       secondlabel = "log$(N_{H_2CO}) ($cm$^{-2})$"
       savetype = "DenCol_T=%iK" % cutvalue
       graphtitle = "T = %g K" % cutvalue
-    elif thirdvarname == "Density":
       firstvar = temperature
       secondvar = column
       thirdvar = density
@@ -121,13 +121,15 @@ def plot_radex(filename,ngridpts=100,ncontours=50,plottype='ratio',
     cb.set_ticklabels([1e-3,1e-2,1e-1,1,1e1])
     if save: savefig("%s_%s_%s.png" % (savetype,plottype,transition))
 
-def gridcube(filename,outfilename,var1="density",var2="column",var3="temperature",plotvar="tau1"):
+def gridcube(filename,outfilename,var1="density",var2="column",var3="temperature",plotvar="tau1",
+        zerobads=True):
     """
     Reads in a radex_grid.py generated .dat file and turns it into a .fits data cube.
     filename - input .dat filename
     outfilename - output data cube name
     var1/var2/var3 - which variable will be used along the x/y/z axis?
     plotvar - which variable will be the value in the data cube?
+    zerobads - set inf/nan values in plotvar to be zero
     """
 
     names,props = readcol(filename,twod=False,names=True)
@@ -157,6 +159,11 @@ def gridcube(filename,outfilename,var1="density",var2="column",var3="temperature
     yarr = (unique(vardict[var2])) #linspace(vardict[var2].min(),vardict[var2].max(),ny)
 
     newarr = zeros([nz,ny,nx])
+
+    if zerobads:
+        pv = vardict[plotvar]
+        pv[pv!=pv] = 0.0
+        pv[isinf(pv)] = 0.0
 
     for ival,val in enumerate(unique(vardict[var3])):
       varfilter = vardict[var3]==val
