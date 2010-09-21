@@ -11,9 +11,14 @@ except ImportError:
     fft2 = numpy.fft.fft2
     ifft2 = numpy.fft.ifft2
 
-def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
+def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True,kernel_number=1,
+        ignore_nan=False,ignore_zeros=False):
     """
-    Convolve two images.  Returns the larger image size.  Assumes image & kernel are centered
+    Convolve two images.  Returns the larger image size.  Assumes image &
+    kernel are centered
+
+    *NOTE* Order matters when padding; the kernel should either be first or
+    kernel_number should be set to 2.  
 
     Options:
     pad - Default on.  Zero-pad image to the nearest 2^n
@@ -22,11 +27,19 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
         image in both directions.
     return_fft - Return the FFT instead of the convolution.  Useful for making PSDs.
     fftshift - If return_fft on, will shift & crop image to appropriate dimensions
+    kernel_number - if specified, assumes that image # is the kernel, otherwise uses
+                   the smaller of the two or the first if they are equal-sized
+    ignore_nan - attempts to re-weight assuming NAN values are meant to be
+                ignored, not treated as zero.  
+    ignore_zeros - Ignore the zero-pad-created zeros.  Desirable if you have periodic
+                   boundaries on a non-2^n grid
     """
 
     # NAN catching
-    im1[im1!=im1] = 0
-    im2[im2!=im2] = 0
+    nanmask1 = im1!=im1
+    nanmask2 = im2!=im2
+    im1[nanmask1] = 0
+    im2[nanmask2] = 0
 
     shape1 = im1.shape
     shape2 = im2.shape
@@ -48,6 +61,18 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
     imfft1 = fft2(bigim1)
     imfft2 = fft2(bigim2)
     fftmult = imfft1*imfft2
+    if ignore_nan or ignore_zeros:
+        bigimwt = numpy.ones(newshape,dtype=numpy.complex128)
+        if ignore_zeros: bigimwt[:] = 0.0
+        if shape1[0] > shape2[0] or kernel_number==2: 
+            bigimwt[im1quarter1x:im1quarter3x,im1quarter1y:im1quarter3y] = 1.0-nanmask1*ignore_nan
+            kern = imfft2
+        else:
+            bigimwt[im2quarter1x:im2quarter3x,im2quarter1y:im2quarter3y] = 1.0-nanmask2*ignore_nan
+            kern = imfft1
+        wtfft = fft2(bigimwt)
+        wtfftmult = wtfft*kern
+        wtfftsm   = ifft2(wtfftmult)
 
     quarter1x = numpy.min([im1quarter1x,im2quarter1x])
     quarter3x = numpy.max([im1quarter3x,im2quarter3x])
@@ -62,14 +87,17 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True):
         else:
             return fftmult
 
-    rifft = numpy.fft.fftshift( (ifft2( fftmult )) )
+    if ignore_nan or ignore_zeros:
+        rifft = numpy.fft.fftshift( ifft2( fftmult ) / wtfftsm ) 
+    else:
+        rifft = numpy.fft.fftshift( ifft2( fftmult ) ) 
     if crop:
         result = rifft[ quarter1x:quarter3x, quarter1y:quarter3y ].real
         return result
     else:
         return rifft.real
 
-def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,**kwargs):
+def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,interp_nan=False,**kwargs):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
@@ -128,9 +156,9 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,
 
     bad = (image != image)
     temp = image.copy()
-    temp[bad] = 0
-    temp = convolve(temp,kernel,**kwargs)
-    temp[bad] = image[bad]
+    # convolve does this already temp[bad] = 0
+    temp = convolve(temp,kernel,kernel_number=2,**kwargs)
+    if interp_nan is False: temp[bad] = image[bad]
 
     return temp
 

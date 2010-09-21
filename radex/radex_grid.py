@@ -39,8 +39,8 @@ cmin = 1e11  # minimum molecular column density
 cmax = 1e16  # maximum molecular column density
 
 ntemp = 11     # number of temperature points
-ndens = 11     # number of density points
-ncol  = 11     # number of column points
+ndens = 101     # number of density points
+ncol  = 101     # number of column points
 
 # user does not need to modify these formulae
 # they are equivalent to temperatures = numpy.linspace(tmin,tmax,ntemp).tolist()
@@ -60,7 +60,7 @@ dv    = 1.0          # line width (km/s)
 mole = 'o-h2co'  # molecular data name
 
 # Naming suffix to append to line name defined in "acts" below
-suffix = "_T=5to55_lvg"
+suffix = "_T=5to55_lvg_TESTwhy600x1000"
 # acts = list of lines to ratio.  Filenames must include ".dat" in order for suffix to be applied
 acts = ([4.8,14.5,'1-1_2-2.dat'],[4.8,29.0,'1-1_3-3.dat'],[14.5,29.0,'2-2_3-3.dat'])
 flow = 4.0     # lowest frequency transition to include in output file
@@ -97,49 +97,8 @@ def write_input(infile,tkin,nh2,cdmol=cdmol_default):
     infile.write(str(cdmol)+'\n')
     infile.write(str(dv)+'\n')
 
-def read_radex(outfile,flow,fupp):
-    """
-    A hack-ey means of reading a radex.out file.  
-    Cycles through it based on fixed format
-    """
-    line  = outfile.readline()
-    words = line.split()
-    while (words[-1] != "FLUX"):
-        line  = outfile.readline()
-        words = line.split()
-        if words[1] == "T(kin)":
-            temp  = float(words[-1])
-        if words[1] == "Density" and words[3] == "H2":
-            dens  = float(words[-1])
-        if words[1] == "Column":
-            col  = float(words[-1])
-    line  = outfile.readline()
-    line  = outfile.readline()
-    words = line.split()
-    ftmp  = float(words[4])
-    while ((ftmp < flow*(1-bw)) or (ftmp > flow/(1-bw))):
-        line  = outfile.readline()
-        words = line.split()
-        ftmp  = float(words[4])
-    low   = float(words[-2])
-    TexLow   = float(words[6])
-    TauLow   = float(words[7])
-    TrotLow  = float(words[8])
-    FluxLow  = float(words[11])
-    line  = outfile.readline()
-    words = line.split()
-    ftmp  = float(words[4])
-    while ((ftmp < fupp*(1-bw)) or (ftmp > fupp/(1-bw))):
-        line  = outfile.readline()
-        words = line.split()
-        ftmp  = float(words[4])
-    upp   = float(words[-2])
-    TexUpp   = float(words[6])
-    TauUpp   = float(words[7])
-    TrotUpp  = float(words[8])
-    FluxUpp  = float(words[11])
-    return temp,dens,col,TexLow,TexUpp,TauLow,TauUpp,TrotLow,TrotUpp,FluxLow,FluxUpp
- 
+from read_radex import read_radex
+
 # Begin main program
 
 start = time.time()

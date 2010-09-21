@@ -140,6 +140,7 @@ def open_3d(filename):
     f = pyfits.open(filename)
     hdr = f[0].header
     cube = f[0].data
+    if len(cube.shape) == 4: cube=cube[0,:,:,:]
     cube = reshape(cube.mean(axis=2).mean(axis=1),[cube.shape[0],1,1])
     dv,v0,p3 = hdr['CD3_3'],hdr['CRVAL3'],hdr['CRPIX3']
     dr,r0,p1 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
@@ -311,7 +312,7 @@ def open_1d(filename):
     elif hdr.get('GLON') and hdr.get('GLAT'):
         specname = "%s %s" % (hdr.get('GLON'),hdr.get('GLAT'))
     else:
-        specname = filename.remove(".fits")
+        specname = filename.rstrip(".fits")
     if hdr.get('CUNIT1') in ['m/s','M/S']:
         conversion_factor = 1000.0
     else:

@@ -2,6 +2,7 @@ from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum,nansum
 from math import acos,atan2,tan
 import copy
 import pyfits
+import pyregion
 try:
     import pywcs, coords
 except ImportError:
@@ -210,6 +211,82 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
 
     return ap
 
+
+def getspec(lon,lat,rad,cube,header,r_fits=True,inherit=True,wunit='arcsec'):
+    """
+    Given a longitude, latitude, aperture radius (arcsec), and a cube file,
+    return a .fits file or a spectrum.
+    
+    lon,lat - longitude and latitude center of a circular aperture in WCS coordinates
+    rad     - radius (default degrees) of aperture
+    """
+
+    convopt = {'arcsec':1.0,'arcmin':60.0,'degree':3600.0}
+
+    flathead = flatten_header(header)
+    wcs = pywcs.WCS(flathead)
+    if wcs.wcs.ctype[0][:2] == 'RA':
+      coordsys='celestial'
+    elif wcs.wcs.ctype[0][:4] == 'GLON':
+      coordsys='galactic'
+    spec = extract_aperture(cube,[lon,lat,rad],wcs=wcs,
+            coordsys=coordsys,wunit=wunit)
+
+    if nansum(spec) == 0:
+        print "Total of extracted spectrum was zero. lon,lat,rad: ",lon,lat,rad #  Tracing to find your problem."
+        #import pdb; pdb.set_trace()
+
+    if r_fits:
+        if inherit:
+            newhead = header.copy()
+        else:
+            newhead = pyfits.Header()
+        try:
+            newhead.update('CD1_1',header['CD3_3'])
+        except KeyError:
+            newhead.update('CD1_1',header['CDELT3'])
+        newhead.update('CRPIX1',header['CRPIX3'])
+        newhead.update('CRVAL1',header['CRVAL3'])
+        try:
+            newhead.update('CTYPE1',header['CTYPE3'])
+        except KeyError:
+            newhead.update('CTYPE1',"VRAD")
+        try:
+            newhead.update('CUNIT1',header['CUNIT3'])
+        except KeyError:
+            print "Header did not contain CUNIT3 keyword.  Defaulting to km/s"
+            newhead.update('CUNIT1',"km/s")
+        newhead.update('BUNIT',header['BUNIT'])
+        newhead.update('APGLON',lon)
+        newhead.update('APGLAT',lat)
+        newhead.update('APRAD',rad*convopt[wunit],comment='arcseconds') # radius in arcsec
+        newfile = pyfits.PrimaryHDU(data=spec,header=newhead)
+        return newfile
+    else:
+        return spec
+
+def getspec_reg(cubefilename,region):
+    """
+    Aperture extraction from a cube using a pyregion circle region
+
+    The region must be in the same coordinate system as the cube header
+    """
+
+    ds9tocoords = {'fk5':'celestial','galactic':'galactic','icrs':'celestial'}
+
+    if region.name != 'circle':
+        raise Exception("Only circular apertures are implemented so far")
+
+    l,b,r = region.coord_list
+    #pos = coords.Position([l,b],system=ds9tocoords[region.coord_format])
+    cubefile = pyfits.open(cubefilename)
+    header = cubefile[0].header
+    cube = cubefile[0].data
+    if len(cube.shape) == 4: cube = cube[0,:,:,:]
+
+    sp = getspec(l,b,r,cube,header,wunit='degree')
+
+    return sp
 
 
 
