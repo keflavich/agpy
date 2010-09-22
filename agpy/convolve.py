@@ -12,7 +12,7 @@ except ImportError:
     ifft2 = numpy.fft.ifft2
 
 def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True,kernel_number=1,
-        ignore_nan=False,ignore_zeros=False):
+        ignore_nan=False,ignore_zeros=False,min_wt=1e-8):
     """
     Convolve two images.  Returns the larger image size.  Assumes image &
     kernel are centered
@@ -33,6 +33,8 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True,kernel_nu
                 ignored, not treated as zero.  
     ignore_zeros - Ignore the zero-pad-created zeros.  Desirable if you have periodic
                    boundaries on a non-2^n grid
+    min_wt - If ignoring nans/zeros, force all grid points with a weight less than this
+             value to NAN (the weight of a grid point with *no* ignored neighbors is 1.0)
     """
 
     # NAN catching
@@ -73,6 +75,7 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True,kernel_nu
         wtfft = fft2(bigimwt)
         wtfftmult = wtfft*kern
         wtfftsm   = ifft2(wtfftmult)
+        pixel_weight = numpy.fft.fftshift(wtfftsm).real
 
     quarter1x = numpy.min([im1quarter1x,im2quarter1x])
     quarter3x = numpy.max([im1quarter3x,im2quarter3x])
@@ -88,7 +91,8 @@ def convolve(im1,im2,pad=True,crop=True,return_fft=False,fftshift=True,kernel_nu
             return fftmult
 
     if ignore_nan or ignore_zeros:
-        rifft = numpy.fft.fftshift( ifft2( fftmult ) / wtfftsm ) 
+        rifft = numpy.fft.fftshift( ifft2( fftmult ) ) / pixel_weight
+        rifft[pixel_weight < min_wt] = numpy.nan
     else:
         rifft = numpy.fft.fftshift( ifft2( fftmult ) ) 
     if crop:
@@ -157,7 +161,7 @@ def smooth(image,kernelwidth=3,kerneltype='gaussian',trapslope=None,silent=True,
     bad = (image != image)
     temp = image.copy()
     # convolve does this already temp[bad] = 0
-    temp = convolve(temp,kernel,kernel_number=2,**kwargs)
+    temp = convolve(temp,kernel,kernel_number=2,ignore_nan=interp_nan,**kwargs)
     if interp_nan is False: temp[bad] = image[bad]
 
     return temp
