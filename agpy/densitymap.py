@@ -61,10 +61,14 @@ def densitymap(header,xi,yi,smoothpix=1,outfits=None,clobber=True):
     weight2 = (xi-xf) * (yc-yi)
     weight3 = (xc-xi) * (yi-yf)
     weight4 = (xc-xi) * (yc-yi)
-    blankim[yc,xc] += weight4
-    blankim[yc,xf] += weight3
-    blankim[yf,xc] += weight2
-    blankim[yf,xf] += weight1
+    OK1 = (xf < nx-1) * (yf < ny-1)
+    OK2 = (xf < nx-1) * (yc < ny-1)
+    OK3 = (xc < nx-1) * (yf < ny-1)
+    OK4 = (xc < nx-1) * (yc < ny-1)
+    blankim[yc[OK4],xc[OK4]] += weight4[OK4]
+    blankim[yc[OK3],xf[OK3]] += weight3[OK3]
+    blankim[yf[OK2],xc[OK2]] += weight2[OK2]
+    blankim[yf[OK1],xf[OK1]] += weight1[OK1]
 
     if smoothpix > 1:
         xax,yax = numpy.indices(blankim.shape)

@@ -16,8 +16,19 @@
 
 origdir=`pwd`
 
-if [ $# -gt 0 ]
+if [ $# -eq 0 ]
 then
+    echo montage wrapper
+    echo Usage:
+    echo mGetHdr template_fitsfile.fit mosaic.hdr
+    echo montage outfile=l089_reference_montage.fits 0*_indiv13pca*_map01.fits combine=median &
+    echo
+    echo Keyword parameters:
+    echo   combine - 'median', 'average', or 'sum'
+    echo   header  - Filename of fits file from which to create mosaic.hdr
+    echo   outfile - Output fits filename
+    exit
+else
     for ii in $*
     do
         if [ ${ii%=*} == 'header' ]
@@ -47,7 +58,8 @@ then
         fi
     done
 fi
-echo ${files[@]} ${#files} 
+echo FILES: ${files[@]} ${#files} 
+echo Extra Parameters: $params
 if [ ${#files} -gt 0 ] 
 then
     mkdir tmp
@@ -85,9 +97,4 @@ else
     cd $origdir
 fi
 
-#for ii in $*
-#do
-#    var="from agpy import pyflagger; f=pyflagger.Flagger('"$ii"'); f.plotscan(0)"
-#    echo ipython -i -c \"$var\"
-#    ipython -i -c "from pylab import *; from agpy import pyflagger; f=pyflagger.Flagger('"$ii"'); f.plotscan(0);"
-#done
+exit

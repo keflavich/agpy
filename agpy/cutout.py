@@ -57,7 +57,9 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
         raise Exception("Can't use units %s." % units)
 
     if xmax < 0 or ymax < 0:
-        raise ValueError("Coordinate is outside of map: %f,%f." % (xmax,ymax))
+        raise ValueError("Max Coordinate is outside of map: %f,%f." % (xmax,ymax))
+    if ymin >= head.get('NAXIS2') or xmin >= head.get('NAXIS1'):
+        raise ValueError("Min Coordinate is outside of map: %f,%f." % (xmin,ymin))
 
     img = file[0].data[ymin:ymax,xmin:xmax]
 
@@ -65,6 +67,9 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
     head['CRPIX2']-=ymin
     head['NAXIS1']=img.shape[1]
     head['NAXIS2']=img.shape[0]
+
+    if head.get('NAXIS1') == 0 or head.get('NAXIS2') == 0:
+        raise ValueError("Map has a 0 dimension: %i,%i." % (head.get('NAXIS1'),head.get('NAXIS2')))
 
     newfile = pyfits.PrimaryHDU(data=img,header=head)
 

@@ -93,7 +93,7 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
     else:
         return spec
 
-def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,units="pixels"):
+def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,dvmult=False,units="pixels"):
     """
     Returns a sub-image from a data cube integrated over the specified velocity range
 
@@ -103,11 +103,16 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,
 
     xwidth and ywidth are "radius" values, i.e. half the length that will be extracted
 
+    if dvmult is set, multiple the average by DV (this is useful if you set
+    average=sum and dvmul=True to get an integrated value)
+
     """
 
     if header:
         flathead = flatten_header(header.copy())
         wcs = pywcs.WCS(header=flathead)
+        if header.get('CD3_3'): CD3 = header.get('CD3_3')
+        else: CD3 = header.get('CDELT3')
 
     if units=="pixels":
         xlo = int( max([xcen-xwidth,0])              )
@@ -125,14 +130,13 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,
         ylo = int( max([newycen-newywid,0]) )
         xhi = int( min([newxcen+newxwid,cube.shape[2]]) )
         yhi = int( min([newycen+newywid,cube.shape[1]]) )
-        if header.get('CD3_3'):
-            zrange = ( array(vrange)-header.get('CRVAL3') ) / header.get('CD3_3') - 1 + header.get('CRPIX3')
-        else:
-            zrange = ( array(vrange)-header.get('CRVAL3') ) / header.get('CDELT3') - 1 + header.get('CRPIX3')
+        zrange = ( array(vrange)-header.get('CRVAL3') ) / CD3 - 1 + header.get('CRPIX3')
     else:
         print "Can only use wcs if you pass a header."
 
     subim = average(cube[zrange[0]:zrange[1],ylo:yhi,xlo:xhi],axis=0)
+    if dvmult and CD3: subim *= CD3
+    elif dvmult: print "Error: could not multiply by dv; CD3=",CD3
 
     if header is None:
         return subim
