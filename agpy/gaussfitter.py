@@ -6,6 +6,15 @@ from numpy.ma import median
 from numpy import pi
 #from scipy import optimize,stats,pi
 from mpfit import mpfit
+""" 
+Note about mpfit/leastsq: 
+I switched everything over to the Markwardt mpfit routine for a few reasons,
+but foremost being the ability to set limits on parameters, not just force them
+to be fixed.  As far as I can tell, leastsq does not have that capability.  
+
+The version of mpfit I use can be found here:
+    http://code.google.com/p/agpy/source/browse/trunk/mpfit
+"""
 
 """
 To do:
