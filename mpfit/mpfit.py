@@ -20,9 +20,9 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 	Updated versions can be found at http://cars.uchicago.edu/software
  
  Sergey Koposov converted the Mark's Python version from Numeric to numpy
-	Sergey Koposov, Max Planck Institute for Astronomy
-	Heidelberg, Germany, D-69117
-	koposov@mpia.de
+	Sergey Koposov, University of Cambridge, Institute of Astronomy,
+	Madingley road, CB3 0HA, Cambridge, UK
+	koposov@ast.cam.ac.uk
 	Updated versions can be found at http://code.google.com/p/astrolibpy/source/browse/trunk/
 
 								 DESCRIPTION
@@ -261,7 +261,8 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
  fields within the PARINFO structure, and they will be ignored.
 
  PARINFO Example:
- parinfo = [{'value':0., 'fixed':0, 'limited':[0,0], 'limits':[0.,0.]}]*5
+ parinfo = [{'value':0., 'fixed':0, 'limited':[0,0], 'limits':[0.,0.]} 
+ 												for i in range(5)]
  parinfo[0]['fixed'] = 1
  parinfo[4]['limited'][0] = 1
  parinfo[4]['limits'][0]  = 50.
@@ -594,6 +595,11 @@ import scipy.lib.blas
 #	 **********
 
 class mpfit:
+
+	blas_enorm32, = scipy.lib.blas.get_blas_funcs(['nrm2'],numpy.array([0],dtype=numpy.float32))
+	blas_enorm64, = scipy.lib.blas.get_blas_funcs(['nrm2'],numpy.array([0],dtype=numpy.float64))
+
+
 	def __init__(self, fcn, xall=None, functkw={}, parinfo=None,
 				 ftol=1.e-10, xtol=1.e-10, gtol=1.e-10,
 				 damp=0., maxiter=200, factor=100., nprint=1,
@@ -844,8 +850,6 @@ class mpfit:
 		self.errmsg = ''
 		self.nfev = 0
 		self.damp = damp
-		self.machar = machar(double=1)
-		machep = self.machar.machep
 		self.dof=0
 
 		if fcn==None:
@@ -887,8 +891,12 @@ class mpfit:
 				self.errmsg = 'ERROR: either P or PARINFO(*)["value"] must be supplied.'
 				return
 
-		# Make sure parameters are Numeric arrays of type Float
-		xall = numpy.asarray(xall, float)
+		# Make sure parameters are numpy arrays
+		xall = numpy.asarray(xall)
+		# In the case if the xall is not float or if is float but has less 
+		# than 64 bits we do convert it into double
+		if xall.dtype.kind != 'f' or xall.dtype.itemsize<=4:
+			xall = xall.astype(numpy.float)
 
 		npar = len(xall)
 		self.fnorm  = -1.
@@ -934,7 +942,7 @@ class mpfit:
 			return
 
 		# Compose only VARYING parameters
-		self.params = xall	  # self.params is the set of parameters to be returned
+		self.params = xall.copy()	  # self.params is the set of parameters to be returned
 		x = self.params[ifree]  # x is the set of free parameters
 
 		# LIMITED parameters ?
@@ -985,14 +993,23 @@ class mpfit:
 				return
 			self.errmsg = ''
 
-		# Make sure x is a Numeric array of type Float
-		x = numpy.asarray(x, float)
-
 		[self.status, fvec] = self.call(fcn, self.params, functkw)
+		
 		if self.status < 0:
 			self.errmsg = 'ERROR: first call to "'+str(fcn)+'" failed'
 			return
-
+		# If the returned fvec has more than four bits I assume that we have 
+		# double precision 
+		# It is important that the machar is determined by the precision of 
+		# the returned value, not by the precision of the input array
+		if numpy.array([fvec]).dtype.itemsize>4:
+			self.machar = machar(double=1)
+			self.blas_enorm = mpfit.blas_enorm64
+		else:
+			self.machar = machar(double=0)
+			self.blas_enorm = mpfit.blas_enorm32
+		machep = self.machar.machep
+		
 		m = len(fvec)
 		if m < n:
 			self.errmsg = 'ERROR: number of parameters must not exceed data'
@@ -1479,8 +1496,7 @@ class mpfit:
 	
 	
 	def enorm(self, vec):
-		blas_enorm, = scipy.lib.blas.get_blas_funcs(['nrm2'],vec)
-		ans = blas_enorm(vec)
+		ans = self.blas_enorm(vec)
 		return ans
 	
 	

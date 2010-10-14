@@ -20,8 +20,19 @@ import re
 import numpy
 import scipy
 
-def mpfitexpr(func, x, y, err , start_params, **kw):
+def mpfitexpr(func, x, y, err , start_params, check=True, full_output=False, **kw):
 	"""Fit the used defined expression to the data
+	Input:
+	- func: string with the function definition 
+	- x: x vector
+	- y: y vector
+	- err: vector with the errors of y
+	- start_params: the starting parameters for the fit
+	Output:
+	- The tuple (params, yfit) with best-fit params and the values of func evaluated at x
+	Keywords:
+	- check: boolean parameter. If true(default) the function will be checked for sanity
+	- full_output: boolean parameter. If True(default is False) then instead of best-fit parameters the mpfit object is returned
 	Example:
 	params,yfit=mpfitexpr('p[0]+p[2]*(x-p[1])',x,y,err,[0,10,1])
 	
@@ -43,11 +54,15 @@ def mpfitexpr(func, x, y, err , start_params, **kw):
 	for m in re.finditer(r,func):
 		curp = int(m.group(1))
 		maxp = curp if curp > maxp else maxp	
-	if maxp == -1: 
-		raise Exception("wrong function format")
-	if maxp + 1 != len(start_params):
-		raise Exception("the length of the start_params != the length of the parameter verctor of the function")
+	if check:
+		if maxp == -1: 
+			raise Exception("wrong function format")
+		if maxp + 1 != len(start_params):
+			raise Exception("the length of the start_params != the length of the parameter verctor of the function")
 	fa={'x' : x, 'y' : y,'err' : err}
 	res = mpfit.mpfit(myfunc,start_params,functkw=fa,**kw)
 	yfit = eval(func, globals(), {'x':x, 'p': res.params})
-	return (res.params, yfit)
+	if full_output:
+		return (res, yfit)
+	else:
+		return (res.params, yfit)
