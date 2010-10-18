@@ -15,10 +15,11 @@ def regtoapo(regfile,outfile,filtercolor=None):
         if r.name == 'box':
             x,y,dx,dy,posang = r.coord_list
             radec = position_region(r).hmsdms()
-            print >>outf,'"%32s" %26s rotangle=%f' % (r.attr[1]['text'],radec,posang)
+            if posang+90 > 360: posang -= 360
+            print >>outf,'%32s %26s rotangle=%f' % ( '"%s"' % r.attr[1]['text'],radec,posang+90)
         else:
             radec = position_region(r).hmsdms()
-            print >>outf,'"%32s" %26s' % (r.attr[1]['text'],radec)
+            print >>outf,'%32s %26s' % ('"%s"' % r.attr[1]['text'],radec)
 
     outf.close()
 
