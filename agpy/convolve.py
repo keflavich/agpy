@@ -56,27 +56,27 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
 
     # DEBUG print "Status: ignore_zeros=",ignore_zeros," force_ignore_zeros_off=",force_ignore_zeros_off," psf_pad=",psf_pad," fft_pad=",fft_pad
 
-    shape1 = img.shape
-    shape2 = kernel.shape
+    imgshape = img.shape
+    kernshape = kernel.shape
     # find ideal size (power of 2) for fft.  Can add shapes because they are tuples
     if fft_pad:
         if psf_pad: 
             # add the X dimensions and Y dimensions and then take the max (bigger)
-            fsize = 2**np.ceil(np.log2(np.max(np.array(shape1)+np.array(shape2)))) 
+            fsize = 2**np.ceil(np.log2(np.max(np.array(imgshape)+np.array(kernshape)))) 
         else: 
             # add the shape lists (max of a list of length 4) (smaller)
-            fsize = 2**np.ceil(np.log2(np.max(shape1+shape2)))
+            fsize = 2**np.ceil(np.log2(np.max(imgshape+kernshape)))
         newshape = np.array([fsize,fsize])
     else:
         if psf_pad:
-            newshape = np.array(shape1)+np.array(shape2) # just add the biggest dimensions
+            newshape = np.array(imgshape)+np.array(kernshape) # just add the biggest dimensions
         else:
-            newshape = np.array([np.max([shape1[0],shape2[0]]),np.max([shape1[1],shape2[1]])]) 
+            newshape = np.array([np.max([imgshape[0],kernshape[0]]),np.max([imgshape[1],kernshape[1]])]) 
     centerx, centery = newshape/2.
-    imgquarter1x, imgquarter1y = centerx - shape1[0]/2.,centery - shape1[1]/2.
-    imgquarter3x, imgquarter3y = centerx + shape1[0]/2.,centery + shape1[1]/2.
-    kernelquarter1x, kernelquarter1y = centerx - shape2[0]/2.,centery - shape2[1]/2.
-    kernelquarter3x, kernelquarter3y = centerx + shape2[0]/2.,centery + shape2[1]/2.
+    imgquarter1x, imgquarter1y = centerx - imgshape[0]/2.,centery - imgshape[1]/2.
+    imgquarter3x, imgquarter3y = centerx + imgshape[0]/2.,centery + imgshape[1]/2.
+    kernelquarter1x, kernelquarter1y = centerx - kernshape[0]/2.,centery - kernshape[1]/2.
+    kernelquarter3x, kernelquarter3y = centerx + kernshape[0]/2.,centery + kernshape[1]/2.
     bigimg = np.zeros(newshape,dtype=np.complex128)
     bigkernel = np.zeros(newshape,dtype=np.complex128)
     bigimg[imgquarter1x:imgquarter3x,imgquarter1y:imgquarter3y] = img
@@ -92,6 +92,9 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         wtfftmult = wtfft*kernfft
         wtfftsm   = ifft2(wtfftmult)
         pixel_weight = np.fft.fftshift(wtfftsm).real
+    # DEBUG print "img shape:",imgshape," kern shape:",kernshape," newshape:",newshape,\
+    # DEBUG         " imgquarter1x,3x,1y,3y:",imgquarter1x,imgquarter3x,imgquarter1y,imgquarter3y, \
+    # DEBUG         " kernelquarter1x,3x,1y,3y:",kernelquarter1x,kernelquarter3x,kernelquarter1y,kernelquarter3y, 
 
     if return_fft: 
         if fftshift: # default on 
@@ -132,7 +135,8 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
             This option should be set to false if the edges of your image are
             symmetric.
         interp_nan = False - Will replace NaN points in an image with the
-            smoothed average of its neighbors
+            smoothed average of its neighbors (you can still simply ignore NaN 
+            values by setting ignore_nan=True but leaving interp_nan=False)
         silent = True - turn it off to get verbose statements about kernel
             types
         return_kernel = False - If set to true, will return the kernel as the
@@ -152,16 +156,16 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     if (nwidths!='max'):# and kernelwidth*nwidths < image.shape[0] and kernelwidth*nwidths < image.shape[1]):
         dimsize = np.ceil(kernelwidth*nwidths)
         dimsize += dimsize % 2
-        xx,yy = np.indices([dimsize,dimsize])
-        sz1,sz2 = dimsize,dimsize
+        yy,xx = np.indices([dimsize,dimsize])
+        szY,szX = dimsize,dimsize
     else:
-        sz1,sz2 = image.shape
-        sz1 += sz1 % 2
-        sz2 += sz2 % 2
-        xx,yy = np.indices([sz1,sz2])
-    shape = (sz1,sz2)
+        szY,szX = image.shape
+        szY += szY % 2
+        szX += szX % 2
+        yy,xx = np.indices([szY,szX])
+    shape = (szY,szX)
     if not silent: print "Kernel size set to ",shape
-    rr = np.sqrt((xx-sz2/2.)**2+(yy-sz1/2.)**2)
+    rr = np.sqrt((xx-szX/2.)**2+(yy-szY/2.)**2)
 
     if kerneltype == 'gaussian':
         kernel = np.exp(-(rr**2)/(2.*kernelwidth**2))

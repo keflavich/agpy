@@ -1,4 +1,8 @@
 import numpy
+try:
+    from scipy.stats import nanmean as mean
+except ImportError:
+    import numpy.mean as mean
 
 def downsample(myarr,factor):
     """
@@ -7,9 +11,23 @@ def downsample(myarr,factor):
 
     This code is pure numpy and should be fast.
     """
-    xs,ys = myarr.shape
-    crarr = myarr[:xs-(xs % int(factor)),:ys-(ys % int(factor))]
-    dsarr = numpy.concatenate([[crarr[i::factor,j::factor] 
+    ys,xs = myarr.shape
+    crarr = myarr[:ys-(ys % int(factor)),:xs-(xs % int(factor))]
+    dsarr = mean( numpy.concatenate([[crarr[i::factor,j::factor] 
         for i in range(factor)] 
-        for j in range(factor)]).mean(axis=0)
+        for j in range(factor)]), axis=0)
+    return dsarr
+
+def downsample_cube(myarr,factor,ignoredim=0):
+    """
+    Downsample a 3D array by averaging over *factor* pixels on the last two
+    axes.
+    """
+    if ignoredim > 0: myarr = myarr.swapaxes(0,ignoredim)
+    zs,ys,xs = myarr.shape
+    crarr = myarr[:,:ys-(ys % int(factor)),:xs-(xs % int(factor))]
+    dsarr = mean(numpy.concatenate([[crarr[:,i::factor,j::factor] 
+        for i in range(factor)] 
+        for j in range(factor)]), axis=0)
+    if ignoredim > 0: dsarr = dsarr.swapaxes(0,ignoredim)
     return dsarr

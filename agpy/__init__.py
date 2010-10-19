@@ -16,7 +16,7 @@ from reg_gal2cel import gal2cel
 from posang import posang
 import densitymap
 import downsample as downsample_mod
-from downsample import downsample
+from downsample import downsample,downsample_cube
 import correlate2d as correlate2d_mod
 from correlate2d import correlate2d
 from psds import PSD2
@@ -25,6 +25,7 @@ from convolve import convolve,smooth
 #from asinh_norm import AsinhNorm
 from radialprofile import azimuthalAverage
 import showspec
+from contributed import parallel_map
 
 # import all of the functions but not the modules...
 __all__ = ['readcol','gaussfitter','kdist','reg_gal2cel','posang','densitymap','downsample','correlate2d','psds','convolve','radialprofile',

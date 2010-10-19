@@ -93,6 +93,29 @@ def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='ar
     else:
         return spec
 
+def integ(file,vrange,xcen=None,xwidth=None,ycen=None,ywidth=None,**kwargs):
+    """
+    wrapper of subimage_integ that defaults to using the full image
+    """
+    if isinstance(file,pyfits.PrimaryHDU):
+        header = file.header
+        cube = file.data
+    elif isinstance(file,pyfits.HDUList):
+        header = file[0].header
+        cube = file[0].data
+    else:
+        file = pyfits.open(file)
+        header = file[0].header
+        cube = file[0].data
+
+    if None in [xcen,xwidth,ycen,ywidth]:
+        xcen = header['NAXIS1'] / 2
+        xwidth = xcen
+        ycen = header['NAXIS2'] / 2
+        ywidth = ycen
+
+    return subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,**kwargs)
+
 def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,dvmult=False,units="pixels"):
     """
     Returns a sub-image from a data cube integrated over the specified velocity range
@@ -292,6 +315,22 @@ def getspec_reg(cubefilename,region):
 
     return sp
 
+def smooth_cube(cube,cubedim=0,**kwargs):
+    """
+    parallel-map the smooth function
+    """
+    from convolve import smooth
+    from contributed import parallel_map
 
+    if cubedim != 0:
+        cube = cube.swapaxes(0,cubedim)
+
+    cubelist = [cube[ii,:,:] for ii in xrange(cube.shape[0])]
+
+    Psmooth = lambda C: smooth(C,**kwargs)
+
+    smoothcube = array(parallel_map(Psmooth,cubelist))
+
+    return smoothcube
 
 

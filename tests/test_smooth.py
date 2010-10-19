@@ -8,6 +8,27 @@ test_image[204,204] = 1
 # box
 test_image[280:297,280:297] = 1/256.
 
+shiftest_image = zeros([300,320])
+shiftest_image[100:120,180:220]=1.0
+print "Testing for a shift"
+figure(11)
+clf()
+smoothed,kernel = smooth(shiftest_image,return_kernel=True)
+subplot(221)
+title("shiftest_image")
+imshow(shiftest_image)
+subplot(222)
+title("smoothed")
+imshow(smoothed)
+subplot(223)
+title("shiftest_image-smoothed")
+imshow(shiftest_image-smoothed)
+subplot(224)
+title("kernel")
+imshow(kernel)
+
+
+"""
 figure(0)
 clf()
 smoothed_gp8_sm25 ,kernel_gp8_25  = smooth(test_image,25.5,'gaussian',nwidths=8,return_kernel=True)
@@ -39,7 +60,9 @@ print "npeak gp8: ", (kernel_gp8_25.max()) ,sum((kernel_gp8_25.max()) ==kernel_g
 print "npeak gp9: ", (kernel_gp9_25.max()) ,sum((kernel_gp9_25.max()) ==kernel_gp9_25)
 print "npeak gp10: ",(kernel_gp10_25.max()),sum((kernel_gp10_25.max())==kernel_gp10_25)
 print "npeak gpmax: ",(kernel_gpmax_25.max()),sum((kernel_gpmax_25.max())==kernel_gpmax_25)
+"""
 
+"""
 print "\n\nDemonstration that you need to ignore_zeros when padding (figure 10)"
 figure(10)
 clf()
@@ -81,6 +104,7 @@ imshow(smtestimage_noz_nopsfpad)
 subplot(339)
 title("smtestimage_noz_nofftpad")
 imshow(smtestimage_noz_nofftpad)
+"""
 
 """
 for ii,smoothsize in enumerate([10,100]): #20,50,100,128]):
