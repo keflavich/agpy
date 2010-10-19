@@ -24,13 +24,21 @@ for size in sizes:
     print "non-parallel smooth took %0.2f seconds for size = %i" % (t2-t1,size)
     nonparallel_times.append(t2-t1)
 
+print parallel_times
+print nonparallel_times
+
 import pylab
 pylab.figure()
-pylab.plot(sizes,parallel_times,label='Parallel')
-pylab.plot(sizes,nonparallel_times,label='Serial')
+pylab.subplot(211)
+pylab.semilogy(sizes,parallel_times   ,linestyle='-',marker='s',label='Parallel')
+pylab.semilogy(sizes,nonparallel_times,linestyle='-',marker='o',label='Serial')
 pylab.legend(loc='best')
 pylab.xlabel('Cube Size')
 pylab.ylabel('Execution Time')
+pylab.subplot(212)
+pylab.plot(sizes,np.array(parallel_times)/np.array(nonparallel_times),linestyle='-',marker='s')
+pylab.xlabel('Cube Size')
+pylab.ylabel('Parallel/Serial')
 pylab.savefig('executiontime_vs_size_cubesmooth.png')
 pylab.show()
 
