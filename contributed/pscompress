@@ -1,6 +1,9 @@
 #!/bin/bash
 
 # Call: pscompress filename.ps
+#
+# Will overwrite the input .ps file with a (usually) smaller oen
+#
 # courtesy Sam Skillman via http://billauer.co.il/blog/2009/07/gimp-xcf-jpg-jpeg-convert-bash-script/
 # Modified 07/14/2010 by Adam Ginsburg
 
