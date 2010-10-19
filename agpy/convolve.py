@@ -11,15 +11,14 @@ except ImportError:
     fft2 = np.fft.fft2
     ifft2 = np.fft.ifft2
 
-def convolve(im1, im2, crop=True, return_fft=False, fftshift=True,
-        kernel_number=1, fft_pad=True, psf_pad=False, ignore_nan=False,
-        ignore_zeros=False, min_wt=1e-8):
+def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
+        fft_pad=True, psf_pad=False, ignore_nan=False,
+        ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False):
     """
-    Convolve two images.  Returns the larger image size.  Assumes image &
-    kernel are centered
+    Convolve an image with a kernel.  Returns something the size of an image.
+    Assumes image & kernel are centered
 
-    *NOTE* Order matters when padding; the kernel should either be first or
-    kernel_number should be set to 2.  
+    *NOTE* Order matters; the kernel should be second.
 
     Options:
     fft_pad - Default on.  Zero-pad image to the nearest 2^n
@@ -32,25 +31,33 @@ def convolve(im1, im2, crop=True, return_fft=False, fftshift=True,
         PSDs.
     fftshift - If return_fft on, will shift & crop image to appropriate
         dimensions
-    kernel_number - if specified, assumes that image # is the kernel, otherwise
-        uses the smaller of the two or the first if they are equal-sized
     ignore_nan - attempts to re-weight assuming NAN values are meant to be
         ignored, not treated as zero.  
     ignore_zeros - Ignore the zero-pad-created zeros.  Desirable if you have
         periodic boundaries on a non-2^n grid
+    force_ignore_zeros_off - You can choose to turn off the ignore-zeros when padding,
+        but this is only recommended for purely debug purposes
     min_wt - If ignoring nans/zeros, force all grid points with a weight less
         than this value to NAN (the weight of a grid point with *no* ignored
         neighbors is 1.0)
     """
 
     # NAN catching
-    nanmask1 = im1!=im1
-    nanmask2 = im2!=im2
-    im1[nanmask1] = 0
-    im2[nanmask2] = 0
+    nanmaskimg = img!=img
+    img[nanmaskimg] = 0
+    if nanmaskimg.sum() > 0 and not ignore_nan:
+        print "Warning: NOT ignoring nan values even though they are present (they are treated as 0)"
 
-    shape1 = im1.shape
-    shape2 = im2.shape
+    if (psf_pad or fft_pad) and not ignore_zeros and not force_ignore_zeros_off:
+        print "Warning: when psf_pad or fft_pad are enabled, ignore_zeros is forced on"
+        ignore_zeros=True
+    elif force_ignore_zeros_off:
+        ignore_zeros=False
+
+    # DEBUG print "Status: ignore_zeros=",ignore_zeros," force_ignore_zeros_off=",force_ignore_zeros_off," psf_pad=",psf_pad," fft_pad=",fft_pad
+
+    shape1 = img.shape
+    shape2 = kernel.shape
     # find ideal size (power of 2) for fft.  Can add shapes because they are tuples
     if fft_pad:
         if psf_pad: 
@@ -66,39 +73,30 @@ def convolve(im1, im2, crop=True, return_fft=False, fftshift=True,
         else:
             newshape = np.array([np.max([shape1[0],shape2[0]]),np.max([shape1[1],shape2[1]])]) 
     centerx, centery = newshape/2.
-    im1quarter1x, im1quarter1y = centerx - shape1[0]/2.,centery - shape1[1]/2.
-    im1quarter3x, im1quarter3y = centerx + shape1[0]/2.,centery + shape1[1]/2.
-    im2quarter1x, im2quarter1y = centerx - shape2[0]/2.,centery - shape2[1]/2.
-    im2quarter3x, im2quarter3y = centerx + shape2[0]/2.,centery + shape2[1]/2.
-    bigim1 = np.zeros(newshape,dtype=np.complex128)
-    bigim2 = np.zeros(newshape,dtype=np.complex128)
-    bigim1[im1quarter1x:im1quarter3x,im1quarter1y:im1quarter3y] = im1
-    bigim2[im2quarter1x:im2quarter3x,im2quarter1y:im2quarter3y] = im2 
-    imfft1 = fft2(bigim1)
-    imfft2 = fft2(bigim2)
-    fftmult = imfft1*imfft2
+    imgquarter1x, imgquarter1y = centerx - shape1[0]/2.,centery - shape1[1]/2.
+    imgquarter3x, imgquarter3y = centerx + shape1[0]/2.,centery + shape1[1]/2.
+    kernelquarter1x, kernelquarter1y = centerx - shape2[0]/2.,centery - shape2[1]/2.
+    kernelquarter3x, kernelquarter3y = centerx + shape2[0]/2.,centery + shape2[1]/2.
+    bigimg = np.zeros(newshape,dtype=np.complex128)
+    bigkernel = np.zeros(newshape,dtype=np.complex128)
+    bigimg[imgquarter1x:imgquarter3x,imgquarter1y:imgquarter3y] = img
+    bigkernel[kernelquarter1x:kernelquarter3x,kernelquarter1y:kernelquarter3y] = kernel 
+    imgfft = fft2(bigimg)
+    kernfft = fft2(bigkernel)
+    fftmult = imgfft*kernfft
     if ignore_nan or ignore_zeros:
         bigimwt = np.ones(newshape,dtype=np.complex128)
         if ignore_zeros: bigimwt[:] = 0.0
-        if shape1[0] > shape2[0] or kernel_number==2: 
-            bigimwt[im1quarter1x:im1quarter3x,im1quarter1y:im1quarter3y] = 1.0-nanmask1*ignore_nan
-            kern = imfft2
-        else:
-            bigimwt[im2quarter1x:im2quarter3x,im2quarter1y:im2quarter3y] = 1.0-nanmask2*ignore_nan
-            kern = imfft1
+        bigimwt[imgquarter1x:imgquarter3x,imgquarter1y:imgquarter3y] = 1.0-nanmaskimg*ignore_nan
         wtfft = fft2(bigimwt)
-        wtfftmult = wtfft*kern
+        wtfftmult = wtfft*kernfft
         wtfftsm   = ifft2(wtfftmult)
         pixel_weight = np.fft.fftshift(wtfftsm).real
 
-    quarter1x = np.min([im1quarter1x,im2quarter1x])
-    quarter3x = np.max([im1quarter3x,im2quarter3x])
-    quarter1y = np.min([im1quarter1y,im2quarter1y])
-    quarter3y = np.max([im1quarter3y,im2quarter3y])
     if return_fft: 
         if fftshift: # default on 
             if crop:
-                return np.fft.fftshift(fftmult)[ quarter1x:quarter3x, quarter1y:quarter3y ]
+                return np.fft.fftshift(fftmult)[ imgquarter1x:imgquarter3x, imgquarter1y:imgquarter3y ]
             else:
                 return np.fft.fftshift(fftmult)
         else:
@@ -110,7 +108,7 @@ def convolve(im1, im2, crop=True, return_fft=False, fftshift=True,
     else:
         rifft = np.fft.fftshift( ifft2( fftmult ) ) 
     if crop:
-        result = rifft[ quarter1x:quarter3x, quarter1y:quarter3y ].real
+        result = rifft[ imgquarter1x:imgquarter3x, imgquarter1y:imgquarter3y ].real
         return result
     else:
         return rifft.real
@@ -198,10 +196,18 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
             if not silent: print "trapezoid function requires a slope"
 
     bad = (image != image)
-    temp = image.copy()
+    temp = image.copy() # to preserve NaN values
     # convolve does this already temp[bad] = 0
-    temp = convolve(temp,kernel,kernel_number=2,ignore_nan=interp_nan,psf_pad=psf_pad,**kwargs)
+
+    # kwargs parsing to avoid duplicate keyword passing
+    if not kwargs.has_key('ignore_zeros'): kwargs['ignore_zeros']=True
+    if not kwargs.has_key('ignore_nan'): kwargs['ignore_nan']=interp_nan
+
+    temp = convolve(temp,kernel,psf_pad=psf_pad,**kwargs)
     if interp_nan is False: temp[bad] = image[bad]
+
+    if temp.shape != image.shape:
+        raise ValueError("Output image changed size; this is completely impossible.")
 
     if return_kernel: return temp,kernel
     else: return temp

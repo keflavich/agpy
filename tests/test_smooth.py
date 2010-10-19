@@ -40,6 +40,49 @@ print "npeak gp9: ", (kernel_gp9_25.max()) ,sum((kernel_gp9_25.max()) ==kernel_g
 print "npeak gp10: ",(kernel_gp10_25.max()),sum((kernel_gp10_25.max())==kernel_gp10_25)
 print "npeak gpmax: ",(kernel_gpmax_25.max()),sum((kernel_gpmax_25.max())==kernel_gpmax_25)
 
+print "\n\nDemonstration that you need to ignore_zeros when padding (figure 10)"
+figure(10)
+clf()
+testimage = ones([10,20]) # make a flat image
+testimage[5,5] += 1 # add some contrast
+smtestimage = smooth(testimage)
+smtestimage_nopsfpad = smooth(testimage,psf_pad=False,force_ignore_zeros_off=True)
+smtestimage_nofftpad = smooth(testimage,fft_pad=False,force_ignore_zeros_off=True)
+smtestimage_ignorenan = smooth(testimage,interp_nan=True,force_ignore_zeros_off=True)
+smtestimage_ignorezeros = smooth(testimage,ignore_zeros=True,force_ignore_zeros_off=True)
+smtestimage_noz_nopsfpad = smooth(testimage,psf_pad=False,ignore_zeros=True)
+smtestimage_noz_nofftpad = smooth(testimage,fft_pad=False,ignore_zeros=True)
+smtestimage_noz_nopad = smooth(testimage,fft_pad=False,psf_pad=False,ignore_zeros=True)
+smtestimage_nopad = smooth(testimage,fft_pad=False,psf_pad=False,force_ignore_zeros_off=True)
+subplot(331)
+title("smtestimage_nopad")
+imshow(smtestimage_nopad)
+subplot(332)
+title("smtestimage (default)")
+imshow(smtestimage)
+subplot(333)
+title("smtestimage_nopsfpad")
+imshow(smtestimage_nopsfpad)
+subplot(334)
+title("smtestimage_nofftpad")
+imshow(smtestimage_nofftpad)
+subplot(335)
+title("smtestimage_ignorenan")
+imshow(smtestimage_ignorenan)
+subplot(336)
+title("smtestimage_ignorezeros")
+imshow(smtestimage_ignorezeros)
+subplot(337)
+title("smtestimage_noz_nopad")
+imshow(smtestimage_noz_nopad)
+subplot(338)
+title("smtestimage_noz_nopsfpad")
+imshow(smtestimage_noz_nopsfpad)
+subplot(339)
+title("smtestimage_noz_nofftpad")
+imshow(smtestimage_noz_nofftpad)
+
+"""
 for ii,smoothsize in enumerate([10,100]): #20,50,100,128]):
 
     figure(ii+1)
@@ -70,3 +113,4 @@ for ii,smoothsize in enumerate([10,100]): #20,50,100,128]):
 
     draw()
 
+"""
