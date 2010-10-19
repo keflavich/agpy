@@ -1,9 +1,37 @@
 from agpy import cubes
 import numpy as np
+import time
 
-zz,yy,xx = np.indices([50,50,50])
-rr = np.sqrt(25-((zz-25)**2+(yy-25)**2+(xx-25)**2))
+parallel_times = []
+nonparallel_times = []
+sizes = np.array([25,50,100,125,150,200,250,300])
 
-smcube = cubes.smooth_cube(rr,ignore_nan=True)
+for size in sizes:
+    zz,yy,xx = np.indices([size,size,size])
+    rr = np.sqrt((size/2)-((zz-(size/2))**2+(yy-(size/2))**2+(xx-(size/2))**2))
 
-print "If you've gotten here, parallel smoothing works, but there's a lot of testing left to be done"
+    t0 = time.time()
+
+    smcube = cubes.smooth_cube(rr,ignore_nan=True)
+    
+    t1=time.time()
+    print "parallel smooth took %0.2f seconds for size = %i" % (t1-t0,size)
+    parallel_times.append(t1-t0)
+
+    smcube = cubes.smooth_cube(rr,ignore_nan=True,parallel=False)
+
+    t2=time.time()
+    print "non-parallel smooth took %0.2f seconds for size = %i" % (t2-t1,size)
+    nonparallel_times.append(t2-t1)
+
+import pylab
+pylab.figure()
+pylab.plot(sizes,parallel_times,label='Parallel')
+pylab.plot(sizes,nonparallel_times,label='Serial')
+pylab.legend(loc='best')
+pylab.xlabel('Cube Size')
+pylab.ylabel('Execution Time')
+pylab.savefig('executiontime_vs_size_cubesmooth.png')
+pylab.show()
+
+

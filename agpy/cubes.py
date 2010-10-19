@@ -315,7 +315,7 @@ def getspec_reg(cubefilename,region):
 
     return sp
 
-def smooth_cube(cube,cubedim=0,**kwargs):
+def smooth_cube(cube,cubedim=0,parallel=True,**kwargs):
     """
     parallel-map the smooth function
     """
@@ -329,7 +329,13 @@ def smooth_cube(cube,cubedim=0,**kwargs):
 
     Psmooth = lambda C: smooth(C,**kwargs)
 
-    smoothcube = array(parallel_map(Psmooth,cubelist))
+    if parallel:
+        smoothcube = array(parallel_map(Psmooth,cubelist))
+    else:
+        smoothcube = array(map(Psmooth,cubelist))
+    
+    if cubedim != 0:
+        smoothcube = smoothcube.swapaxes(0,cubedim)
 
     return smoothcube
 
