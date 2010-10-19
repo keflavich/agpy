@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Call: pngtoeps filename.png
+# courtesy Sam Skillman via http://billauer.co.il/blog/2009/07/gimp-xcf-jpg-jpeg-convert-bash-script/
+
+# Path to the gimp executable
+GIMP='/Applications/Gimp.app/Contents/Resources/bin/gimp'
+
+
+{
+cat <<EOF
+(define (convert-eps-to-png filename outfile)
+  (let* (
+	 (image (car (gimp-file-load RUN-NONINTERACTIVE filename filename)))
+	 (drawable (car (gimp-image-merge-visible-layers image CLIP-TO-IMAGE)))
+	 (drawable (car (gimp-image-flatten image)))
+	 )
+    (file-png-save RUN-NONINTERACTIVE image drawable outfile outfile 0 0 0 0 0 1 0 1 0 2)
+    (gimp-image-delete image) ; ... or the memory will explode
+    )
+  )
+
+(gimp-message-set-handler 1) ; Messages to standard output
+EOF
+
+for i in $*; do
+  echo "(gimp-message \"$i\")"
+  echo "(convert-eps-to-png \"$i\" \"${i%%.eps}.png\")"
+done
+
+echo "(gimp-quit 0)"
+} | $GIMP -i -b -
+
+#for i in $*; do
+#    epstopdf ${i%%.eps}.png 
+#done
+  
+

@@ -114,9 +114,10 @@ def integ(file,vrange,xcen=None,xwidth=None,ycen=None,ywidth=None,**kwargs):
         ycen = header['NAXIS2'] / 2
         ywidth = ycen
 
-    return subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,**kwargs)
+    return subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=header,**kwargs)
 
-def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,dvmult=False,units="pixels"):
+def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
+        average=mean, dvmult=False, return_HDU=False, units="pixels"):
     """
     Returns a sub-image from a data cube integrated over the specified velocity range
 
@@ -170,8 +171,11 @@ def subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=None,average=mean,
         flathead['CRVAL2'] = crv2[0]
         flathead['CRPIX1'] = 1
         flathead['CRPIX2'] = 1
-
-        return subim,flathead
+        
+        if return_HDU:
+            return pyfits.PrimaryHDU(data=subim,header=flathead)
+        else:
+            return subim,flathead
 
 def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
     """
@@ -315,9 +319,13 @@ def getspec_reg(cubefilename,region):
 
     return sp
 
-def smooth_cube(cube,cubedim=0,parallel=True,**kwargs):
+def smooth_cube(cube,cubedim=0,parallel=True,numcores=None,**kwargs):
     """
     parallel-map the smooth function
+
+    parallel - defaults True.  Set to false if you want serial (for debug
+        purposes?)
+    numcores - pass to parallel_map (None = use all available)
     """
     from convolve import smooth
     from contributed import parallel_map
@@ -330,7 +338,7 @@ def smooth_cube(cube,cubedim=0,parallel=True,**kwargs):
     Psmooth = lambda C: smooth(C,**kwargs)
 
     if parallel:
-        smoothcube = array(parallel_map(Psmooth,cubelist))
+        smoothcube = array(parallel_map(Psmooth,cubelist,numcores=numcores))
     else:
         smoothcube = array(map(Psmooth,cubelist))
     
