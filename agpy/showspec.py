@@ -58,7 +58,7 @@ class SpecPlotter:
   def plotspec(self, i, j, fig=None, fignum=1, cube=True,
           button=1, dv=None,ivconv=None,clear=True,color='k',
           axis=None, offset=0.0, scale=1.0, voff=0.0, vmin=None,
-          vmax=None, units='K', **kwargs):
+          vmax=None, units='K', xunits=None, **kwargs):
     """
     Plot a spectrum
     Originally written to plot spectra from data cubes, hence the i,j parameter
@@ -109,7 +109,10 @@ class SpecPlotter:
         title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
     elif self.specname:
         title("Spectrum of %s" % self.specname)
-    xlabel("V$_{LSR}$ (km s$^{-1}$)")
+    if xunits:
+        xlabel(xunits)
+    else:
+        xlabel("V$_{LSR}$ (km s$^{-1}$)")
     self.units = units
     if units in ['Ta*','Tastar','K']:
       ylabel("$T_A^*$ (K)")
@@ -117,6 +120,8 @@ class SpecPlotter:
       ylabel("$S_\\nu$ (mJy)")
     elif units == 'Jy':
       ylabel("$S_\\nu$ (Jy)")
+    else:
+      ylabel(units)
     #legend(loc='best')
 
   def save(self,fname,**kwargs):
@@ -416,3 +421,25 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
 
     return sp
 
+def splat_tspec(filename,**kwargs):
+    """
+    Same as splat_1d for tspec data
+    """
+
+    tdata = pyfits.getdata(filename)
+    theader = pyfits.getheader(filename)
+    wavelength = tdata[0,:]
+    spectrum   = tdata[1,:]
+    error      = tdata[2,:]
+
+    vconv = lambda x: wavelength[x]
+    ivconv = lambda x: argmin(abs(wavelength-x))
+    
+    specname='TSPEC'
+    dv = median(wavelength[1:] - wavelength[:-1])
+    
+    sp = SpecPlotter(spectrum,vconv=vconv,specname=specname,dv=dv,hdr=theader,**kwargs)
+
+    sp.plotspec(0,0,ivconv=ivconv,dv=dv,cube=False,units=theader.get('YUNITS'),xunits=theader.get('XUNITS'),**kwargs)
+
+    return sp

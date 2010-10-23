@@ -48,53 +48,60 @@ def read_radex_old(outfile,flow,fupp,bw=bw):
     FluxUpp  = float(words[11])
     return temp,dens,col,TexLow,TexUpp,TauLow,TauUpp,TrotLow,TrotUpp,FluxLow,FluxUpp
 
+def tryfloat(x):
+    try:
+        return float(x)
+    except ValueError:
+        return float(0)
+
 def read_radex(file,flow,fupp,bw=bw,debug=False):
     """ 
     less hack-ey way to read radex.out files
     """
-    line = file.readline()
+    linenum = 0
+    line = file.readline(); linenum+=1
     if debug: print line
     if line == '':
         return 0
     words = line.split()
     if words[1] == '--':
-        freq = float(words[4])
+        freq = tryfloat(words[4])
     else:
         freq = 0
     while not(freq*(1-bw) < flow < freq*(1+bw)):
         if words[1] == 'T(kin)':
-            tkin = float(words[3])
+            tkin = tryfloat(words[3])
         elif line.find("Density of H2") != -1:
-            dens = float(words[5])
+            dens = tryfloat(words[5])
         elif line.find("Density of pH2") != -1:
-            pdens = float(words[5])
+            pdens = tryfloat(words[5])
         elif line.find("Density of oH2") != -1:
-            odens = float(words[5])
+            odens = tryfloat(words[5])
         elif line.find("Column density") != -1:
-            col = float(words[4])
-        line = file.readline()
+            col = tryfloat(words[4])
+        line = file.readline(); linenum+=1
         words = line.split()
         if words[1] == '--':
-            freq = float(words[4])
-    TexLow   = float(words[6])
-    TauLow   = float(words[7])
-    TrotLow  = float(words[8])
-    FluxLow  = float(words[11])
-    line = file.readline()
+            freq = tryfloat(words[4])
+    TexLow   = tryfloat(words[6])
+    TauLow   = tryfloat(words[7])
+    TrotLow  = tryfloat(words[8])
+    FluxLow  = tryfloat(words[11])
+    line = file.readline(); linenum+=1
     words = line.split()
     if words[1] == '--':
-        freq = float(words[4])
-    while  not(freq*(1-bw) < flow < freq*(1+bw)):
-        line = file.readline()
+        freq = tryfloat(words[4])
+    while  not(freq*(1-bw) < fupp < freq*(1+bw)):
+        line = file.readline(); linenum+=1
         if debug: print freq,flow,line
         words = line.split()
         if words[1] == '--':
-            freq = float(words[4])
-    TexUpp   = float(words[6])
-    TauUpp   = float(words[7])
-    TrotUpp  = float(words[8])
-    FluxUpp  = float(words[11])
+            freq = tryfloat(words[4])
+    TexUpp   = tryfloat(words[6])
+    TauUpp   = tryfloat(words[7])
+    TrotUpp  = tryfloat(words[8])
+    FluxUpp  = tryfloat(words[11])
     while len(words) > 0 and words[1] == '--':
-        line = file.readline()
+        line = file.readline(); linenum+=1
         words = line.split()
     return tkin,dens,col,TexLow,TexUpp,TauLow,TauUpp,TrotLow,TrotUpp,FluxLow,FluxUpp
