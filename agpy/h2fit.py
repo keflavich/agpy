@@ -1,7 +1,6 @@
 from pylab import *
 from numpy import *
-from readcol import readcol
-import readcol
+from agpy import readcol
 try:
     import pyfits
 except ImportError:
@@ -38,7 +37,7 @@ def h2level_energy(V,J):
 
 # read in rest energies before calling function
 tablepath='/Users/adam/work/IRAS05358/code/'
-resten = readcol.readcol(tablepath+'dalgarno1984_table5.txt',verbose=0)
+resten = readcol(tablepath+'dalgarno1984_table5.txt',verbose=0)
 
 def restwl(vu,vl,ju,jl):
     """ Uses energy levels measured by Dalgarno, Can J. Physics, 62,1639,1984 
@@ -52,7 +51,7 @@ def restwl(vu,vl,ju,jl):
 
 def linename_to_restwl(linelistfile = '/Users/adam/work/IRAS05358/code/linelist.txt',outfile='/Users/adam/work/IRAS05358/code/newlinelist.txt'):
 
-    lines = readcol.readcol(linelistfile,fsep='|',twod=False,dtype='S')
+    lines = readcol(linelistfile,fsep='|',twod=False)
     outf = open(outfile,'w')
 
     for line in transpose(lines):
@@ -123,10 +122,10 @@ def aval(v,ju,jl):
 aval_vect=vectorize(aval)
 
 # atran = pyfits.open('/Users/adam/observations/triplespec/Spextool2/data/atran2000.fits')
-atran = readcol.readcol('/Users/adam/work/IRAS05358/code/atran.txt')
+atran = readcol('/Users/adam/work/IRAS05358/code/atran.txt')
 atran_wl = atran[:,0]*1e4
 atran_tr = atran[:,1]
-atran_arc = readcol.readcol('/Users/adam/work/IRAS05358/code/atran_arcturus.txt')
+atran_arc = readcol('/Users/adam/work/IRAS05358/code/atran_arcturus.txt')
 ARCSORT = argsort(atran_arc[:,0])
 atran_arcwl = atran_arc[ARCSORT,0]*1e4
 atran_arctr = atran_arc[ARCSORT,1]
@@ -149,7 +148,7 @@ atmotrans_vect = vectorize(atmotrans)
 
 def readspexspec(image,
     linelistfile = '/Users/adam/work/IRAS05358/code/linelist.txt',
-    path_obs='/Users/adam/work/IRAS05358/spectra/nearir/', #'/Users/adam/observations/IRAS05358/UT090108/',
+    path_obs='', #'/Users/adam/observations/IRAS05358/UT090108/',
     nameregex='2-1 S\(1\)|1-0 S\([1379028]\)|1-0 Q\([1234]\)|3-2 S\([35]\)|4-3 S\(5\)',
     vlsrcorr=0,
     backsub=False,
@@ -163,7 +162,7 @@ def readspexspec(image,
     countsperflux = 2.25e18
     errspec = im[0].data[2,:]
 
-    lines = readcol.readcol(linelistfile,fsep='|',twod=False,dtype='S')
+    lines = readcol(linelistfile,fsep='|',twod=False)
     lines[1] = asarray(lines[1],dtype='float')*1e4 # convert microns to angstroms
 
     specsegments=[]
@@ -198,7 +197,7 @@ def readspexspec(image,
 
 def readspec(image,noiseimage,
     linelistfile = '/Users/adam/work/IRAS05358/code/linelist.txt',
-    path_obs='/Users/adam/work/IRAS05358/spectra/nearir/', #'/Users/adam/observations/IRAS05358/UT090108/',
+    path_obs='', #'/Users/adam/observations/IRAS05358/UT090108/',
     noiseaperture=[0,10],
     aperture=[],
     nameregex='2-1 S\(1\)|1-0 S\([1379028]\)|1-0 Q\([1234]\)|3-2 S\([35]\)|4-3 S\(5\)',
@@ -218,7 +217,7 @@ def readspec(image,noiseimage,
     errspec = sqrt( stdatmo**2 + 2*poisserr**2 )                 # poisson statistics - once for estimation of the noise, once for the subtraction
     errspec /= atmotrans_vect(wlA)**2                                                  # Weight by inverse of atmospheric transmission^2
 
-    lines = readcol.readcol(linelistfile,fsep='|',twod=False,dtype='S')
+    lines = readcol(linelistfile,fsep='|',twod=False)
     lines[1] = asarray(lines[1],dtype='float')*1e4 # convert microns to angstroms
 
     specsegments=[]

@@ -100,9 +100,9 @@ class SpecPlotter:
                 **kwargs)
 
     if vmin is not None: xlo = vmin
-    else: xlo=min(vind)
+    else: xlo=vind.min()
     if vmax is not None: xhi = vmax
-    else: xhi=max(vind)
+    else: xhi=vind.max()
     self.axis.set_xlim(xlo,xhi)
 
     if self.xtora and self.ytodec:
@@ -304,10 +304,14 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
     return (spectrum-bestfit)
 
-def open_1d(filename):
+def open_1d(filename,specnum=0):
     f = pyfits.open(filename)
     hdr = f[0].header
     spec = f[0].data
+    if hdr.get('NAXIS') == 2:
+        spec = spec[specnum,:]
+    elif hdr.get('NAXIS') > 2:
+        raise ValueError("Too many axes for open_1d (splat_1d) - use cube instead")
     if hdr.get('CD1_1'):
         dv,v0,p3 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
     else:
@@ -332,7 +336,7 @@ def open_1d(filename):
 def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
         vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
-        specname=None,quiet=True,
+        specname=None,quiet=True,specnum=0,
         smoothtype='gaussian',convmode='valid',**kwargs):
     """
     Inputs:
@@ -343,7 +347,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     if vpars and vconv and hdr and spec and xtora and ytora:
         dv,v0,p3 = vpars
     else:
-        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units = open_1d(filename)
+        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units = open_1d(filename,specnum=specnum)
 
     varr = vconv(arange(spec.shape[0]))
     if vmin is None or vcrop==False: argvmin = 0
@@ -421,13 +425,15 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
 
     return sp
 
-def splat_tspec(filename,**kwargs):
+def splat_tspec(filename,specnum=0,**kwargs):
     """
     Same as splat_1d for tspec data
     """
 
     tdata = pyfits.getdata(filename)
     theader = pyfits.getheader(filename)
+    if len(tdata.shape) == 3:
+        tdata = tdata[specnum,:,:]
     wavelength = tdata[0,:]
     spectrum   = tdata[1,:]
     error      = tdata[2,:]
@@ -438,7 +444,7 @@ def splat_tspec(filename,**kwargs):
     specname='TSPEC'
     dv = median(wavelength[1:] - wavelength[:-1])
     
-    sp = SpecPlotter(spectrum,vconv=vconv,specname=specname,dv=dv,hdr=theader,**kwargs)
+    sp = SpecPlotter(spectrum,vconv=vconv,specname=specname,dv=dv,hdr=theader)
 
     sp.plotspec(0,0,ivconv=ivconv,dv=dv,cube=False,units=theader.get('YUNITS'),xunits=theader.get('XUNITS'),**kwargs)
 
