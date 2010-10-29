@@ -347,7 +347,8 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     if vpars and vconv and hdr and spec and xtora and ytora:
         dv,v0,p3 = vpars
     else:
-        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units = open_1d(filename,specnum=specnum)
+        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units = open_1d(filename,specnum=specnum)
+        if specname is None: specname=specname_file
 
     varr = vconv(arange(spec.shape[0]))
     if vmin is None or vcrop==False: argvmin = 0

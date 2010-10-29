@@ -214,11 +214,13 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
         x = -gamma * sin(theta) / wcs.wcs.cdelt[0] + wcs.wcs.crpix[0]
         y = gamma * cos(theta) / wcs.wcs.cdelt[1] + wcs.wcs.crpix[1]
     
-
+    #print "DEBUG: x,y from math (vectors): ",x,y
     #x,y = wcs.wcs_sky2pix(ra,dec,0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)
+    #print "DEBUG: x,y from wcs: ",x,y
     try:
-        x=x[0]
-        y=y[0]
+        x=x[0] - 1 # change from FITS to python convention
+        y=y[0] - 1 # change from FITS to python convention
+        #print "DEBUG: x,y from math: ",x,y
     except:
         pass
     # cd is default, cdelt is backup
