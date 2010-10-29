@@ -37,6 +37,33 @@ def flatten_header(header):
 
     return newheader
 
+def speccen_header(header,lon=None,lat=None):
+    """
+    Turn a cube header into a spectrum header, retaining RA/Dec vals where possible
+    (speccen is like flatten; spec-ify would be better but, specify?  nah)
+
+    Assumes 3rd axis is velocity
+    """
+    newheader = header.copy()
+    newheader.update('CRVAL1',header.get('CRVAL3'))
+    newheader.update('CRPIX1',header.get('CRPIX3'))
+    if header.has_key('CD3_3'): newheader.update('CDELT1',header.get('CD3_3'))
+    if header.has_key('CD1_1'): newheader.rename_key('CD1_1','OLDCD1_1')
+    newheader.update('CTYPE1','VRAD')
+    newheader.update('CUNIT1',header.get('CUNIT3'))
+    newheader.update('CRPIX2',1)
+    newheader.update('CTYPE2','RA---TAN')
+    newheader.update('CRPIX3',1)
+    newheader.update('CTYPE3','DEC--TAN')
+
+    if lon is not None: newheader.update('CRVAL2',lon)
+    if lat is not None: newheader.update('CRVAL3',lat)
+
+    if header.has_key('CD2_2'): newheader.rename_key('CD2_2','OLDCD2_2')
+    if header.has_key('CD3_3'): newheader.rename_key('CD3_3','OLDCD3_3')
+
+    return newheader
+
 def extract_aperture(cube,ap,r_mask=False,wcs=None,coordsys='galactic',wunit='arcsec'):
     """
     Extract an aperture from a data cube.  E.g. to acquire a spectrum
