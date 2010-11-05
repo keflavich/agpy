@@ -6,6 +6,14 @@ except ImportError:
 import posang
 
 def gal2cel(regfile):
+    """
+    Converts a region file from galactic to celestial coordinates including
+    position angle reference from the center of the box (right now only works
+    on box regions)
+
+    Requires pyregion with the ShapeList.write() function implemented...
+    not clear if that exists in 1.0
+    """
     reg = pyregion.open(regfile)
 
     for R in reg:

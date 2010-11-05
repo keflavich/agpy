@@ -1,3 +1,16 @@
+"""
+showspec is my homegrown spectrum plotter, meant to somewhat follow STARLINK's
+SPLAT and have functionality similar to GAIA, but with an emphasis on producing
+publication-quality plots (which, while splat may do, it does unreproducibly)
+
+
+TO DO:
+    -add spectrum arithmetic tools
+    -add gaussfitter
+
+"""
+
+
 
 import math
 
@@ -304,7 +317,11 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
     return (spectrum-bestfit)
 
-def open_1d(filename,specnum=0):
+def open_1d(filename,specnum=0,wcstype=''):
+    """
+    Grabs all the relevant pieces of a 1d spectrum for plotting
+    wcstype is the suffix on the WCS type to get to velocity/frequency/whatever
+    """
     f = pyfits.open(filename)
     hdr = f[0].header
     spec = f[0].data
@@ -312,31 +329,37 @@ def open_1d(filename,specnum=0):
         spec = spec[specnum,:]
     elif hdr.get('NAXIS') > 2:
         raise ValueError("Too many axes for open_1d (splat_1d) - use cube instead")
-    if hdr.get('CD1_1'):
-        dv,v0,p3 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
+    if hdr.get('CD1_1'+wcstype):
+        dv,v0,p3 = hdr['CD1_1'+wcstype],hdr['CRVAL1'+wcstype],hdr['CRPIX1'+wcstype]
     else:
-        dv,v0,p3 = hdr['CDELT1'],hdr['CRVAL1'],hdr['CRPIX1']
-    if hdr.get('OBJECT'):
-        specname = hdr['OBJECT']
+        dv,v0,p3 = hdr['CDELT1'+wcstype],hdr['CRVAL1'+wcstype],hdr['CRPIX1'+wcstype]
+    if hdr.get('OBJECT'+wcstype):
+        specname = hdr['OBJECT'+wcstype]
     elif hdr.get('GLON') and hdr.get('GLAT'):
         specname = "%s %s" % (hdr.get('GLON'),hdr.get('GLAT'))
     else:
         specname = filename.rstrip(".fits")
-    if hdr.get('CUNIT1') in ['m/s','M/S']:
+    if hdr.get('CUNIT1'+wcstype) in ['m/s','M/S']:
         conversion_factor = 1000.0
+        xunits = 'm/s'
     else:
         conversion_factor = 1.0
+        xunits = hdr.get('CUNIT1'+wcstype)
     vconv = lambda v: ((v-p3+1)*dv+v0)/conversion_factor
     xtora=None
     ytodec=None
     units = hdr.get('BUNIT')
+    if hdr.get('CTYPE1'+wcstype):
+        xtype = hdr.get('CTYPE1'+wcstype)
+    else:
+        xtype = 'VLSR'
 
-    return dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units
+    return dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units,xunits
 
 def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
         vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
-        specname=None,quiet=True,specnum=0,
+        specname=None,quiet=True,specnum=0,wcstype='',offset=None,
         smoothtype='gaussian',convmode='valid',**kwargs):
     """
     Inputs:
@@ -347,20 +370,26 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     if vpars and vconv and hdr and spec and xtora and ytora:
         dv,v0,p3 = vpars
     else:
-        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units = open_1d(filename,specnum=specnum)
+        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits = open_1d(filename,specnum=specnum,wcstype=wcstype)
         if specname is None: specname=specname_file
+
+    if type(offset)==type('str'):
+        if hdr.get(offset) is not None:
+            offset = hdr.get(offset)
+        else:
+            raise ValueError("Offset specified but none present.")
 
     varr = vconv(arange(spec.shape[0]))
     if vmin is None or vcrop==False: argvmin = 0
     else: 
       argvmin = argmin(abs(varr-vmin))
       if dv > 0:
-        hdr.update('CRPIX1',p3-argvmin)
+        hdr.update('CRPIX1'+wcstype,p3-argvmin)
     if vmax is None or vcrop==False: argvmax = spec.shape[0]
     else: 
       argvmax = argmin(abs(varr-vmax))
       if dv < 0:
-        hdr.update('CRPIX1',p3-argvmax)
+        hdr.update('CRPIX1'+wcstype,p3-argvmax)
 
     if argvmin > argvmax:
         argvmin,argvmax = argvmax,argvmin
@@ -406,12 +435,13 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         # shift 1/2 pixel to the right so that the first pixel goes from 0 to 1
         vconv = lambda v: ((v-newrefpix)*dv+v0)/conversion_factor
         ivconv = lambda V: newrefpix+(V*conversion_factor-v0)/dv
-        hdr.update('CRPIX1',newrefpix+1)
-        hdr.update('CDELT1',dv)
+        hdr.update('CRPIX1'+wcstype,newrefpix+1)
+        hdr.update('CDELT1'+wcstype,dv)
 
     sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor,hdr=hdr)
 
-    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,vmin=vmin,vmax=vmax,units=units,**kwargs)
+    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,vmin=vmin,vmax=vmax,units=units,xunits=xunits,
+            offset=offset,**kwargs)
     
     if hdr.get('GLON') and hdr.get('GLAT'):
         sp.glon = hdr.get('GLON')

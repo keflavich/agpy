@@ -21,11 +21,12 @@ then
     echo montage wrapper
     echo Usage:
     echo mGetHdr template_fitsfile.fit mosaic.hdr
-    echo montage outfile=l089_reference_montage.fits 0*_indiv13pca*_map01.fits combine=median &
+    echo montage outfile=l089_reference_montage.fits 0\*_indiv13pca\*_map01.fits combine='median' \&
     echo
     echo Keyword parameters:
     echo   combine - 'median', 'average', or 'sum'
     echo   header  - Filename of fits file from which to create mosaic.hdr
+    echo "             (if header is not specified, assumed to be mosaic.hdr in pwd)"
     echo   outfile - Output fits filename
     exit
 else
@@ -58,13 +59,16 @@ else
         fi
     done
 fi
-echo FILES: ${files[@]} ${#files} 
+echo FILES: ${files[@]} 
+echo NFILES: ${#files} 
 echo Extra Parameters: $params
 if [ ${#files} -gt 0 ] 
 then
     echo "Creating temporary directory and hard-linking (not sym-linking) all files into it"
     mkdir tmp
+    #echo ln ${files[@]} tmp/
     ln ${files[@]} tmp/
+    #echo ln $headerfile tmp/
     ln $headerfile tmp/
     cd tmp/
 fi
