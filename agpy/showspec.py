@@ -33,6 +33,16 @@ try:
 except ImportError:
     print "showspec requires coords"
 
+def steppify(arr,isX=False,interval=0,sign=+1.0):
+    """
+    *support function*
+    Converts an array to double-length for step plotting
+    """
+    if isX and interval==0:
+        interval = abs(arr[1]-arr[0]) / 2.0
+    newarr = array(zip(arr-sign*interval,arr+sign*interval)).ravel()
+    return newarr
+
 class SpecPlotter:
   """
   callback for matplotlib to display an annotation when points are clicked on.  The
@@ -45,15 +55,20 @@ class SpecPlotter:
   connect('button_press_event', af)
   """
 
-  def __init__(self, cube, axis=None, xtol=None, ytol=None,
-          vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x,
-          specname=None,dv=None,hdr=None):
+  def __init__(self,  cube,  axis=None,  xtol=None,  ytol=None, vconv=lambda x: x, 
+          xtora=lambda x: x, ytodec=lambda x: x, specname=None, dv=None,
+          hdr=None, errspec=None,  maskspec=None):
     self.vconv = vconv
     self.xtora = xtora
     self.ytodec = ytodec
     self.cube = where(numpy.isnan(cube),0,cube)
     self.specname=specname
     self.dv=dv
+    self.errspec = errspec
+    if maskspec is not None:
+        self.maskspec = maskspec
+    else:
+        self.maskspec = zeros(self.cube.shape)
     self.graphic_objects=[]
     if hdr: self.header = hdr
     if axis is None:
@@ -72,7 +87,8 @@ class SpecPlotter:
   def plotspec(self, i, j, fig=None, fignum=1, cube=True,
           button=1, dv=None,ivconv=None,clear=True,color='k',
           axis=None, offset=0.0, scale=1.0, voff=0.0, vmin=None,
-          vmax=None, units='K', xunits=None, **kwargs):
+          vmax=None, units='K', xunits=None, erralpha=0.2, 
+          errstyle='fill', **kwargs):
     """
     Plot a spectrum
     Originally written to plot spectra from data cubes, hence the i,j parameter
@@ -113,9 +129,25 @@ class SpecPlotter:
                 linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     else:
-        self.axis.plot(vind,self.cube*scale+offset,color=color,
-                linestyle='steps-mid',linewidth=linewidth,
-                **kwargs)
+        if self.maskspec.sum() > 0:
+            nanmask = where(self.maskspec,numpy.nan,1)
+            self.axis.plot(vind,self.cube*scale*nanmask+offset,color=color,
+                    linestyle='steps-mid',linewidth=linewidth,
+                    **kwargs)
+        else:
+            self.axis.plot(vind,self.cube*scale+offset,color=color,
+                    linestyle='steps-mid',linewidth=linewidth,
+                    **kwargs)
+        if self.errspec is not None:
+            if errstyle == 'fill':
+                self.axis.fill_between(steppify(vind,isX=True,sign=sign(self.dv)),
+                        steppify(self.cube*scale-self.errspec*scale),
+                        steppify(self.cube*scale+self.errspec*scale),
+                        facecolor=color, alpha=erralpha, **kwargs)
+            elif errstyle == 'bars':
+                self.axis.errorbar(vind, self.cube*scale,
+                        yerr=self.errspec*scale, ecolor=color, fmt=None,
+                        **kwargs)
 
     if vmin is not None: xlo = vmin
     else: xlo=vind.min()
@@ -353,7 +385,7 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
     return (spectrum-bestfit)
 
-def open_1d(filename,specnum=0,wcstype=''):
+def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
     """
     Grabs all the relevant pieces of a 1d spectrum for plotting
     wcstype is the suffix on the WCS type to get to velocity/frequency/whatever
@@ -361,7 +393,13 @@ def open_1d(filename,specnum=0,wcstype=''):
     f = pyfits.open(filename)
     hdr = f[0].header
     spec = f[0].data
+    errspec  = None
+    maskspec = None
     if hdr.get('NAXIS') == 2:
+        if errspecnum is not None:
+            errspec = spec[errspecnum,:]
+        if maskspecnum is not None:
+            maskspec = spec[maskspecnum,:]
         spec = spec[specnum,:]
     elif hdr.get('NAXIS') > 2:
         raise ValueError("Too many axes for open_1d (splat_1d) - use cube instead")
@@ -390,13 +428,13 @@ def open_1d(filename,specnum=0,wcstype=''):
     else:
         xtype = 'VLSR'
 
-    return dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units,xunits
+    return dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units,xunits,errspec,maskspec
 
 def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
         vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
-        specname=None,quiet=True,specnum=0,wcstype='',offset=None,
-        smoothtype='gaussian',convmode='valid',**kwargs):
+        specname=None,quiet=True,specnum=0,errspecnum=None,wcstype='',offset=None,
+        smoothtype='gaussian',convmode='valid',maskspecnum=None,**kwargs):
     """
     Inputs:
         vmin,vmax - range over which to baseline and plot
@@ -406,7 +444,8 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     if vpars and vconv and hdr and spec and xtora and ytora:
         dv,v0,p3 = vpars
     else:
-        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits = open_1d(filename,specnum=specnum,wcstype=wcstype)
+        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits,errspec,maskspec = \
+                open_1d(filename,specnum=specnum,wcstype=wcstype,errspecnum=errspecnum,maskspecnum=maskspecnum)
         if specname is None: specname=specname_file
         if units is None and kwargs.has_key('units'): units = kwargs.pop('units')
 
@@ -460,6 +499,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
             kernel /= kernel.sum()
             kernsize = len(kernel)
             specplot = convolve(specplot,kernel,convmode)[::roundsmooth] 
+        if errspec is not None: errspec = convolve(errspec,ones(roundsmooth),convmode)[::roundsmooth] / sqrt(roundsmooth)
         # this bit of code may also make sense, but I'm shifting the center pixel instead
         # b/c it's easier (?) to deal with velocity range
         #v0 += (abs(dv)*smooth - abs(dv))/2.0 # pixel center moves by half the original pixel size
@@ -478,10 +518,13 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         hdr.update('CRPIX1'+wcstype,newrefpix+1)
         hdr.update('CDELT1'+wcstype,dv)
 
-    sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,specname=specname,dv=dv/conversion_factor,hdr=hdr)
+    sp = SpecPlotter(specplot, vconv=vconv, xtora=xtora, ytodec=ytodec,
+            specname=specname, dv=dv/conversion_factor, hdr=hdr,
+            errspec=errspec, maskspec=maskspec)
 
-    sp.plotspec(0,0,button=button,ivconv=ivconv,dv=dv,cube=False,vmin=vmin,vmax=vmax,units=units,xunits=xunits,
-            offset=offset,**kwargs)
+    sp.plotspec(0, 0, button=button, ivconv=ivconv, dv=dv, cube=False,
+            vmin=vmin, vmax=vmax, units=units, xunits=xunits, offset=offset,
+            **kwargs)
     
     if hdr.get('GLON') and hdr.get('GLAT'):
         sp.glon = hdr.get('GLON')
