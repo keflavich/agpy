@@ -54,6 +54,7 @@ class SpecPlotter:
     self.cube = where(numpy.isnan(cube),0,cube)
     self.specname=specname
     self.dv=dv
+    self.graphic_objects=[]
     if hdr: self.header = hdr
     if axis is None:
       self.axis = pylab.gca()
@@ -95,6 +96,10 @@ class SpecPlotter:
         self.axis = axis
     #ax = axes([.05,.05,.7,.85])
 
+    self.scale = scale
+    self.units = units
+    self.xunits= xunits
+
     vind = self.vconv(arange(self.cube.shape[0])) + voff
     xind = arange(self.cube.shape[0])
 
@@ -126,6 +131,7 @@ class SpecPlotter:
         xlabel(xunits)
     else:
         xlabel("V$_{LSR}$ (km s$^{-1}$)")
+        self.xunits = 'km/s'
     self.units = units
     if units in ['Ta*','Tastar','K']:
       ylabel("$T_A^*$ (K)")
@@ -143,6 +149,36 @@ class SpecPlotter:
     """
     newfile = pyfits.PrimaryHDU(data=self.cube,header=self.header)
     newfile.writeto(fname,**kwargs)
+
+  def showlines(self,linefreqs,linenames,ctype='freq',cunit='hz',yscale=0.8,voffset=0.0,
+          voffunit='km/s',**kwargs):
+      """
+      Overplot vertical lines and labels at the frequencies (or velocities) of each line
+
+      yscale - fraction of maximum at which to label
+      """
+
+      if ctype != 'freq':
+          print "Sorry, non-frequency units not implemented yet."
+          return
+
+      speedoflight=2.99792458e5
+      if 'hz' in cunit or 'Hz' in cunit:
+          linefreqs *= (1.0 + voffset / speedoflight)
+      else:
+          linefreqs += voffset
+    
+      ymax = (self.cube*self.scale).max() 
+      for lf,ln in zip(linefreqs,linenames):
+          self.graphic_objects.append(vlines(lf,0,ymax,**kwargs))
+          self.graphic_objects.append(text(lf,ymax*yscale,ln,rotation='vertical',**kwargs))
+
+      return self.graphic_objects
+
+  def hidelines(self):
+        for obj in self.graphic_objects:
+            obj.set_visible(False)
+
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
     
@@ -372,12 +408,15 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     else:
         dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits = open_1d(filename,specnum=specnum,wcstype=wcstype)
         if specname is None: specname=specname_file
+        if units is None and kwargs.has_key('units'): units = kwargs.pop('units')
 
     if type(offset)==type('str'):
         if hdr.get(offset) is not None:
             offset = hdr.get(offset)
         else:
             raise ValueError("Offset specified but none present.")
+    elif offset is None:
+        offset = 0.0
 
     varr = vconv(arange(spec.shape[0]))
     if vmin is None or vcrop==False: argvmin = 0
@@ -406,12 +445,13 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     else: specplot = spec[argvmin:argvmax]
 
     if smooth:
+        roundsmooth = round(smooth) # can only downsample by integers
         # change fitter first
         if smoothtype == 'hanning': 
-            specplot = convolve(specplot,hanning(2+smooth)/hanning(2+smooth).sum(),convmode)[::smooth]
+            specplot = convolve(specplot,hanning(2+smooth)/hanning(2+smooth).sum(),convmode)[::roundsmooth]
             kernsize = smooth
         elif smoothtype == 'boxcar':
-            specplot = convolve(specplot,ones(smooth)/float(smooth),convmode)[::smooth]
+            specplot = convolve(specplot,ones(smooth)/float(smooth),convmode)[::roundsmooth]
             kernsize = smooth
         elif smoothtype == 'gaussian':
             speclen = specplot.shape[0]
@@ -419,17 +459,17 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
             kernel = exp(-xkern**2/(2*(smooth/sqrt(8*log(2)))**2))
             kernel /= kernel.sum()
             kernsize = len(kernel)
-            specplot = convolve(specplot,kernel,convmode)[::smooth] 
+            specplot = convolve(specplot,kernel,convmode)[::roundsmooth] 
         # this bit of code may also make sense, but I'm shifting the center pixel instead
         # b/c it's easier (?) to deal with velocity range
         #v0 += (abs(dv)*smooth - abs(dv))/2.0 # pixel center moves by half the original pixel size
-        dv *= smooth
+        dv *= roundsmooth
         if convmode == 'same':
-          newrefpix = (p3-argvmin)/smooth  
+          newrefpix = (p3-argvmin)/roundsmooth  
         elif convmode == 'full':
-          newrefpix = (p3-0.5-argvmin+kernsize/2.0)/smooth  
+          newrefpix = (p3-0.5-argvmin+kernsize/2.0)/roundsmooth  
         elif convmode == 'valid':
-          newrefpix = (p3-0.5-argvmin-kernsize/2.0)/smooth  
+          newrefpix = (p3-0.5-argvmin-kernsize/2.0)/roundsmooth  
         # this was resolved by advanced guess-and check
         # but also, sort of makes sense: FITS refers to the *center* of a pixel.  You want to 
         # shift 1/2 pixel to the right so that the first pixel goes from 0 to 1
