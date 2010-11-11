@@ -61,7 +61,7 @@ class SpecPlotter:
     self.vconv = vconv
     self.xtora = xtora
     self.ytodec = ytodec
-    self.cube = where(numpy.isnan(cube),0,cube)
+    self.cube = cube # where(numpy.isnan(cube),0,cube)
     self.specname=specname
     self.dv=dv
     self.errspec = errspec
@@ -116,7 +116,7 @@ class SpecPlotter:
     self.units = units
     self.xunits= xunits
 
-    vind = self.vconv(arange(self.cube.shape[0])) + voff
+    self.vind = self.vconv(arange(self.cube.shape[0])) + voff
     xind = arange(self.cube.shape[0])
 
     if kwargs.has_key('linewidth'):
@@ -125,34 +125,34 @@ class SpecPlotter:
         linewidth="0.5"
 
     if cube:
-        self.axis.plot(vind,self.cube[:,i,j]*scale+offset,color=color,
+        self.axis.plot(self.vind,self.cube[:,i,j]*scale+offset,color=color,
                 linestyle='steps-mid',linewidth=linewidth,
                 **kwargs)
     else:
         if self.maskspec.sum() > 0:
             nanmask = where(self.maskspec,numpy.nan,1)
-            self.axis.plot(vind,self.cube*scale*nanmask+offset,color=color,
+            self.axis.plot(self.vind,self.cube*scale*nanmask+offset,color=color,
                     linestyle='steps-mid',linewidth=linewidth,
                     **kwargs)
         else:
-            self.axis.plot(vind,self.cube*scale+offset,color=color,
+            self.axis.plot(self.vind,self.cube*scale+offset,color=color,
                     linestyle='steps-mid',linewidth=linewidth,
                     **kwargs)
         if self.errspec is not None:
             if errstyle == 'fill':
-                self.axis.fill_between(steppify(vind,isX=True,sign=sign(self.dv)),
+                self.axis.fill_between(steppify(self.vind,isX=True,sign=sign(self.dv)),
                         steppify(self.cube*scale-self.errspec*scale),
                         steppify(self.cube*scale+self.errspec*scale),
                         facecolor=color, alpha=erralpha, **kwargs)
             elif errstyle == 'bars':
-                self.axis.errorbar(vind, self.cube*scale,
+                self.axis.errorbar(self.vind, self.cube*scale,
                         yerr=self.errspec*scale, ecolor=color, fmt=None,
                         **kwargs)
 
     if vmin is not None: xlo = vmin
-    else: xlo=vind.min()
+    else: xlo=self.vind.min()
     if vmax is not None: xhi = vmax
-    else: xhi=vind.max()
+    else: xhi=self.vind.max()
     self.axis.set_xlim(xlo,xhi)
 
     if self.xtora and self.ytodec:
