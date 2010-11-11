@@ -487,11 +487,14 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         roundsmooth = round(smooth) # can only downsample by integers
         # change fitter first
         if smoothtype == 'hanning': 
-            specplot = convolve(specplot,hanning(2+smooth)/hanning(2+smooth).sum(),convmode)[::roundsmooth]
+            specplot = convolve(specplot,hanning(2+roundsmooth)/hanning(2+roundsmooth).sum(),convmode)[::roundsmooth]
             kernsize = smooth
+            ones_sameshape = zeros(smooth+2)
+            ones_sameshape[1:-1] = 1
         elif smoothtype == 'boxcar':
-            specplot = convolve(specplot,ones(smooth)/float(smooth),convmode)[::roundsmooth]
-            kernsize = smooth
+            specplot = convolve(specplot,ones(roundsmooth)/float(roundsmooth),convmode)[::roundsmooth]
+            kernsize = roundsmooth
+            ones_sameshape = ones(roundsmooth)
         elif smoothtype == 'gaussian':
             speclen = specplot.shape[0]
             xkern  = linspace(-1*smooth,smooth,smooth*3)
@@ -499,7 +502,12 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
             kernel /= kernel.sum()
             kernsize = len(kernel)
             specplot = convolve(specplot,kernel,convmode)[::roundsmooth] 
-        if errspec is not None: errspec = convolve(errspec,ones(roundsmooth),convmode)[::roundsmooth] / sqrt(roundsmooth)
+            ones_sameshape = zeros(roundsmooth*3)
+            ones_sameshape[roundsmooth:-roundsmooth] = 1
+        if errspec is not None: errspec = convolve(errspec,ones_sameshape,convmode)[::roundsmooth] / sqrt(roundsmooth)
+        if maskspec is not None: 
+            maskspec = array(convolve(maskspec,ones_sameshape,convmode)[::roundsmooth],dtype='bool')
+            if maskspec.shape != specplot.shape: import pdb; pdb.set_trace()
         # this bit of code may also make sense, but I'm shifting the center pixel instead
         # b/c it's easier (?) to deal with velocity range
         #v0 += (abs(dv)*smooth - abs(dv))/2.0 # pixel center moves by half the original pixel size
