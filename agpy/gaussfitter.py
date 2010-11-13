@@ -250,6 +250,28 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         returns = (returns,fitimage)
     return returns
 
+def onedmoments(Xax,data,vheight=1,estimator=median,**kwargs):
+    """Returns (height, amplitude, x, width_x)
+    the gaussian parameters of a 1D distribution by calculating its
+    moments.  Depending on the input parameters, will only output 
+    a subset of the above.
+    
+    If using masked arrays, pass estimator=numpy.ma.median
+    'estimator' is used to measure the background level (height)
+    """
+    total = numpy.abs(data).sum()
+    xcen = (Xax*numpy.abs(data)).sum()/total
+    width_x = numpy.sqrt(((Xax-xcen)**2 * numpy.abs(data)).sum()/total)
+    height = estimator(data.ravel())
+    amplitude = data.max()-height
+    mylist = [amplitude,xcen]
+    if numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
+        raise ValueError("something is nan")
+    if vheight==1:
+        mylist = [height] + mylist
+    mylist = mylist + [width_x]
+    return mylist
+
 def onedgaussian(x,H,A,dx,w):
     """
     Returns a 1-dimensional gaussian of form
@@ -257,9 +279,12 @@ def onedgaussian(x,H,A,dx,w):
     """
     return H+A*numpy.exp(-(x-dx)**2/(2*w**2))
 
-def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,False],limitedmin=[False,False,False,True],
-        limitedmax=[False,False,False,False],minpars=[0,0,0,0],maxpars=[0,0,0,0],
-        quiet=True,shh=True):
+def onedgaussfit(xax, data, err=None,
+        params=[0,1,0,1],fixed=[False,False,False,False],
+        limitedmin=[False,False,False,True],
+        limitedmax=[False,False,False,False], minpars=[0,0,0,0],
+        maxpars=[0,0,0,0], quiet=True, shh=True,
+        usemoments=False):
     """
     Inputs:
        xax - x axis
@@ -272,6 +297,7 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
        limitedmax/maxpars - set upper limits on each parameter
        quiet - should MPFIT output each iteration?
        shh - output final parameters?
+       usemoments - replace default parameters with moments
 
     Returns:
        Fit parameters
@@ -289,6 +315,9 @@ def onedgaussfit(xax,data,err=None,params=[0,1,0,1],fixed=[False,False,False,Fal
 
     if xax == None:
         xax = numpy.arange(len(data))
+
+    if usemoments:
+        params = onedmoments(xax,data)
 
     parinfo = [ {'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0} ,
                 {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
@@ -339,16 +368,17 @@ def n_gaussian(pars=None,a=None,dx=None,sigma=None):
         return v
     return g
 
-def multigaussfit(xax,data,ngauss=1,err=None,params=[1,0,1],fixed=[False,False,False],limitedmin=[False,False,True],
-        limitedmax=[False,False,False],minpars=[0,0,0],maxpars=[0,0,0],
-        quiet=True,shh=True):
+def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
+        fixed=[False,False,False], limitedmin=[False,False,True],
+        limitedmax=[False,False,False], minpars=[0,0,0], maxpars=[0,0,0],
+        quiet=True, shh=True):
     """
     An improvement on onedgaussfit.  Lets you fit multiple gaussians.
 
     Inputs:
        xax - x axis
        data - y axis
-       ngauss - How many gaussians to fit?  Default 1 (this could supercede onedgaussfit)
+       ngauss - How many gaussians to fit?  Default 1 (this could supersede onedgaussfit)
        err - error corresponding to data
 
      These parameters need to have length = 3*ngauss.  If ngauss > 1 and length = 3, they will
@@ -400,7 +430,11 @@ def multigaussfit(xax,data,ngauss=1,err=None,params=[1,0,1],fixed=[False,False,F
 
     parnames = {0:"SHIFT",1:"WIDTH",2:"AMPLITUDE"}
 
-    parinfo = [ {'n':ii,'value':params[ii],'limits':[minpars[ii],maxpars[ii]],'limited':[limitedmin[ii],limitedmax[ii]],'fixed':fixed[ii],'parname':parnames[ii/3]+str(ii/3),'error':ii} for ii in xrange(len(params)) ]
+    parinfo = [ {'n':ii, 'value':params[ii],
+        'limits':[minpars[ii],maxpars[ii]],
+        'limited':[limitedmin[ii],limitedmax[ii]], 'fixed':fixed[ii],
+        'parname':parnames[ii/3]+str(ii/3), 'error':ii} 
+        for ii in xrange(len(params)) ]
 
     mp = mpfit(mpfitfun(xax,data,err),parinfo=parinfo,quiet=quiet)
     mpp = mp.params

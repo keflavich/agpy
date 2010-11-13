@@ -24,6 +24,7 @@ from mpfit import mpfit
 from collapse_gaussfit import *
 from ratosexagesimal import *
 import pyfits
+import gaussfitter
 
 from numpy import isnan
 from mad import MAD,nanmedian
@@ -44,173 +45,243 @@ def steppify(arr,isX=False,interval=0,sign=+1.0):
     return newarr
 
 class SpecPlotter:
-  """
-  callback for matplotlib to display an annotation when points are clicked on.  The
-  point which is closest to the click and within xtol and ytol is identified.
-    
-  Register this function like this:
-    
-  scatter(xdata, ydata)
-  af = AnnoteFinder(xdata, ydata, annotes)
-  connect('button_press_event', af)
-  """
-
-  def __init__(self,  cube,  axis=None,  xtol=None,  ytol=None, vconv=lambda x: x, 
-          xtora=lambda x: x, ytodec=lambda x: x, specname=None, dv=None,
-          hdr=None, errspec=None,  maskspec=None):
-    self.vconv = vconv
-    self.xtora = xtora
-    self.ytodec = ytodec
-    self.cube = cube # where(numpy.isnan(cube),0,cube)
-    self.specname=specname
-    self.dv=dv
-    self.errspec = errspec
-    if maskspec is not None:
-        self.maskspec = maskspec
-    else:
-        self.maskspec = zeros(self.cube.shape)
-    self.graphic_objects=[]
-    if hdr: self.header = hdr
-    if axis is None:
-      self.axis = pylab.gca()
-    else:
-      self.axis= axis
-
-  def __call__(self, event):
-    if event.inaxes:
-      clickX = event.xdata
-      clickY = event.ydata
-      tb = get_current_fig_manager().toolbar
-      if ((self.axis is None) or (self.axis==event.inaxes)) and tb.mode=='':
-        self.plotspec(clickY,clickX,button=event.button)
-
-  def plotspec(self, i, j, fig=None, fignum=1, cube=True,
-          button=1, dv=None,ivconv=None,clear=True,color='k',
-          axis=None, offset=0.0, scale=1.0, voff=0.0, vmin=None,
-          vmax=None, units='K', xunits=None, erralpha=0.2, 
-          errstyle='fill', **kwargs):
     """
-    Plot a spectrum
-    Originally written to plot spectra from data cubes, hence the i,j parameter
-    to specify the location in the cube
+    callback for matplotlib to display an annotation when points are clicked on.  The
+    point which is closest to the click and within xtol and ytol is identified.
+      
+    Register this function like this:
+      
+    scatter(xdata, ydata)
+    af = AnnoteFinder(xdata, ydata, annotes)
+    connect('button_press_event', af)
     """
-    if dv is None:
-        dv = self.dv
 
-    if fig is None and clear and axis is None:
-        fig=figure(fignum)
-        fig.clf()
-        self.axis = fig.gca()
-    elif fig is None and axis is None:
-        self.axis = pylab.gca()
-    elif clear and fig:
-        fig.clf()
-        self.axis = fig.gca()
-    elif axis is None:
-        self.axis = fig.gca()
-    else:
-        self.axis = axis
-    #ax = axes([.05,.05,.7,.85])
-
-    self.scale = scale
-    self.units = units
-    self.xunits= xunits
-
-    self.vind = self.vconv(arange(self.cube.shape[0])) + voff
-    xind = arange(self.cube.shape[0])
-
-    if kwargs.has_key('linewidth'):
-        linewidth = kwargs.pop('linewidth')
-    else:
-        linewidth="0.5"
-
-    if cube:
-        self.axis.plot(self.vind,self.cube[:,i,j]*scale+offset,color=color,
-                linestyle='steps-mid',linewidth=linewidth,
-                **kwargs)
-    else:
-        if self.maskspec.sum() > 0:
-            nanmask = where(self.maskspec,numpy.nan,1)
-            self.axis.plot(self.vind,self.cube*scale*nanmask+offset,color=color,
-                    linestyle='steps-mid',linewidth=linewidth,
-                    **kwargs)
-        else:
-            self.axis.plot(self.vind,self.cube*scale+offset,color=color,
-                    linestyle='steps-mid',linewidth=linewidth,
-                    **kwargs)
-        if self.errspec is not None:
-            if errstyle == 'fill':
-                self.axis.fill_between(steppify(self.vind,isX=True,sign=sign(self.dv)),
-                        steppify(self.cube*scale-self.errspec*scale),
-                        steppify(self.cube*scale+self.errspec*scale),
-                        facecolor=color, alpha=erralpha, **kwargs)
-            elif errstyle == 'bars':
-                self.axis.errorbar(self.vind, self.cube*scale,
-                        yerr=self.errspec*scale, ecolor=color, fmt=None,
-                        **kwargs)
-
-    if vmin is not None: xlo = vmin
-    else: xlo=self.vind.min()
-    if vmax is not None: xhi = vmax
-    else: xhi=self.vind.max()
-    self.axis.set_xlim(xlo,xhi)
-
-    if self.xtora and self.ytodec:
-        title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
-    elif self.specname:
-        title("Spectrum of %s" % self.specname)
-    if xunits:
-        xlabel(xunits)
-    else:
-        xlabel("V$_{LSR}$ (km s$^{-1}$)")
-        self.xunits = 'km/s'
-    self.units = units
-    if units in ['Ta*','Tastar','K']:
-      ylabel("$T_A^*$ (K)")
-    elif units == 'mJy':
-      ylabel("$S_\\nu$ (mJy)")
-    elif units == 'Jy':
-      ylabel("$S_\\nu$ (Jy)")
-    else:
-      ylabel(units)
-    #legend(loc='best')
-
-  def save(self,fname,**kwargs):
-    """
-    Save the current spectrum (useful for saving baselined data)
-    """
-    newfile = pyfits.PrimaryHDU(data=self.cube,header=self.header)
-    newfile.writeto(fname,**kwargs)
-
-  def showlines(self,linefreqs,linenames,ctype='freq',cunit='hz',yscale=0.8,voffset=0.0,
-          voffunit='km/s',**kwargs):
-      """
-      Overplot vertical lines and labels at the frequencies (or velocities) of each line
-
-      yscale - fraction of maximum at which to label
-      """
-
-      if ctype != 'freq':
-          print "Sorry, non-frequency units not implemented yet."
-          return
-
-      speedoflight=2.99792458e5
-      if 'hz' in cunit or 'Hz' in cunit:
-          linefreqs *= (1.0 + voffset / speedoflight)
+    def __init__(self,  cube,  axis=None,  xtol=None,  ytol=None, vconv=lambda x: x, 
+            xtora=lambda x: x, ytodec=lambda x: x, specname=None, dv=None,
+            hdr=None, errspec=None,  maskspec=None):
+      self.vconv = vconv
+      self.xtora = xtora
+      self.ytodec = ytodec
+      self.cube = cube # where(numpy.isnan(cube),0,cube)
+      self.specname=specname
+      self.dv=dv
+      self.errspec = errspec
+      if maskspec is not None:
+          self.maskspec = maskspec
       else:
-          linefreqs += voffset
+          self.maskspec = zeros(self.cube.shape)
+      self.graphic_objects=[]
+      if hdr: self.header = hdr
+      if axis is None:
+        self.axis = pylab.gca()
+      else:
+        self.axis= axis
+  
+    def __call__(self, event):
+      if event.inaxes:
+        clickX = event.xdata
+        clickY = event.ydata
+        tb = get_current_fig_manager().toolbar
+        if ((self.axis is None) or (self.axis==event.inaxes)) and tb.mode=='':
+          self.plotspec(clickY,clickX,button=event.button)
+  
+    def plotspec(self, i, j, fig=None, fignum=1, cube=True,
+            button=1, dv=None,ivconv=None,clear=True,color='k',
+            axis=None, offset=0.0, scale=1.0, voff=0.0, vmin=None,
+            vmax=None, units='K', xunits=None, erralpha=0.2, 
+            errstyle='fill', **kwargs):
+      """
+      Plot a spectrum
+      Originally written to plot spectra from data cubes, hence the i,j parameter
+      to specify the location in the cube
+      """
+      if dv is None:
+          dv = self.dv
+  
+      if fig is None and clear and axis is None:
+          fig=figure(fignum)
+          fig.clf()
+          self.axis = fig.gca()
+      elif fig is None and axis is None:
+          self.axis = pylab.gca()
+      elif clear and fig:
+          fig.clf()
+          self.axis = fig.gca()
+      elif axis is None:
+          self.axis = fig.gca()
+      else:
+          self.axis = axis
+      #ax = axes([.05,.05,.7,.85])
+  
+      self.scale = scale
+      self.units = units
+      self.xunits= xunits
+  
+      self.vind = self.vconv(arange(self.cube.shape[0])) + voff
+      xind = arange(self.cube.shape[0])
+  
+      if kwargs.has_key('linewidth'):
+          linewidth = kwargs.pop('linewidth')
+      else:
+          linewidth="0.5"
+  
+      if cube:
+          self.axis.plot(self.vind,self.cube[:,i,j]*scale+offset,color=color,
+                  linestyle='steps-mid',linewidth=linewidth,
+                  **kwargs)
+      else:
+          if self.maskspec.sum() > 0:
+              nanmask = where(self.maskspec,numpy.nan,1)
+              self.axis.plot(self.vind,self.cube*scale*nanmask+offset,color=color,
+                      linestyle='steps-mid',linewidth=linewidth,
+                      **kwargs)
+          else:
+              self.axis.plot(self.vind,self.cube*scale+offset,color=color,
+                      linestyle='steps-mid',linewidth=linewidth,
+                      **kwargs)
+          if self.errspec is not None:
+              if errstyle == 'fill':
+                  self.axis.fill_between(steppify(self.vind,isX=True,sign=sign(self.dv)),
+                          steppify(self.cube*scale-self.errspec*scale),
+                          steppify(self.cube*scale+self.errspec*scale),
+                          facecolor=color, alpha=erralpha, **kwargs)
+              elif errstyle == 'bars':
+                  self.axis.errorbar(self.vind, self.cube*scale,
+                          yerr=self.errspec*scale, ecolor=color, fmt=None,
+                          **kwargs)
+  
+      if vmin is not None: xlo = vmin
+      else: xlo=self.vind.min()
+      if vmax is not None: xhi = vmax
+      else: xhi=self.vind.max()
+      self.axis.set_xlim(xlo,xhi)
+  
+      if self.xtora and self.ytodec:
+          title("Spectrum at %s %s" % (ratos(self.xtora(i)),dectos(self.ytodec(j))) ) 
+      elif self.specname:
+          title("Spectrum of %s" % self.specname)
+      if xunits:
+          xlabel(xunits)
+      else:
+          xlabel("V$_{LSR}$ (km s$^{-1}$)")
+          self.xunits = 'km/s'
+      self.units = units
+      if units in ['Ta*','Tastar','K']:
+        ylabel("$T_A^*$ (K)")
+      elif units == 'mJy':
+        ylabel("$S_\\nu$ (mJy)")
+      elif units == 'Jy':
+        ylabel("$S_\\nu$ (Jy)")
+      else:
+        ylabel(units)
+      #legend(loc='best')
+  
+    def save(self,fname,**kwargs):
+      """
+      Save the current spectrum (useful for saving baselined data)
+      """
+      newfile = pyfits.PrimaryHDU(data=self.cube,header=self.header)
+      newfile.writeto(fname,**kwargs)
+  
+    def showlines(self,linefreqs,linenames,ctype='freq',cunit='hz',yscale=0.8,voffset=0.0,
+            voffunit='km/s',**kwargs):
+        """
+        Overplot vertical lines and labels at the frequencies (or velocities) of each line
+  
+        yscale - fraction of maximum at which to label
+        """
+  
+        if ctype != 'freq':
+            print "Sorry, non-frequency units not implemented yet."
+            return
+  
+        speedoflight=2.99792458e5
+        if 'hz' in cunit or 'Hz' in cunit:
+            linefreqs *= (1.0 + voffset / speedoflight)
+        else:
+            linefreqs += voffset
+      
+        ymax = (self.cube*self.scale).max() 
+        for lf,ln in zip(linefreqs,linenames):
+            self.graphic_objects.append(vlines(lf,0,ymax,**kwargs))
+            self.graphic_objects.append(text(lf,ymax*yscale,ln,rotation='vertical',**kwargs))
+  
+        return self.graphic_objects
+  
+    def hidelines(self):
+          for obj in self.graphic_objects:
+              obj.set_visible(False)
+  
+    def fitspec(self,interactive=False, usemoments=True, fitcolor='r',**kwargs):
+        """
+        Fit gaussians to a spectrum
+        """
+  
+        if self.__dict__.has_key('modelplot'):
+            for p in self.modelplot:
+                p.set_visible(False)
+  
+        if interactive:
+            print "Do something."
+            self.nclicks_b1 = 0
+            self.nclicks_b2 = 0
+            self.guesses = []
+            self.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
+        else:
+            print "Non-interactive, 1D fit with automatic guessing"
+            mpp,model,mpperr,chi2 = gaussfitter.onedgaussfit(self.vind, 
+                    self.cube, err=self.errspec, usemoments=usemoments, **kwargs)
+            self.model = model
+            self.modelpars = mpp
+            self.modelplot = self.axis.plot(self.vind, self.model, color=fitcolor, linewidth=0.5)
+            self.refresh()
     
-      ymax = (self.cube*self.scale).max() 
-      for lf,ln in zip(linefreqs,linenames):
-          self.graphic_objects.append(vlines(lf,0,ymax,**kwargs))
-          self.graphic_objects.append(text(lf,ymax*yscale,ln,rotation='vertical',**kwargs))
-
-      return self.graphic_objects
-
-  def hidelines(self):
-        for obj in self.graphic_objects:
-            obj.set_visible(False)
-
+    def makeguess(self,event,fitcolor='r'):
+        if event.button == 1:
+            if self.nclicks_b1 == 0:
+                self.gx1 = argmin(abs(event.xdata-self.vind))
+                self.nclicks_b1 += 1
+            elif self.nclicks_b1 == 1:
+                self.gx2 = argmin(abs(event.xdata-self.vind))
+                self.nclicks_b1 -= 1
+                if self.gx1 > self.gx2: self.gx1,self.gx2 = self.gx2,self.gx1
+                self.fitregion = self.axis.plot(self.vind[self.gx1:self.gx2],
+                        self.cube[self.gx1:self.gx2],drawstyle='steps-mid',
+                        color='c')
+        elif event.button == 2:
+            if self.nclicks_b2 == 0:
+                self.guesses.append([event.ydata,event.xdata,0])
+                self.nclicks_b2 += 1
+                self.guessplot = [self.axis.scatter(event.xdata,event.ydata,marker='x',c='r')]
+            elif self.nclicks_b2 == 1:
+                self.guesses[-1][2] = abs(event.xdata-self.guesses[-1][1])
+                self.nclicks_b2 -= 1
+                self.guessplot += self.axis.plot([event.xdata,
+                    2*self.guesses[-1][1]-event.xdata],[event.ydata]*2,
+                    color='r')
+            print "Button 2, click %i" % self.nclicks_b2
+        elif event.button == 3:
+            disconnect(self.click)
+            #self.click.disconnect()
+            if self.errspec is None: errspec = ones(self.gx2-self.gx1)
+            else: errspec = self.errspec[self.gx1:self.gx2]
+            print len(self.guesses)," Guesses: ",self.guesses," X channel range: ",self.gx1,self.gx2
+            mpp,model,mpperr,chi2 = gaussfitter.multigaussfit(self.vind[self.gx1:self.gx2], 
+                    self.cube[self.gx1:self.gx2], 
+                    err=errspec,
+                    ngauss=len(self.guesses),
+                    params=self.guesses)
+            self.model = model
+            self.modelpars = mpp
+            self.modelplot = self.axis.plot(self.vind[self.gx1:self.gx2],
+                    self.model, color=fitcolor, linewidth=0.5)
+            for p in self.guessplot + self.fitregion:
+                p.set_visible(False)
+        self.refresh()
+  
+    def refresh(self):
+        self.axis.figure.canvas.draw()
+  
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
     
@@ -407,8 +478,8 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
         dv,v0,p3 = hdr['CD1_1'+wcstype],hdr['CRVAL1'+wcstype],hdr['CRPIX1'+wcstype]
     else:
         dv,v0,p3 = hdr['CDELT1'+wcstype],hdr['CRVAL1'+wcstype],hdr['CRPIX1'+wcstype]
-    if hdr.get('OBJECT'+wcstype):
-        specname = hdr['OBJECT'+wcstype]
+    if hdr.get('OBJECT'):
+        specname = hdr['OBJECT']
     elif hdr.get('GLON') and hdr.get('GLAT'):
         specname = "%s %s" % (hdr.get('GLON'),hdr.get('GLAT'))
     else:
@@ -482,6 +553,8 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     ivconv = lambda V: p3-1-argvmin+(V*conversion_factor-v0)/dv
     if dobaseline: specplot = baseline(spec[argvmin:argvmax].squeeze(),exclude=exclude,order=order,quiet=quiet)
     else: specplot = spec[argvmin:argvmax]
+    if errspec is not None: errspec=errspec[argvmin:argvmax]
+    if maskspec is not None: maskspec=maskspec[argvmin:argvmax]
 
     if smooth:
         roundsmooth = round(smooth) # can only downsample by integers
@@ -504,7 +577,8 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
             specplot = convolve(specplot,kernel,convmode)[::roundsmooth] 
             ones_sameshape = zeros(roundsmooth*3)
             ones_sameshape[roundsmooth:-roundsmooth] = 1
-        if errspec is not None: errspec = convolve(errspec,ones_sameshape,convmode)[::roundsmooth] / sqrt(roundsmooth)
+        if errspec is not None: 
+            errspec = sqrt(convolve(errspec**2,ones_sameshape,convmode)[::roundsmooth]) / float(roundsmooth)
         if maskspec is not None: 
             maskspec = array(convolve(maskspec,ones_sameshape,convmode)[::roundsmooth],dtype='bool')
             if maskspec.shape != specplot.shape: import pdb; pdb.set_trace()
