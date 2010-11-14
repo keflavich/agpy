@@ -250,7 +250,7 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         returns = (returns,fitimage)
     return returns
 
-def onedmoments(Xax,data,vheight=1,estimator=median,**kwargs):
+def onedmoments(Xax,data,vheight=1,estimator=median,negamp=False,**kwargs):
     """Returns (height, amplitude, x, width_x)
     the gaussian parameters of a 1D distribution by calculating its
     moments.  Depending on the input parameters, will only output 
@@ -260,16 +260,24 @@ def onedmoments(Xax,data,vheight=1,estimator=median,**kwargs):
     'estimator' is used to measure the background level (height)
     """
     total = numpy.abs(data).sum()
-    xcen = (Xax*numpy.abs(data)).sum()/total
-    width_x = numpy.sqrt(((Xax-xcen)**2 * numpy.abs(data)).sum()/total)
+    dx = numpy.mean(Xax[1:] - Xax[:-1]) # assume a regular grid
+    integral = (data*dx).sum()
+    #width_x = numpy.sqrt(((Xax-xcen)**2 * numpy.abs(data)).sum()/total)
     height = estimator(data.ravel())
-    amplitude = data.max()-height
-    mylist = [amplitude,xcen]
+    if negamp: 
+        xcen = Xax[numpy.argmin(data)]
+        peakintegral = integral - height*len(Xax) - (data[data>height]*dx).sum()
+        amplitude = data.min()-height
+    else: 
+        xcen = Xax[numpy.argmax(data)]
+        peakintegral = integral - height*len(Xax) - (data[data<height]*dx).sum()
+        amplitude = data.max()-height
+    width_x = numpy.sqrt(numpy.abs(peakintegral / amplitude))
+    mylist = [amplitude,xcen,width_x]
     if numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
         raise ValueError("something is nan")
     if vheight==1:
         mylist = [height] + mylist
-    mylist = mylist + [width_x]
     return mylist
 
 def onedgaussian(x,H,A,dx,w):
@@ -284,6 +292,8 @@ def onedgaussfit(xax, data, err=None,
         limitedmin=[False,False,False,True],
         limitedmax=[False,False,False,False], minpars=[0,0,0,0],
         maxpars=[0,0,0,0], quiet=True, shh=True,
+        veryverbose=False,
+        vheight=True, negamp=False,
         usemoments=False):
     """
     Inputs:
@@ -316,8 +326,11 @@ def onedgaussfit(xax, data, err=None,
     if xax == None:
         xax = numpy.arange(len(data))
 
+    if vheight is False: height = params[0]
     if usemoments:
-        params = onedmoments(xax,data)
+        params = onedmoments(xax,data,vheight=vheight,negamp=negamp)
+        if vheight is False: params = [height]+params
+        if veryverbose: print "OneD moments: h: %g  a: %g  c: %g  w: %g" % tuple(params)
 
     parinfo = [ {'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0} ,
                 {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
@@ -332,7 +345,7 @@ def onedgaussfit(xax, data, err=None,
     if mp.status == 0:
         raise Exception(mp.errmsg)
 
-    if not shh:
+    if (not shh) or veryverbose:
         for i,p in enumerate(mpp):
             parinfo[i]['value'] = p
             print parinfo[i]['parname'],p," +/- ",mpperr[i]
