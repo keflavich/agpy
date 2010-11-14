@@ -371,7 +371,7 @@ def n_gaussian(pars=None,a=None,dx=None,sigma=None):
 def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
         fixed=[False,False,False], limitedmin=[False,False,True],
         limitedmax=[False,False,False], minpars=[0,0,0], maxpars=[0,0,0],
-        quiet=True, shh=True):
+        quiet=True, shh=True, veryverbose=False):
     """
     An improvement on onedgaussfit.  Lets you fit multiple gaussians.
 
@@ -433,8 +433,12 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
     parinfo = [ {'n':ii, 'value':params[ii],
         'limits':[minpars[ii],maxpars[ii]],
         'limited':[limitedmin[ii],limitedmax[ii]], 'fixed':fixed[ii],
-        'parname':parnames[ii/3]+str(ii/3), 'error':ii} 
+        'parname':parnames[ii%3]+str(ii%3), 'error':ii} 
         for ii in xrange(len(params)) ]
+
+    if veryverbose:
+        print "GUESSES: "
+        print "\n".join(["%s: %s" % (p['parname'],p['value']) for p in parinfo])
 
     mp = mpfit(mpfitfun(xax,data,err),parinfo=parinfo,quiet=quiet)
     mpp = mp.params
@@ -445,6 +449,7 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
         raise Exception(mp.errmsg)
 
     if not shh:
+        print "Final fit values: "
         for i,p in enumerate(mpp):
             parinfo[i]['value'] = p
             print parinfo[i]['parname'],p," +/- ",mpperr[i]

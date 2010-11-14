@@ -66,6 +66,8 @@ class SpecPlotter:
       self.specname=specname
       self.dv=dv
       self.errspec = errspec
+      self.specfit = Specfit(self)
+      self.specfit.gx2 = cube.shape[0] # initialize gaussian fitting region to be everywhere
       if maskspec is not None:
           self.maskspec = maskspec
       else:
@@ -201,10 +203,11 @@ class SpecPlotter:
         else:
             linefreqs += voffset
       
-        ymax = (self.cube*self.scale).max() 
+        ymax = (self.cube[self.cube==self.cube]*self.scale).max() 
         for lf,ln in zip(linefreqs,linenames):
-            self.graphic_objects.append(vlines(lf,0,ymax,**kwargs))
-            self.graphic_objects.append(text(lf,ymax*yscale,ln,rotation='vertical',**kwargs))
+            if lf < self.vind.max() and lf > self.vind.min():
+                self.graphic_objects.append(vlines(lf,0,ymax,**kwargs))
+                self.graphic_objects.append(text(lf,ymax*yscale,ln,rotation='vertical',**kwargs))
   
         return self.graphic_objects
   
@@ -212,7 +215,8 @@ class SpecPlotter:
           for obj in self.graphic_objects:
               obj.set_visible(False)
   
-    def fitspec(self,interactive=False, usemoments=True, fitcolor='r',**kwargs):
+    def fitspec(self,interactive=False, usemoments=True, fitcolor='r',
+            multifit=False, guesses=None, **kwargs):
         """
         Fit gaussians to a spectrum
         """
@@ -220,68 +224,128 @@ class SpecPlotter:
         if self.__dict__.has_key('modelplot'):
             for p in self.modelplot:
                 p.set_visible(False)
+
+        self.specfit.fitcolor = fitcolor
   
+        self.ngauss = 0
         if interactive:
-            print "Do something."
-            self.nclicks_b1 = 0
-            self.nclicks_b2 = 0
-            self.guesses = []
-            self.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
+            print "Left-click twice to select a fitting range, then middle-click twice to select a peak and width"
+            self.specfit.nclicks_b1 = 0
+            self.specfit.nclicks_b2 = 0
+            self.specfit.guesses = []
+            self.specfit.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
+            self.specfit.fitkwargs = kwargs
+        elif multifit:
+            if guesses is None:
+                print "You must input guesses when using multifit.  Also, baseline first!"
+            else:
+                self.specfit.guesses = guesses
+                self.specfit.multifit()
         else:
             print "Non-interactive, 1D fit with automatic guessing"
-            mpp,model,mpperr,chi2 = gaussfitter.onedgaussfit(self.vind, 
-                    self.cube, err=self.errspec, usemoments=usemoments, **kwargs)
-            self.model = model
-            self.modelpars = mpp
-            self.modelplot = self.axis.plot(self.vind, self.model, color=fitcolor, linewidth=0.5)
+            self.specfit.ngauss += 1
+            self.specfit.auto = 1
+            mpp,model,mpperr,chi2 = gaussfitter.onedgaussfit(self.vind[self.specfit.gx1:self.specfit.gx2],
+                    self.cube[self.specfit.gx1:self.specfit.gx2],
+                    err=self.errspec, usemoments=usemoments, **kwargs)
+            self.specfit.model = model
+            self.specfit.modelpars = mpp
+            self.specfit.modelplot = self.axis.plot(self.vind, self.specfit.model, color=self.specfit.fitcolor, linewidth=0.5)
             self.refresh()
     
-    def makeguess(self,event,fitcolor='r'):
+    def makeguess(self,event):
         if event.button == 1:
-            if self.nclicks_b1 == 0:
-                self.gx1 = argmin(abs(event.xdata-self.vind))
-                self.nclicks_b1 += 1
-            elif self.nclicks_b1 == 1:
-                self.gx2 = argmin(abs(event.xdata-self.vind))
-                self.nclicks_b1 -= 1
-                if self.gx1 > self.gx2: self.gx1,self.gx2 = self.gx2,self.gx1
-                self.fitregion = self.axis.plot(self.vind[self.gx1:self.gx2],
-                        self.cube[self.gx1:self.gx2],drawstyle='steps-mid',
+            if self.specfit.nclicks_b1 == 0:
+                self.specfit.gx1 = argmin(abs(event.xdata-self.vind))
+                self.specfit.nclicks_b1 += 1
+            elif self.specfit.nclicks_b1 == 1:
+                self.specfit.gx2 = argmin(abs(event.xdata-self.vind))
+                self.specfit.nclicks_b1 -= 1
+                if self.specfit.gx1 > self.specfit.gx2: self.specfit.gx1,self.specfit.gx2 = self.specfit.gx2,self.specfit.gx1
+                self.specfit.fitregion = self.axis.plot(self.vind[self.specfit.gx1:self.specfit.gx2],
+                        self.cube[self.specfit.gx1:self.specfit.gx2],drawstyle='steps-mid',
                         color='c')
+                if self.specfit.guesses == []:
+                    self.specfit.guesses = gaussfitter.onedmoments(
+                            self.vind[self.specfit.gx1:self.specfit.gx2],
+                            self.cube[self.specfit.gx1:self.specfit.gx2],
+                            vheight=0)
+                    self.specfit.ngauss = 1
+                    self.specfit.auto = 1
         elif event.button == 2:
-            if self.nclicks_b2 == 0:
-                self.guesses.append([event.ydata,event.xdata,0])
-                self.nclicks_b2 += 1
-                self.guessplot = [self.axis.scatter(event.xdata,event.ydata,marker='x',c='r')]
-            elif self.nclicks_b2 == 1:
-                self.guesses[-1][2] = abs(event.xdata-self.guesses[-1][1])
-                self.nclicks_b2 -= 1
-                self.guessplot += self.axis.plot([event.xdata,
-                    2*self.guesses[-1][1]-event.xdata],[event.ydata]*2,
+            if self.specfit.nclicks_b2 == 0:
+                if (self.specfit.auto == 1 and self.specfit.ngauss == 1):
+                    self.specfit.guesses[:2] = [event.ydata,event.xdata]
+                else:
+                    self.specfit.guesses += [event.ydata,event.xdata,1]
+                    self.specfit.ngauss += 1
+                self.specfit.nclicks_b2 += 1
+                self.specfit.guessplot = [self.axis.scatter(event.xdata,event.ydata,marker='x',c='r')]
+            elif self.specfit.nclicks_b2 == 1:
+                self.specfit.guesses[-1] = abs(event.xdata-self.specfit.guesses[-2])
+                self.specfit.nclicks_b2 -= 1
+                self.specfit.guessplot += self.axis.plot([event.xdata,
+                    2*self.specfit.guesses[-2]-event.xdata],[event.ydata]*2,
                     color='r')
-            print "Button 2, click %i" % self.nclicks_b2
         elif event.button == 3:
-            disconnect(self.click)
-            #self.click.disconnect()
-            if self.errspec is None: errspec = ones(self.gx2-self.gx1)
-            else: errspec = self.errspec[self.gx1:self.gx2]
-            print len(self.guesses)," Guesses: ",self.guesses," X channel range: ",self.gx1,self.gx2
-            mpp,model,mpperr,chi2 = gaussfitter.multigaussfit(self.vind[self.gx1:self.gx2], 
-                    self.cube[self.gx1:self.gx2], 
-                    err=errspec,
-                    ngauss=len(self.guesses),
-                    params=self.guesses)
-            self.model = model
-            self.modelpars = mpp
-            self.modelplot = self.axis.plot(self.vind[self.gx1:self.gx2],
-                    self.model, color=fitcolor, linewidth=0.5)
-            for p in self.guessplot + self.fitregion:
-                p.set_visible(False)
+            disconnect(self.specfit.click)
+            if self.specfit.ngauss > 0:
+                if self.errspec is None: errspec = ones(self.specfit.gx2-self.specfit.gx1)
+                else: errspec = self.errspec[self.specfit.gx1:self.specfit.gx2]
+                print len(self.specfit.guesses)/3," Guesses: ",self.specfit.guesses," X channel range: ",self.specfit.gx1,self.specfit.gx2
+                mpp,model,mpperr,chi2 = gaussfitter.multigaussfit(self.vind[self.specfit.gx1:self.specfit.gx2], 
+                        self.cube[self.specfit.gx1:self.specfit.gx2], 
+                        err=errspec,
+                        ngauss=len(self.specfit.guesses)/3,
+                        params=self.specfit.guesses,
+                        **self.specfit.fitkwargs)
+                self.specfit.model = model
+                self.specfit.modelpars = mpp
+                self.specfit.modelplot = self.axis.plot(self.vind[self.specfit.gx1:self.specfit.gx2],
+                        self.specfit.model, color=self.specfit.fitcolor, linewidth=0.5)
+                for p in self.specfit.guessplot + self.specfit.fitregion:
+                    p.set_visible(False)
         self.refresh()
   
     def refresh(self):
         self.axis.figure.canvas.draw()
-  
+
+class Specfit:
+
+    def __init__(self,specplotter):
+        self.model = None
+        self.modelpars = None
+        self.modelplot = None
+        self.guessplot = []
+        self.fitregion = []
+        self.ngauss = 0
+        self.nclicks_b1 = 0
+        self.nclicks_b2 = 0
+        self.gx1 = 0
+        self.gx2 = 0
+        self.guesses = []
+        self.click = 0
+        self.fitkwargs = {}
+        self.auto = 0
+        self.specplotter = specplotter
+
+    def multifit(self):
+        mpp,model,mpperr,chi2 = gaussfitter.multigaussfit(self.vind[self.gx1:self.gx2], 
+                self.cube[self.gx1:self.gx2], 
+                err=errspec,
+                ngauss=len(self.guesses)/3,
+                params=self.guesses,
+                **self.fitkwargs)
+        self.model = model
+        self.modelpars = mpp
+        self.modelplot = self.axis.plot(self.specplotter.vind[self.gx1:self.gx2],
+                self.model, color=self.fitcolor, linewidth=0.5)
+
+    def plotresiduals(self,figure=figure(2)):
+        self.residualfigure = figure
+        self.residualplot = self.residualfigure.axis.plot(self.specplotter.vind[self.gx1:self.gx2],
+                self.specplotter.cube[self.gx1:self.gx2]-self.model,drawstyle='steps-mid',
+                linewidth=0.5, color='k')
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
     
@@ -456,7 +520,8 @@ def baseline(spectrum,vmin=None,vmax=None,order=1,quiet=True,exclude=None,fitp=N
 
     return (spectrum-bestfit)
 
-def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
+def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None,
+        voffset=0.0):
     """
     Grabs all the relevant pieces of a 1d spectrum for plotting
     wcstype is the suffix on the WCS type to get to velocity/frequency/whatever
@@ -478,6 +543,7 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
         dv,v0,p3 = hdr['CD1_1'+wcstype],hdr['CRVAL1'+wcstype],hdr['CRPIX1'+wcstype]
     else:
         dv,v0,p3 = hdr['CDELT1'+wcstype],hdr['CRVAL1'+wcstype],hdr['CRPIX1'+wcstype]
+    v0 += voffset
     if hdr.get('OBJECT'):
         specname = hdr['OBJECT']
     elif hdr.get('GLON') and hdr.get('GLAT'):
@@ -504,7 +570,8 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
 def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
         vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
-        specname=None,quiet=True,specnum=0,errspecnum=None,wcstype='',offset=None,
+        specname=None,quiet=True,specnum=0,errspecnum=None,wcstype='',
+        offset=None, voffset=0.0,
         smoothtype='gaussian',convmode='valid',maskspecnum=None,**kwargs):
     """
     Inputs:
@@ -516,7 +583,8 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         dv,v0,p3 = vpars
     else:
         dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits,errspec,maskspec = \
-                open_1d(filename,specnum=specnum,wcstype=wcstype,errspecnum=errspecnum,maskspecnum=maskspecnum)
+                open_1d(filename,specnum=specnum,wcstype=wcstype,errspecnum=errspecnum,maskspecnum=maskspecnum,
+                        voffset=voffset)
         if specname is None: specname=specname_file
         if units is None and kwargs.has_key('units'): units = kwargs.pop('units')
 
@@ -607,6 +675,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     sp.plotspec(0, 0, button=button, ivconv=ivconv, dv=dv, cube=False,
             vmin=vmin, vmax=vmax, units=units, xunits=xunits, offset=offset,
             **kwargs)
+    sp.refresh()
     
     if hdr.get('GLON') and hdr.get('GLAT'):
         sp.glon = hdr.get('GLON')
