@@ -250,7 +250,7 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         returns = (returns,fitimage)
     return returns
 
-def onedmoments(Xax,data,vheight=1,estimator=median,negamp=False,**kwargs):
+def onedmoments(Xax,data,vheight=1,estimator=median,negamp=None,**kwargs):
     """Returns (height, amplitude, x, width_x)
     the gaussian parameters of a 1D distribution by calculating its
     moments.  Depending on the input parameters, will only output 
@@ -258,21 +258,37 @@ def onedmoments(Xax,data,vheight=1,estimator=median,negamp=False,**kwargs):
     
     If using masked arrays, pass estimator=numpy.ma.median
     'estimator' is used to measure the background level (height)
+
+    negamp can be used to force the peak negative (True), positive (False),
+    or it will be "autodetected" (negamp=None)
     """
-    total = numpy.abs(data).sum()
+
     dx = numpy.mean(Xax[1:] - Xax[:-1]) # assume a regular grid
     integral = (data*dx).sum()
-    #width_x = numpy.sqrt(((Xax-xcen)**2 * numpy.abs(data)).sum()/total)
-    height = estimator(data.ravel())
-    if negamp: 
-        xcen = Xax[numpy.argmin(data)]
-        peakintegral = integral - height*len(Xax) - (data[data>height]*dx).sum()
-        amplitude = data.min()-height
-    else: 
-        xcen = Xax[numpy.argmax(data)]
-        peakintegral = integral - height*len(Xax) - (data[data<height]*dx).sum()
-        amplitude = data.max()-height
-    width_x = numpy.sqrt(numpy.abs(peakintegral / amplitude))
+    height = estimator(data)
+    
+    # try to figure out whether pos or neg based on the minimum width of the pos/neg peaks
+    Lpeakintegral = integral - height*len(Xax) - (data[data>height]*dx).sum()
+    Lamplitude = data.min()-height
+    Lwidth_x = numpy.sqrt(numpy.abs(Lpeakintegral / Lamplitude))
+    Hpeakintegral = integral - height*len(Xax) - (data[data<height]*dx).sum()
+    Hamplitude = data.min()-height
+    Hwidth_x = numpy.sqrt(numpy.abs(Hpeakintegral / Hamplitude))
+    Lstddev = Xax[data<data.mean()].std()
+    Hstddev = Xax[data>data.mean()].std()
+    #print "Lstddev: %10.3g  Hstddev: %10.3g" % (Lstddev,Hstddev)
+    #print "Lwidth_x: %10.3g  Hwidth_x: %10.3g" % (Lwidth_x,Hwidth_x)
+
+    if negamp: # can force the guess to be negative
+        xcen,amplitude,width_x = Xax[numpy.argmin(data)],Lamplitude,Lwidth_x
+    elif negamp is None:
+        if Hstddev < Lstddev: 
+            xcen,amplitude,width_x, = Xax[numpy.argmax(data),Hamplitude,Hwidth_x]
+        else:                                                                   
+            xcen,amplitude,width_x, = Xax[numpy.argmin(data),Lamplitude,Lwidth_x]
+    else:  # if negamp==False, make positive
+        xcen,amplitude,width_x = Xax[numpy.argmax(data)],Hamplitude,Hwidth_x
+
     mylist = [amplitude,xcen,width_x]
     if numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
         raise ValueError("something is nan")
