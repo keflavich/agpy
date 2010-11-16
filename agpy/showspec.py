@@ -56,10 +56,11 @@ class SpecPlotter:
     connect('button_press_event', af)
     """
 
-    def __init__(self,  cube,  axis=None,  xtol=None,  ytol=None, vconv=lambda x: x, 
-            xtora=lambda x: x, ytodec=lambda x: x, specname=None, dv=None, color='k',
-            hdr=None, errspec=None,  maskspec=None, fig=None, fignum=1, clear=True,
-            title=None, erralpha=0.2, ivconv=None, autorefresh=True ):
+    def __init__(self,  cube,  axis=None,  xtol=None,  ytol=None, vconv=lambda
+            x: x, xtora=lambda x: x, ytodec=lambda x: x, specname=None,
+            dv=None, color='k', hdr=None, errspec=None,  maskspec=None,
+            fig=None, fignum=1, clear=True, title=None, xunits='km/s',
+            erralpha=0.2, ivconv=None, autorefresh=True, **kwargs ):
       self.vconv = vconv
       self.xtora = xtora
       self.ytodec = ytodec
@@ -69,9 +70,10 @@ class SpecPlotter:
       self.dv=dv
       self.scale=1.0
       self.units='K'
-      self.xunits='km/s'
+      self.xunits=xunits
       self.voff=0.0
       self.offset=0.0
+      self.continuum=0.0
       self.errspec = errspec
       self.erralpha=erralpha
       self.plotcolor=color
@@ -82,6 +84,9 @@ class SpecPlotter:
       self.title=title
       self.ivconv=ivconv
       self.autorefresh=autorefresh
+      self.spectrumplot=None
+      self.errorplot=None
+      self.plotkwargs = kwargs
       if maskspec is not None:
           self.maskspec = maskspec
       else:
@@ -93,7 +98,7 @@ class SpecPlotter:
       # figure out where to put the plot
       if fig is None and axis is None:
           fig=figure(fignum)
-          fig.clf()
+          if clear: fig.clf()
           self.axis = fig.gca()
       elif fig is None and axis is None:
           self.axis = pylab.gca()
@@ -115,7 +120,7 @@ class SpecPlotter:
           self.plotspec(clickY,clickX,button=event.button)
   
     def plotspec(self, i=0, j=0, cube=False, title=None,
-            button=1, clear=True,color=None,
+            button=1, clear=False,color=None, continuum=None,
             axis=None, offset=None, scale=None, voff=None, vmin=None,
             vmax=None, units=None, xunits=None, erralpha=None, 
             errstyle='fill', autorefresh=None, **kwargs):
@@ -130,6 +135,7 @@ class SpecPlotter:
       if xunits is not None: self.xunits= xunits
       if voff   is not None: self.voff  = voff
       if offset is not None: self.offset= offset
+      if continuum is not None: self.continuum= continuum
       if color  is not None: self.plotcolor=color
       if erralpha is not None: self.erralpha= erralpha
       if vmax  is not None: self.vmax = vmax
@@ -142,36 +148,37 @@ class SpecPlotter:
       self.vind = self.vconv(arange(self.cube.shape[0])) + self.voff
       xind = arange(self.cube.shape[0])
   
+      if kwargs.has_key('fignum'): kwargs.pop('fignum')
       if kwargs.has_key('linewidth'):
           linewidth = kwargs.pop('linewidth')
       else:
           linewidth=0.5
   
       if cube:
-          self.spectrum = self.cube[:,i,j]*self.scale+self.offset-self.baseline.basespec
-          axis.plot(self.vind,self.spectrum,color=self.plotcolor,
+          self.spectrum = self.cube[:,i,j]*self.scale+self.continuum-self.baseline.basespec
+          axis.plot(self.vind,self.spectrum+self.offset,color=self.plotcolor,
                   linestyle='steps-mid',linewidth=linewidth,
                   **kwargs)
       else:
           if self.maskspec.sum() > 0:
               nanmask = where(self.maskspec,numpy.nan,1)
-              self.spectrum = self.cube*self.scale*nanmask+self.offset-self.baseline.basespec
-              axis.plot(self.vind,self.spectrum,color=self.plotcolor,
+              self.spectrum = self.cube*self.scale*nanmask+self.continuum-self.baseline.basespec
+              self.spectrumplot = axis.plot(self.vind,self.spectrum+self.offset,color=self.plotcolor,
                       linestyle='steps-mid',linewidth=linewidth,
                       **kwargs)
           else:
-              self.spectrum = self.cube*self.scale+self.offset-self.baseline.basespec
-              axis.plot(self.vind,self.spectrum,color=self.plotcolor,
+              self.spectrum = self.cube*self.scale+self.continuum-self.baseline.basespec
+              self.spectrumplot = axis.plot(self.vind,self.spectrum+self.offset,color=self.plotcolor,
                       linestyle='steps-mid',linewidth=linewidth,
                       **kwargs)
           if self.errspec is not None:
               if errstyle == 'fill':
-                  axis.fill_between(steppify(self.vind,isX=True,sign=sign(self.dv)),
-                          steppify(self.spectrum-self.errspec*self.scale),
-                          steppify(self.spectrum+self.errspec*self.scale),
-                          facecolor=self.plotcolor, alpha=self.erralpha, **kwargs)
+                  self.errorplot = [axis.fill_between(steppify(self.vind,isX=True,sign=sign(self.dv)),
+                          steppify(self.spectrum+self.offset-self.errspec*self.scale),
+                          steppify(self.spectrum+self.offset+self.errspec*self.scale),
+                          facecolor=self.plotcolor, alpha=self.erralpha, **kwargs)]
               elif errstyle == 'bars':
-                  axis.errorbar(self.vind, self.spectrum,
+                  self.errorplot = axis.errorbar(self.vind, self.spectrum+self.offset,
                           yerr=self.errspec*self.scale, ecolor=self.plotcolor, fmt=None,
                           **kwargs)
   
@@ -188,7 +195,7 @@ class SpecPlotter:
                   (ratos(self.xtora(i)),dectos(self.ytodec(j))))
       elif self.specname:
           axis.set_title("Spectrum of %s" % self.specname)
-      if xunits:
+      if isinstance(self.xunits,str):
           axis.set_xlabel(self.xunits)
       else:
           axis.set_xlabel("V$_{LSR}$ (km s$^{-1}$)")
@@ -276,10 +283,11 @@ class SpecPlotter:
         else:
             #print "Non-interactive, 1D fit with automatic guessing"
             if self.baseline.order is None:
-                self.specfit.onedfit(usemoments=usemoments,annotate=annotate)
+                self.baseline.order=0
+                self.specfit.onedfit(usemoments=usemoments,annotate=annotate,**kwargs)
             else:
                 self.specfit.onedfit(usemoments=usemoments,annotate=annotate,
-                        vheight=False,height=0.0)
+                        vheight=False,height=0.0,**kwargs)
             if self.autorefresh: self.refresh()
     
     def makeguess(self,event):
@@ -328,17 +336,30 @@ class Baseline:
         procedure multiple times without losing information
         """
         if excludefit and self.specplotter.specfit.modelpars is not None:
-            vlo = self.specplotter.specfit.modelpars[1] - 2*self.specplotter.specfit.modelpars[2]
-            vhi = self.specplotter.specfit.modelpars[1] + 2*self.specplotter.specfit.modelpars[2]
-            exclude = [argmin(abs(self.specplotter.vind-vlo)),argmin(abs(self.specplotter.vind-vhi))]
+            #vlo = self.specplotter.specfit.modelpars[1] - 2*self.specplotter.specfit.modelpars[2]
+            #vhi = self.specplotter.specfit.modelpars[1] + 2*self.specplotter.specfit.modelpars[2]
+            #exclude = [argmin(abs(self.specplotter.vind-vlo)),argmin(abs(self.specplotter.vind-vhi))]
+            print "YOU STILL NEED TO FIX THIS!!!  What criterion to exclude on?  Does ONED include height?" 
+            excludemask = abs(self.model) > abs(max(self.modelpars[1::3]))
         fitp = zeros(order+1)
+        spectofit = self.specplotter.spectrum+self.basespec
         self.specplotter.spectrum, self.baselinepars = baseline(
-                self.specplotter.spectrum+self.basespec,
+                spectofit,
                 xarr=self.specplotter.vind,
-                order=order, exclude=exclude, **kwargs)
+                order=order, exclude=exclude, 
+                mask=spectofit!=spectofit,
+                **kwargs)
         self.order = order
         self.basespec = poly1d(self.baselinepars)(self.specplotter.vind)
+        if self.specplotter.spectrumplot is not None: 
+            [self.specplotter.axis.lines.remove(p) for p in self.specplotter.spectrumplot]
+        if self.specplotter.errorplot is not None: 
+            [self.specplotter.axis.collections.remove(p) for p in self.specplotter.errorplot if isinstance(p,matplotlib.collections.PolyCollection)]
+            [self.specplotter.axis.lines.remove(p) for p in self.specplotter.errorplot if isinstance(p,matplotlib.lines.Line2D)]
         self.specplotter.plotspec()
+        self.specplotter.axis.set_ylim(
+                abs(self.specplotter.spectrum.min())*1.1*sign(self.specplotter.spectrum.min()),
+                abs(self.specplotter.spectrum.max())*1.1*sign(self.specplotter.spectrum.max()))
         if annotate: self.annotate()
 
     def annotate(self,loc='upper left'):
@@ -378,7 +399,7 @@ class Specfit:
         self.guesses = []
         self.click = 0
         self.fitkwargs = {}
-        self.auto = 0
+        self.auto = False
         self.autoannotate = True
         self.specplotter = specplotter
         self.gaussleg=None
@@ -404,20 +425,29 @@ class Specfit:
         self.modelerrs = mpperr.tolist()
         self.modelplot = self.specplotter.axis.plot(
                 self.specplotter.vind[self.gx1:self.gx2],
-                self.model, color=self.fitcolor, linewidth=0.5)
+                self.model+self.specplotter.offset, color=self.fitcolor, linewidth=0.5)
+        self.residuals = self.specplotter.spectrum[self.gx1:self.gx2] - self.model
         if self.autoannotate:
             self.annotate()
     
-    def onedfit(self, usemoments=True, annotate=True, vheight=True, height=0):
+    def onedfit(self, usemoments=True, annotate=True, vheight=True, height=0, negamp=None,**kwargs):
         self.ngauss = 1
-        self.auto = 1
+        self.auto = True
+        if usemoments: # this can be done within gaussfit but I want to save them
+            self.guesses = gaussfitter.onedmoments(
+                    self.specplotter.vind[self.gx1:self.gx2],
+                    self.specplotter.spectrum[self.gx1:self.gx2],
+                    vheight=vheight,negamp=negamp,**kwargs)
+            if vheight is False: self.guesses = [height]+self.guesses
+        else:
+            if negamp: self.guesses = [height,-1,0,1]
+            else:  self.guesses = [height,1,0,1]
         mpp,model,mpperr,chi2 = gaussfitter.onedgaussfit(
                 self.specplotter.vind[self.gx1:self.gx2],
                 self.specplotter.spectrum[self.gx1:self.gx2],
                 err=self.errspec,
                 vheight=vheight,
-                params=[height,1,0,1],
-                usemoments=usemoments,
+                params=self.guesses,
                 **self.fitkwargs)
         self.chi2 = chi2
         self.dof  = self.gx2-self.gx1-self.ngauss*3-vheight
@@ -428,12 +458,12 @@ class Specfit:
         if vheight: self.specplotter.baseline.baselinepars = mpp[:1]
         self.modelplot = self.specplotter.axis.plot(
                 self.specplotter.vind[self.gx1:self.gx2],
-                self.model, color=self.fitcolor, linewidth=0.5)
+                self.model+self.specplotter.offset, color=self.fitcolor, linewidth=0.5)
         if annotate:
             self.annotate()
             if vheight: self.specplotter.baseline.annotate()
 
-    def plotresiduals(self,figure=None,axis=None,**kwargs):
+    def plotresiduals(self,fig=None,axis=None,clear=True,**kwargs):
         """
         Plot residuals of the fit.  Specify a figure or
         axis; defaults to figure(2).
@@ -443,8 +473,10 @@ class Specfit:
         if axis is None:
             fig=figure(2)
             self.residualaxis = gca()
+            if clear: self.residualaxis.clear()
         else:
             self.residualaxis = axis
+            if clear: self.residualaxis.clear()
         self.residualplot = self.residualaxis.plot(self.specplotter.vind[self.gx1:self.gx2],
                 self.residuals,drawstyle='steps-mid',
                 linewidth=0.5, color='k', **kwargs)
@@ -459,10 +491,12 @@ class Specfit:
         self.clearlegend()
         pl = matplotlib.collections.CircleCollection([0],edgecolors=['k'])
         self.gaussleg = self.specplotter.axis.legend(
-                tuple([pl]*3),
-                ("c=%6.3g $\\pm$ %6.3g" % (self.modelpars[1],self.modelerrs[1]),
-                "w=%6.3g $\\pm$ %6.3g" % (self.modelpars[2],self.modelerrs[2]),
-                "a=%6.3g $\\pm$ %6.3g" % (self.modelpars[0],self.modelerrs[0])),
+                tuple([pl]*3*self.ngauss),
+                tuple(flatten(
+                    [("c%i=%6.3g $\\pm$ %6.3g" % (jj,self.modelpars[1+jj*3],self.modelerrs[1+jj*3]),
+                      "w%i=%6.3g $\\pm$ %6.3g" % (jj,self.modelpars[2+jj*3],self.modelerrs[2+jj*3]),
+                      "a%i=%6.3g $\\pm$ %6.3g" % (jj,self.modelpars[0+jj*3],self.modelerrs[0+jj*3]))
+                      for jj in range(self.ngauss)])),
                 loc=loc,markerscale=0.01,
                 borderpad=0.1, handlelength=0.1, handletextpad=0.1
                 )
@@ -477,37 +511,45 @@ class Specfit:
             self.gx2 = argmin(abs(event.xdata-self.specplotter.vind))
             self.nclicks_b1 -= 1
             if self.gx1 > self.gx2: self.gx1,self.gx2 = self.gx2,self.gx1
-            self.fitregion = self.specplotter.axis.plot(
-                    self.specplotter.vind[self.gx1:self.gx2],
-                    self.specplotter.spectrum[self.gx1:self.gx2],
-                    drawstyle='steps-mid',
-                    color='c')
-            if self.guesses == []:
-                self.guesses = gaussfitter.onedmoments(
+            if abs(self.gx1-self.gx2) > 3: # can't fit w/ fewer data than pars
+                self.fitregion = self.specplotter.axis.plot(
                         self.specplotter.vind[self.gx1:self.gx2],
-                        self.specplotter.spectrum[self.gx1:self.gx2],
-                        vheight=0)
-                self.ngauss = 1
-                self.auto = 1
-            if self.specplotter.errspec is not None:
-                self.errspec = self.specplotter.errspec[self.gx1:self.gx2]
-            else: self.errspec = ones(self.gx2-self.gx1)
+                        self.specplotter.spectrum[self.gx1:self.gx2]+self.specplotter.offset,
+                        drawstyle='steps-mid',
+                        color='c')
+                if self.guesses == []:
+                    self.guesses = gaussfitter.onedmoments(
+                            self.specplotter.vind[self.gx1:self.gx2],
+                            self.specplotter.spectrum[self.gx1:self.gx2],
+                            vheight=0)
+                    self.ngauss = 1
+                    self.auto = True
+                if self.specplotter.errspec is not None:
+                    self.errspec = self.specplotter.errspec[self.gx1:self.gx2]
+                else: self.errspec = ones(self.gx2-self.gx1)
+            else:
+                print "Fitting region is too small (channels %i:%i).  Try again." % (self.gx1,self.gx2)
 
     def guesspeakwidth(self,event):
-        if self.nclicks_b2 == 0:
-            if (self.auto == 1 and self.ngauss == 1):
+        if self.nclicks_b2 % 2 == 0:
+            if self.auto:
                 self.guesses[:2] = [event.ydata,event.xdata]
             else:
                 self.guesses += [event.ydata,event.xdata,1]
                 self.ngauss += 1
             self.nclicks_b2 += 1
-            self.guessplot = [self.specplotter.axis.scatter(event.xdata,event.ydata,marker='x',c='r')]
-        elif self.nclicks_b2 == 1:
+            self.guessplot += [self.specplotter.axis.scatter(event.xdata,event.ydata,marker='x',c='r')]
+        elif self.nclicks_b2 % 2 == 1:
             self.guesses[-1] = abs(event.xdata-self.guesses[-2])
-            self.nclicks_b2 -= 1
+            self.nclicks_b2 += 1
             self.guessplot += self.specplotter.axis.plot([event.xdata,
                 2*self.guesses[-2]-event.xdata],[event.ydata]*2,
                 color='r')
+            if self.auto:
+                self.auto = False
+            if self.nclicks_b2 / 2 > self.ngauss:
+                print "There have been %i middle-clicks but there are only %i gaussians" % (self.nclicks_b2,self.ngauss)
+                self.ngauss += 1
 
     def clear(self,legend=True):
         if self.modelplot is not None:
@@ -665,7 +707,8 @@ def baseline_file(filename,outfilename,vmin=None,vmax=None,order=1,crop=False):
     bspec,bfit = baseline(cube,vmin=argvmin,vmax=argvmax,order=order)
 
 
-def baseline(spectrum,xarr=None,xmin=None,xmax=None,order=1,quiet=True,exclude=None):
+def baseline(spectrum,xarr=None,xmin=None,xmax=None,order=1,quiet=True,exclude=None,
+        mask=None):
     """
     Subtract a baseline from a spectrum
     If xmin,xmax are not specified, defaults to ignoring first and last 10% of spectrum
@@ -691,6 +734,9 @@ def baseline(spectrum,xarr=None,xmin=None,xmax=None,order=1,quiet=True,exclude=N
     err = ones(spectrum.shape)
     if exclude is not None:
         err[exclude[0]:exclude[1]] = 1e10
+    if mask is not None:
+        err[mask] = 1e10
+        spectrum[mask] = 0
 
     mp = mpfit(mpfitfun(spectrum[xmin:xmax],err[xmin:xmax]),xall=pguess,quiet=quiet)
     fitp = mp.params
@@ -730,8 +776,13 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
         conversion_factor = 1000.0
         xunits = 'm/s'
     else:
-        conversion_factor = 1.0
         xunits = hdr.get('CUNIT1'+wcstype)
+        if xunits in ("hz","Hz"):
+            print "Converting from Hz to GHz"
+            xunits = "GHz"
+            conversion_factor = 1.0e9
+        else:
+            conversion_factor = 1.0
     vconv = lambda v: ((v-p3+1)*dv+v0)/conversion_factor
     xtora=None
     ytodec=None
@@ -747,7 +798,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
         vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
         specname=None,quiet=True,specnum=0,errspecnum=None,wcstype='',
-        offset=None, annotatebaseline=True, plotspectrum=True,
+        offset=0.0, continuum=0.0, annotatebaseline=False, plotspectrum=True,
         smoothtype='gaussian',convmode='valid',maskspecnum=None,**kwargs):
     """
     Inputs:
@@ -763,13 +814,11 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         if specname is None: specname=specname_file
         if units is None and kwargs.has_key('units'): units = kwargs.pop('units')
 
-    if type(offset)==type('str'):
-        if hdr.get(offset) is not None:
-            offset = hdr.get(offset)
+    if type(continuum)==type('str'):
+        if hdr.get(continuum) is not None:
+            continuum = hdr.get(continuum)
         else:
-            raise ValueError("Offset specified but none present.")
-    elif offset is None:
-        offset = 0.0
+            raise ValueError("Continuum specified but none present.")
 
     varr = vconv(arange(spec.shape[0]))
     if vmin is None or vcrop==False: argvmin = 0
@@ -786,6 +835,9 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     if argvmin > argvmax:
         argvmin,argvmax = argvmax,argvmin
         if exclude is not None: exclude = exclude[::-1]
+    elif argvmin == argvmax:
+        raise Exception("Error: no data in velocity range %g:%g for source %s."
+                % (vmin,vmax,filename))
 
     if exclude is not None:
         exclude[0] = argmin(abs(varr-exclude[0]))
@@ -845,11 +897,11 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
 
     sp = SpecPlotter(specplot, vconv=vconv, xtora=xtora, ytodec=ytodec,
             specname=specname, dv=dv/conversion_factor, hdr=hdr,
-            errspec=errspec, maskspec=maskspec, **kwargs)
+            errspec=errspec, maskspec=maskspec, xunits=xunits, **kwargs)
 
     if plotspectrum:
-        sp.plotspec(button=button, cube=False,
-                vmin=vmin, vmax=vmax, units=units, xunits=xunits, offset=offset,
+        sp.plotspec(button=button, cube=False, vmin=vmin, vmax=vmax,
+                units=units, offset=offset, continuum=continuum,
                 **kwargs)
 
     if dobaseline: 

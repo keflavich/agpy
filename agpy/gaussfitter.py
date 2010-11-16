@@ -250,7 +250,8 @@ def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
         returns = (returns,fitimage)
     return returns
 
-def onedmoments(Xax,data,vheight=1,estimator=median,negamp=None,**kwargs):
+def onedmoments(Xax,data,vheight=True,estimator=median,negamp=None,
+        veryverbose=False, **kwargs):
     """Returns (height, amplitude, x, width_x)
     the gaussian parameters of a 1D distribution by calculating its
     moments.  Depending on the input parameters, will only output 
@@ -268,12 +269,12 @@ def onedmoments(Xax,data,vheight=1,estimator=median,negamp=None,**kwargs):
     height = estimator(data)
     
     # try to figure out whether pos or neg based on the minimum width of the pos/neg peaks
-    Lpeakintegral = integral - height*len(Xax) - (data[data>height]*dx).sum()
+    Lpeakintegral = integral - height*len(Xax)*dx - (data[data>height]*dx).sum()
     Lamplitude = data.min()-height
-    Lwidth_x = numpy.sqrt(numpy.abs(Lpeakintegral / Lamplitude))
-    Hpeakintegral = integral - height*len(Xax) - (data[data<height]*dx).sum()
-    Hamplitude = data.min()-height
-    Hwidth_x = numpy.sqrt(numpy.abs(Hpeakintegral / Hamplitude))
+    Lwidth_x = 0.5*(numpy.abs(Lpeakintegral / Lamplitude))
+    Hpeakintegral = integral - height*len(Xax)*dx - (data[data<height]*dx).sum()
+    Hamplitude = data.max()-height
+    Hwidth_x = 0.5*(numpy.abs(Hpeakintegral / Hamplitude))
     Lstddev = Xax[data<data.mean()].std()
     Hstddev = Xax[data>data.mean()].std()
     #print "Lstddev: %10.3g  Hstddev: %10.3g" % (Lstddev,Hstddev)
@@ -283,16 +284,19 @@ def onedmoments(Xax,data,vheight=1,estimator=median,negamp=None,**kwargs):
         xcen,amplitude,width_x = Xax[numpy.argmin(data)],Lamplitude,Lwidth_x
     elif negamp is None:
         if Hstddev < Lstddev: 
-            xcen,amplitude,width_x, = Xax[numpy.argmax(data),Hamplitude,Hwidth_x]
+            xcen,amplitude,width_x, = Xax[numpy.argmax(data)],Hamplitude,Hwidth_x
         else:                                                                   
-            xcen,amplitude,width_x, = Xax[numpy.argmin(data),Lamplitude,Lwidth_x]
+            xcen,amplitude,width_x, = Xax[numpy.argmin(data)],Lamplitude,Lwidth_x
     else:  # if negamp==False, make positive
         xcen,amplitude,width_x = Xax[numpy.argmax(data)],Hamplitude,Hwidth_x
 
+    if veryverbose:
+        print "negamp: %s  amp,width,cen Lower: %g, %g   Upper: %g, %g  Center: %g" %\
+                (negamp,Lamplitude,Lwidth_x,Hamplitude,Hwidth_x,xcen)
     mylist = [amplitude,xcen,width_x]
     if numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
         raise ValueError("something is nan")
-    if vheight==1:
+    if vheight:
         mylist = [height] + mylist
     return mylist
 
@@ -344,7 +348,7 @@ def onedgaussfit(xax, data, err=None,
 
     if vheight is False: height = params[0]
     if usemoments:
-        params = onedmoments(xax,data,vheight=vheight,negamp=negamp)
+        params = onedmoments(xax,data,vheight=vheight,negamp=negamp, veryverbose=veryverbose)
         if vheight is False: params = [height]+params
         if veryverbose: print "OneD moments: h: %g  a: %g  c: %g  w: %g" % tuple(params)
 
@@ -362,6 +366,7 @@ def onedgaussfit(xax, data, err=None,
         raise Exception(mp.errmsg)
 
     if (not shh) or veryverbose:
+        print "Fit status: ",mp.status
         for i,p in enumerate(mpp):
             parinfo[i]['value'] = p
             print parinfo[i]['parname'],p," +/- ",mpperr[i]
