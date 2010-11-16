@@ -431,6 +431,8 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
     if len(params) != ngauss and (len(params) / 3) > ngauss:
         ngauss = len(params) / 3 
 
+    if isinstance(params,numpy.ndarray): params=params.tolist()
+
     # make sure all various things are the right length; if they're not, fix them using the defaults
     for parlist in (params,fixed,limitedmin,limitedmax,minpars,maxpars):
         if len(parlist) != 3*ngauss:
