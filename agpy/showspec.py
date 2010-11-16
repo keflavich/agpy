@@ -358,7 +358,8 @@ class Baseline:
     def clearlegend(self):
         if self.blleg is not None: 
             self.blleg.set_visible(False)
-            self.specplotter.axis.artists.remove(self.blleg)
+            if self.blleg in self.specplotter.axis.artists:
+                self.specplotter.axis.artists.remove(self.blleg)
 
 class Specfit:
 
@@ -508,15 +509,17 @@ class Specfit:
                 2*self.guesses[-2]-event.xdata],[event.ydata]*2,
                 color='r')
 
-    def clear(self):
+    def clear(self,legend=True):
         if self.modelplot is not None:
             for p in self.modelplot:
                 p.set_visible(False)
+        if legend: self.clearlegend()
 
     def clearlegend(self):
         if self.gaussleg is not None: 
             self.gaussleg.set_visible(False)
-            self.specplotter.axis.artists.remove(self.gaussleg)
+            if self.gaussleg in self.specplotter.axis.artists:
+                self.specplotter.axis.artists.remove(self.gaussleg)
         
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
