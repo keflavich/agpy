@@ -319,7 +319,7 @@ class Baseline:
         self.blleg = None
 
     def __call__(self, order=1, annotate=False, excludefit=False,
-            exclude=None, **kwargs):
+            exclude=None, exclusionlevel=0.01, **kwargs):
         """
         Fit and remove a polynomial from the spectrum.  
         It will be saved in the variable "self.basespec"
@@ -332,22 +332,28 @@ class Baseline:
         exclude is a set of start/end indices to ignore when baseline fitting
         (ignored by setting error to infinite in fitting procedure)
 
+        excludefit creates a mask based on the fitted gaussian model (assuming
+        that it has a zero-height) using an exclusion level of (exclusionlevel)
+        * the smallest gaussian peak that was fit
+
         "basespec" is added back to the spectrum before fitting so you can run this
         procedure multiple times without losing information
         """
-        if excludefit and self.specplotter.specfit.modelpars is not None:
+        specfit = self.specplotter.specfit
+        if excludefit and specfit.modelpars is not None:
             #vlo = self.specplotter.specfit.modelpars[1] - 2*self.specplotter.specfit.modelpars[2]
             #vhi = self.specplotter.specfit.modelpars[1] + 2*self.specplotter.specfit.modelpars[2]
             #exclude = [argmin(abs(self.specplotter.vind-vlo)),argmin(abs(self.specplotter.vind-vhi))]
-            print "YOU STILL NEED TO FIX THIS!!!  What criterion to exclude on?  Does ONED include height?" 
-            excludemask = abs(self.model) > abs(max(self.modelpars[1::3]))
+            excludemask = abs(specfit.model) > exclusionlevel*abs(min(specfit.modelpars[0::3]))
+        else:
+            excludemask = 0 # can make it a scalar because it's only used in this code
         fitp = zeros(order+1)
         spectofit = self.specplotter.spectrum+self.basespec
         self.specplotter.spectrum, self.baselinepars = baseline(
                 spectofit,
                 xarr=self.specplotter.vind,
                 order=order, exclude=exclude, 
-                mask=spectofit!=spectofit,
+                mask=(spectofit!=spectofit)+excludemask,
                 **kwargs)
         self.order = order
         self.basespec = poly1d(self.baselinepars)(self.specplotter.vind)
