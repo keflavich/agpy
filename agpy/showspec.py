@@ -78,7 +78,10 @@ class SpecPlotter:
       self.erralpha=erralpha
       self.plotcolor=color
       self.specfit = Specfit(self)
+      self.fitspec = self.specfit
       self.baseline = Baseline(self)
+      self.fft = FFT(self)
+      self.psd = self.fft.psd
       self.vmin=None
       self.vmax=None
       self.title=title
@@ -254,41 +257,41 @@ class SpecPlotter:
                 if LC in self.axis.collections: 
                     self.axis.collections.remove(LC)
   
-    def fitspec(self, interactive=False, usemoments=True, fitcolor='r',
-            multifit=False, guesses=None, annotate=True, 
-            **kwargs):
-        """
-        Fit gaussians to a spectrum
-        """
+    #def fitspec(self, interactive=False, usemoments=True, fitcolor='r',
+    #        multifit=False, guesses=None, annotate=True, 
+    #        **kwargs):
+    #    """
+    #    Fit gaussians to a spectrum
+    #    """
   
-        self.specfit.fitcolor = fitcolor
-        self.specfit.clear()
+    #    self.specfit.fitcolor = fitcolor
+    #    self.specfit.clear()
 
-        self.ngauss = 0
-        self.specfit.fitkwargs = kwargs
-        if interactive:
-            print "Left-click twice to select a fitting range, then middle-click twice to select a peak and width"
-            self.specfit.nclicks_b1 = 0
-            self.specfit.nclicks_b2 = 0
-            self.specfit.guesses = []
-            self.specfit.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
-            self.specfit.autoannotate = annotate
-        elif multifit:
-            if guesses is None:
-                print "You must input guesses when using multifit.  Also, baseline first!"
-            else:
-                self.specfit.guesses = guesses
-                self.specfit.multifit()
-                self.specfit.autoannotate = annotate
-        else:
-            #print "Non-interactive, 1D fit with automatic guessing"
-            if self.baseline.order is None:
-                self.baseline.order=0
-                self.specfit.onedfit(usemoments=usemoments,annotate=annotate,**kwargs)
-            else:
-                self.specfit.onedfit(usemoments=usemoments,annotate=annotate,
-                        vheight=False,height=0.0,**kwargs)
-            if self.autorefresh: self.refresh()
+    #    self.ngauss = 0
+    #    self.specfit.fitkwargs = kwargs
+    #    if interactive:
+    #        print "Left-click twice to select a fitting range, then middle-click twice to select a peak and width"
+    #        self.specfit.nclicks_b1 = 0
+    #        self.specfit.nclicks_b2 = 0
+    #        self.specfit.guesses = []
+    #        self.specfit.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
+    #        self.specfit.autoannotate = annotate
+    #    elif multifit:
+    #        if guesses is None:
+    #            print "You must input guesses when using multifit.  Also, baseline first!"
+    #        else:
+    #            self.specfit.guesses = guesses
+    #            self.specfit.multifit()
+    #            self.specfit.autoannotate = annotate
+    #    else:
+    #        #print "Non-interactive, 1D fit with automatic guessing"
+    #        if self.baseline.order is None:
+    #            self.baseline.order=0
+    #            self.specfit.onedfit(usemoments=usemoments,annotate=annotate,**kwargs)
+    #        else:
+    #            self.specfit.onedfit(usemoments=usemoments,annotate=annotate,
+    #                    vheight=False,height=0.0,**kwargs)
+    #        if self.autorefresh: self.refresh()
     
     def makeguess(self,event):
         if event.button == 1:
@@ -309,6 +312,83 @@ class SpecPlotter:
 
     def refresh(self):
         self.axis.figure.canvas.draw()
+
+class FFT:
+    def __init__(self,specplotter,fignum=3,axis=None, color='k'):
+        self.specplotter=specplotter
+        if axis is None:
+            self.fignum=fignum
+            self.figure=figure(self.fignum)
+            self.axis=gca()
+        else:
+            self.axis=axis
+            self.figure=self.axis.figure
+            self.fignum=None
+        self.axis.clear()
+        self.color=color
+        self.fftplot=None
+        self.setspec()
+        self.setshift()
+        self.clear()
+
+    def __call__(self,psd=False,shift=True):
+        self.setspec()
+        if psd:
+            self.psd(shift=shift)
+        else:
+            self.fft(shift=shift)
+    
+    def fft(self,shift=True,logplot=False):
+        self.clear()
+        self.setshift(shift)
+        if logplot: self.axis.set_yscale('log')
+        else: self.axis.set_yscale('linear')
+        self.fftspec = fft(self.spectofft)
+        self.realfft = self.fftspec.real
+        self.imagfft = self.fftspec.imag
+        self.fftplot = self.axis.plot(self.shiftfunc(self.realfft),
+                drawstyle='steps-mid',color=self.color)
+        self.refresh()
+
+    def psd(self,logplot=True,shift=True):
+        self.clear()
+        if logplot: self.axis.set_yscale('log')
+        else: self.axis.set_yscale('linear')
+        self.setshift(shift)
+        self.psdspec = fft(self.spectofft) * fft(self.spectofft[::-1])
+        self.psdreal = self.psdspec.real
+        if logplot:
+            self.fftplot = self.axis.semilogy(self.shiftfunc(self.psdreal),
+                    drawstyle='steps-mid',color=self.color)
+        self.refresh()
+
+    def setshift(self,shift=True):
+        if shift: self.shiftfunc = fftshift
+        else: self.shiftfunc = lambda x: x
+
+    def setspec(self):
+        self.spectofft = copy(self.specplotter.spectrum)
+        OKmask = (self.spectofft==self.spectofft)
+        self.spectofft[(True-OKmask)] = 0
+
+    def clear(self):
+        if self.fftplot is not None:
+            for p in self.fftplot:
+                p.set_visible(False)
+                if p in self.axis.lines: self.axis.lines.remove(p)
+        self.axis.clear()
+        self.refresh()
+
+    def refresh(self):
+        self.axis.figure.canvas.draw()
+
+class PSD(FFT):
+    def __call__(self,shift=True):
+        self.setspec()
+        self.setshift(shift)
+        self.clear()
+        self.psd()
+        self.refresh()
 
 class Baseline:
     def __init__(self,specplotter):
@@ -347,14 +427,15 @@ class Baseline:
             specfit.fullsizemodel() # make sure the spectrum is the right size
             excludemask = abs(specfit.model) > exclusionlevel*abs(min(specfit.modelpars[0::3]))
         else:
-            excludemask = 0 # can make it a scalar because it's only used in this code
+            excludemask = False # can make it a scalar because it's only used in this code
         fitp = zeros(order+1)
         spectofit = self.specplotter.spectrum+self.basespec
+        OKmask = (spectofit==spectofit)
         self.specplotter.spectrum, self.baselinepars = baseline(
                 spectofit,
                 xarr=self.specplotter.vind,
                 order=order, exclude=exclude, 
-                mask=(spectofit!=spectofit)+excludemask,
+                mask=(True-OKmask)+excludemask,
                 **kwargs)
         self.order = order
         self.basespec = poly1d(self.baselinepars)(self.specplotter.vind)
@@ -365,8 +446,8 @@ class Baseline:
             [self.specplotter.axis.lines.remove(p) for p in self.specplotter.errorplot if isinstance(p,matplotlib.lines.Line2D)]
         self.specplotter.plotspec()
         self.specplotter.axis.set_ylim(
-                abs(self.specplotter.spectrum.min())*1.1*sign(self.specplotter.spectrum.min()),
-                abs(self.specplotter.spectrum.max())*1.1*sign(self.specplotter.spectrum.max()))
+                abs(self.specplotter.spectrum[OKmask].min())*1.1*sign(self.specplotter.spectrum[OKmask].min()),
+                abs(self.specplotter.spectrum[OKmask].max())*1.1*sign(self.specplotter.spectrum[OKmask].max()))
         if annotate: self.annotate() # refreshes automatically
         elif self.specplotter.autorefresh: self.specplotter.refresh()
 
@@ -412,21 +493,66 @@ class Specfit:
         self.specplotter = specplotter
         self.gaussleg=None
         self.residuals=None
-        self.seterrspec()
+        self.setfitspec()
+        #self.seterrspec()
 
-    def seterrspec(self,usedstd=None,useresiduals=True):
+    def __call__(self, interactive=False, usemoments=True, fitcolor='r',
+            multifit=False, guesses=None, annotate=True, 
+            **kwargs):
+        """
+        Fit gaussians to a spectrum
+        """
+  
+        self.fitcolor = fitcolor
+        self.clear()
+
+        self.ngauss = 0
+        self.fitkwargs = kwargs
+        if interactive:
+            print "Left-click twice to select a fitting range, then middle-click twice to select a peak and width"
+            self.nclicks_b1 = 0
+            self.nclicks_b2 = 0
+            self.guesses = []
+            self.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
+            self.autoannotate = annotate
+        elif multifit:
+            if guesses is None:
+                print "You must input guesses when using multifit.  Also, baseline first!"
+            else:
+                self.guesses = guesses
+                self.multifit()
+                self.autoannotate = annotate
+        else:
+            #print "Non-interactive, 1D fit with automatic guessing"
+            if self.specplotter.baseline.order is None:
+                self.specplotter.baseline.order=0
+                self.onedfit(usemoments=usemoments,annotate=annotate,**kwargs)
+            else:
+                self.onedfit(usemoments=usemoments,annotate=annotate,
+                        vheight=False,height=0.0,**kwargs)
+            if self.specplotter.autorefresh: self.specplotter.refresh()
+
+    def seterrspec(self,usestd=None,useresiduals=True):
         if self.specplotter.errspec is not None and not usestd:
-            self.errspec = self.specplotter.errspec[self.gx1:self.gx2]
+            self.errspec = self.specplotter.errspec
         elif self.residuals is not None and useresiduals: 
-            self.errspec = ones(self.specplotter.spectrum.shape[0]) * self.residuals.std()
-        else: self.errspec = ones(self.specplotter.spectrum.shape[0]) * self.specplotter.spectrum.std()
+            self.errspec = ones(self.spectofit.shape[0]) * self.residuals.std()
+        else: self.errspec = ones(self.spectofit.shape[0]) * self.spectofit.std()
+
+    def setfitspec(self):
+        self.spectofit = copy(self.specplotter.spectrum)
+        OKmask = (self.spectofit==self.spectofit)
+        self.spectofit[(True-OKmask)] = 0
+        self.seterrspec()
+        self.errspec[(True-OKmask)] = 1e10
 
     def multifit(self):
         self.ngauss = len(self.guesses)/3
+        self.setfitspec()
         mpp,model,mpperr,chi2 = gaussfitter.multigaussfit(
                 self.specplotter.vind[self.gx1:self.gx2], 
-                self.specplotter.spectrum[self.gx1:self.gx2], 
-                err=self.errspec,
+                self.spectofit[self.gx1:self.gx2], 
+                err=self.errspec[self.gx1:self.gx2],
                 ngauss=self.ngauss,
                 params=self.guesses,
                 **self.fitkwargs)
@@ -438,17 +564,18 @@ class Specfit:
         self.modelplot = self.specplotter.axis.plot(
                 self.specplotter.vind[self.gx1:self.gx2],
                 self.model+self.specplotter.offset, color=self.fitcolor, linewidth=0.5)
-        self.residuals = self.specplotter.spectrum[self.gx1:self.gx2] - self.model
+        self.residuals = self.spectofit[self.gx1:self.gx2] - self.model
         if self.autoannotate:
             self.annotate()
     
     def onedfit(self, usemoments=True, annotate=True, vheight=True, height=0, negamp=None,**kwargs):
         self.ngauss = 1
         self.auto = True
+        self.setfitspec()
         if usemoments: # this can be done within gaussfit but I want to save them
             self.guesses = gaussfitter.onedmoments(
                     self.specplotter.vind[self.gx1:self.gx2],
-                    self.specplotter.spectrum[self.gx1:self.gx2],
+                    self.spectofit[self.gx1:self.gx2],
                     vheight=vheight,negamp=negamp,**kwargs)
             if vheight is False: self.guesses = [height]+self.guesses
         else:
@@ -456,15 +583,15 @@ class Specfit:
             else:  self.guesses = [height,1,0,1]
         mpp,model,mpperr,chi2 = gaussfitter.onedgaussfit(
                 self.specplotter.vind[self.gx1:self.gx2],
-                self.specplotter.spectrum[self.gx1:self.gx2],
-                err=self.errspec,
+                self.spectofit[self.gx1:self.gx2],
+                err=self.errspec[self.gx1:self.gx2],
                 vheight=vheight,
                 params=self.guesses,
                 **self.fitkwargs)
         self.chi2 = chi2
         self.dof  = self.gx2-self.gx1-self.ngauss*3-vheight
         self.model = model
-        self.residuals = self.specplotter.spectrum[self.gx1:self.gx2] - self.model
+        self.residuals = self.spectofit[self.gx1:self.gx2] - self.model
         self.modelpars = mpp[1:].tolist()
         self.modelerrs = mpperr[1:].tolist()
         if vheight: self.specplotter.baseline.baselinepars = mpp[:1]
@@ -487,6 +614,7 @@ class Specfit:
             temp = zeros(self.specplotter.spectrum.shape)
             temp[self.gx1:self.gx2] = self.model
             self.model = temp
+            self.residuals = self.spectofit - self.model
 
     def plotresiduals(self,fig=None,axis=None,clear=True,**kwargs):
         """
@@ -545,13 +673,10 @@ class Specfit:
                 if self.guesses == []:
                     self.guesses = gaussfitter.onedmoments(
                             self.specplotter.vind[self.gx1:self.gx2],
-                            self.specplotter.spectrum[self.gx1:self.gx2],
+                            self.spectofit[self.gx1:self.gx2],
                             vheight=0)
                     self.ngauss = 1
                     self.auto = True
-                if self.specplotter.errspec is not None:
-                    self.errspec = self.specplotter.errspec[self.gx1:self.gx2]
-                else: self.errspec = ones(self.gx2-self.gx1)
             else:
                 print "Fitting region is too small (channels %i:%i).  Try again." % (self.gx1,self.gx2)
 
@@ -760,8 +885,12 @@ def baseline(spectrum,xarr=None,xmin=None,xmax=None,order=1,quiet=True,exclude=N
     if exclude is not None:
         err[exclude[0]:exclude[1]] = 1e10
     if mask is not None:
+        if mask.dtype.name != 'bool': mask = mask.astype('bool')
         err[mask] = 1e10
         spectrum[mask] = 0
+    if (spectrum!=spectrum).sum() > 0:
+        print "There is an error in baseline: some values are NaN"
+        import pdb; pdb.set_trace()
 
     mp = mpfit(mpfitfun(spectrum[xmin:xmax],err[xmin:xmax]),xall=pguess,quiet=quiet)
     fitp = mp.params
