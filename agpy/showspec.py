@@ -367,7 +367,8 @@ class Baseline:
         self.specplotter.axis.set_ylim(
                 abs(self.specplotter.spectrum.min())*1.1*sign(self.specplotter.spectrum.min()),
                 abs(self.specplotter.spectrum.max())*1.1*sign(self.specplotter.spectrum.max()))
-        if annotate: self.annotate()
+        if annotate: self.annotate() # refreshes automatically
+        elif self.specplotter.autorefresh: self.specplotter.refresh()
 
     def annotate(self,loc='upper left'):
         bltext = "bl: $y=$"+"".join(["$%+6.3gx^{%i}$" % (f,self.order-i)
@@ -411,10 +412,14 @@ class Specfit:
         self.specplotter = specplotter
         self.gaussleg=None
         self.residuals=None
+        self.seterrspec()
 
-        if self.specplotter.errspec is not None:
+    def seterrspec(self,usedstd=None,useresiduals=True):
+        if self.specplotter.errspec is not None and not usestd:
             self.errspec = self.specplotter.errspec[self.gx1:self.gx2]
-        else: self.errspec = ones(specplotter.spectrum.shape[0]) * specplotter.spectrum.std()
+        elif self.residuals is not None and useresiduals: 
+            self.errspec = ones(self.specplotter.spectrum.shape[0]) * self.residuals.std()
+        else: self.errspec = ones(self.specplotter.spectrum.shape[0]) * self.specplotter.spectrum.std()
 
     def multifit(self):
         self.ngauss = len(self.guesses)/3
