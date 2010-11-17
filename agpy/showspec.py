@@ -344,6 +344,7 @@ class Baseline:
             #vlo = self.specplotter.specfit.modelpars[1] - 2*self.specplotter.specfit.modelpars[2]
             #vhi = self.specplotter.specfit.modelpars[1] + 2*self.specplotter.specfit.modelpars[2]
             #exclude = [argmin(abs(self.specplotter.vind-vlo)),argmin(abs(self.specplotter.vind-vhi))]
+            specfit.fullsizemodel() # make sure the spectrum is the right size
             excludemask = abs(specfit.model) > exclusionlevel*abs(min(specfit.modelpars[0::3]))
         else:
             excludemask = 0 # can make it a scalar because it's only used in this code
@@ -468,6 +469,19 @@ class Specfit:
         if annotate:
             self.annotate()
             if vheight: self.specplotter.baseline.annotate()
+
+    def fullsizemodel(self):
+        """
+        If the gaussian was fit to a sub-region of the spectrum,
+        expand it (with zeros) to fill the spectrum.  You can 
+        always recover the original by:
+        origmodel = model[gx1:gx2]
+        """
+
+        if self.model.shape != self.specplotter.spectrum.shape:
+            temp = zeros(self.specplotter.spectrum.shape)
+            temp[self.gx1:self.gx2] = self.model
+            self.model = temp
 
     def plotresiduals(self,fig=None,axis=None,clear=True,**kwargs):
         """
