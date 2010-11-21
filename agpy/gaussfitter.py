@@ -346,7 +346,9 @@ def onedgaussfit(xax, data, err=None,
     if xax == None:
         xax = numpy.arange(len(data))
 
-    if vheight is False: height = params[0]
+    if vheight is False: 
+        height = params[0]
+        fixed[0] = True
     if usemoments:
         params = onedmoments(xax,data,vheight=vheight,negamp=negamp, veryverbose=veryverbose)
         if vheight is False: params = [height]+params

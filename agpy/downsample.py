@@ -2,7 +2,7 @@ import numpy
 try:
     from scipy.stats import nanmean as mean
 except ImportError:
-    import numpy.mean as mean
+    from numpy import mean
 
 def downsample(myarr,factor,estimator=mean):
     """

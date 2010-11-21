@@ -293,22 +293,22 @@ class SpecPlotter:
     #                    vheight=False,height=0.0,**kwargs)
     #        if self.autorefresh: self.refresh()
     
-    def makeguess(self,event):
-        if event.button == 1:
-            self.specfit.selectregion(event)
-        elif event.button == 2:
-            self.specfit.guesspeakwidth(event)
-        elif event.button == 3:
-            disconnect(self.specfit.click)
-            if self.specfit.ngauss > 0:
-                print len(self.specfit.guesses)/3," Guesses: ",self.specfit.guesses," X channel range: ",self.specfit.gx1,self.specfit.gx2
-                if len(self.specfit.guesses) % 3 == 0:
-                    self.specfit.multifit()
-                    for p in self.specfit.guessplot + self.specfit.fitregion:
-                        p.set_visible(False)
-                else: 
-                    print "error, wrong # of pars"
-        if self.autorefresh: self.refresh()
+    #def makeguess(self,event):
+    #    if event.button == 1:
+    #        self.specfit.selectregion(event)
+    #    elif event.button == 2:
+    #        self.specfit.guesspeakwidth(event)
+    #    elif event.button == 3:
+    #        disconnect(self.specfit.click)
+    #        if self.specfit.ngauss > 0:
+    #            print len(self.specfit.guesses)/3," Guesses: ",self.specfit.guesses," X channel range: ",self.specfit.gx1,self.specfit.gx2
+    #            if len(self.specfit.guesses) % 3 == 0:
+    #                self.specfit.multifit()
+    #                for p in self.specfit.guessplot + self.specfit.fitregion:
+    #                    p.set_visible(False)
+    #            else: 
+    #                print "error, wrong # of pars"
+    #    if self.autorefresh: self.refresh()
 
     def refresh(self):
         self.axis.figure.canvas.draw()
@@ -513,7 +513,7 @@ class Specfit:
             self.nclicks_b1 = 0
             self.nclicks_b2 = 0
             self.guesses = []
-            self.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
+            self.click = self.specplotter.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
             self.autoannotate = annotate
         elif multifit:
             if guesses is None:
@@ -590,11 +590,13 @@ class Specfit:
                 **self.fitkwargs)
         self.chi2 = chi2
         self.dof  = self.gx2-self.gx1-self.ngauss*3-vheight
-        self.model = model
+        if vheight: 
+            self.specplotter.baseline.baselinepars = mpp[0]
+            self.model = model - mpp[0]
+        else: self.model = model
         self.residuals = self.spectofit[self.gx1:self.gx2] - self.model
         self.modelpars = mpp[1:].tolist()
         self.modelerrs = mpperr[1:].tolist()
-        if vheight: self.specplotter.baseline.baselinepars = mpp[:1]
         self.modelplot = self.specplotter.axis.plot(
                 self.specplotter.vind[self.gx1:self.gx2],
                 self.model+self.specplotter.offset, color=self.fitcolor, linewidth=0.5)
@@ -706,6 +708,23 @@ class Specfit:
             for p in self.modelplot:
                 p.set_visible(False)
         if legend: self.clearlegend()
+
+    def makeguess(self,event):
+        if event.button == 1:
+            self.selectregion(event)
+        elif event.button == 2:
+            self.guesspeakwidth(event)
+        elif event.button == 3:
+            disconnect(self.click)
+            if self.ngauss > 0:
+                print len(self.guesses)/3," Guesses: ",self.guesses," X channel range: ",self.gx1,self.gx2
+                if len(self.guesses) % 3 == 0:
+                    self.multifit()
+                    for p in self.guessplot + self.fitregion:
+                        p.set_visible(False)
+                else: 
+                    print "error, wrong # of pars"
+        if self.specplotter.autorefresh: self.specplotter.refresh()
 
     def clearlegend(self):
         if self.gaussleg is not None: 
@@ -857,19 +876,26 @@ def baseline_file(filename,outfilename,vmin=None,vmax=None,order=1,crop=False):
     bspec,bfit = baseline(cube,vmin=argvmin,vmax=argvmax,order=order)
 
 
-def baseline(spectrum,xarr=None,xmin=None,xmax=None,order=1,quiet=True,exclude=None,
+def baseline(spectrum,xarr=None,xmin='default',xmax='default',order=1,quiet=True,exclude=None,
         mask=None):
     """
     Subtract a baseline from a spectrum
     If xmin,xmax are not specified, defaults to ignoring first and last 10% of spectrum
+    *unless* order > 1, in which case ignoring the ends tends to cause strange effects
 
     exclude is a set of start/end indices to ignore when baseline fitting
     (ignored by setting error to infinite in fitting procedure)
     """
-    if xmin is None:
-        xmin = floor( spectrum.shape[-1]*0.1 )
-    if xmax is None:
-        xmax = ceil( spectrum.shape[-1]*0.9 )
+    if xmin == 'default':
+        if order <= 1: xmin = floor( spectrum.shape[-1]*0.1 )
+        else:          xmin = 0
+    elif xmin is None:
+        xmin = 0
+    if xmax == 'default':
+        if order <= 1: xmax = ceil( spectrum.shape[-1]*0.9 )
+        else:          xmax = spectrum.shape[-1]
+    elif xmax is None:
+        xmax = spectrum.shape[-1]
     
     pguess = [1]*(order+1)
 
@@ -913,7 +939,10 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
             errspec = spec[errspecnum,:]
         if maskspecnum is not None:
             maskspec = spec[maskspecnum,:]
-        spec = spec[specnum,:]
+        if isinstance(specnum,list):
+            spec = spec[specnum,:].mean(axis=0)
+        elif isinstance(specnum,int):
+            spec = spec[specnum,:]
     elif hdr.get('NAXIS') > 2:
         raise ValueError("Too many axes for open_1d (splat_1d) - use cube instead")
     if hdr.get('CD1_1'+wcstype):
