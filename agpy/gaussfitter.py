@@ -400,7 +400,7 @@ def n_gaussian(pars=None,a=None,dx=None,sigma=None):
     def g(x):
         v = numpy.zeros(len(x))
         for i in range(len(dx)):
-            v += a[i] * numpy.exp( - ( x - dx[i] )**2 / sigma[i]**2 )
+            v += a[i] * numpy.exp( - ( x - dx[i] )**2 / (2.0*sigma[i]**2) )
         return v
     return g
 
