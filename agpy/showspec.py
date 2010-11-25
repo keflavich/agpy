@@ -159,7 +159,7 @@ class SpecPlotter:
   
       if cube:
           self.spectrum = self.cube[:,i,j]*self.scale+self.continuum-self.baseline.basespec
-          axis.plot(self.vind,self.spectrum+self.offset,color=self.plotcolor,
+          self.spectrumplot = axis.plot(self.vind,self.spectrum+self.offset,color=self.plotcolor,
                   linestyle='steps-mid',linewidth=linewidth,
                   **kwargs)
       else:
@@ -257,59 +257,6 @@ class SpecPlotter:
                 if LC in self.axis.collections: 
                     self.axis.collections.remove(LC)
   
-    #def fitspec(self, interactive=False, usemoments=True, fitcolor='r',
-    #        multifit=False, guesses=None, annotate=True, 
-    #        **kwargs):
-    #    """
-    #    Fit gaussians to a spectrum
-    #    """
-  
-    #    self.specfit.fitcolor = fitcolor
-    #    self.specfit.clear()
-
-    #    self.ngauss = 0
-    #    self.specfit.fitkwargs = kwargs
-    #    if interactive:
-    #        print "Left-click twice to select a fitting range, then middle-click twice to select a peak and width"
-    #        self.specfit.nclicks_b1 = 0
-    #        self.specfit.nclicks_b2 = 0
-    #        self.specfit.guesses = []
-    #        self.specfit.click = self.axis.figure.canvas.mpl_connect('button_press_event',self.makeguess)
-    #        self.specfit.autoannotate = annotate
-    #    elif multifit:
-    #        if guesses is None:
-    #            print "You must input guesses when using multifit.  Also, baseline first!"
-    #        else:
-    #            self.specfit.guesses = guesses
-    #            self.specfit.multifit()
-    #            self.specfit.autoannotate = annotate
-    #    else:
-    #        #print "Non-interactive, 1D fit with automatic guessing"
-    #        if self.baseline.order is None:
-    #            self.baseline.order=0
-    #            self.specfit.onedfit(usemoments=usemoments,annotate=annotate,**kwargs)
-    #        else:
-    #            self.specfit.onedfit(usemoments=usemoments,annotate=annotate,
-    #                    vheight=False,height=0.0,**kwargs)
-    #        if self.autorefresh: self.refresh()
-    
-    #def makeguess(self,event):
-    #    if event.button == 1:
-    #        self.specfit.selectregion(event)
-    #    elif event.button == 2:
-    #        self.specfit.guesspeakwidth(event)
-    #    elif event.button == 3:
-    #        disconnect(self.specfit.click)
-    #        if self.specfit.ngauss > 0:
-    #            print len(self.specfit.guesses)/3," Guesses: ",self.specfit.guesses," X channel range: ",self.specfit.gx1,self.specfit.gx2
-    #            if len(self.specfit.guesses) % 3 == 0:
-    #                self.specfit.multifit()
-    #                for p in self.specfit.guessplot + self.specfit.fitregion:
-    #                    p.set_visible(False)
-    #            else: 
-    #                print "error, wrong # of pars"
-    #    if self.autorefresh: self.refresh()
-
     def refresh(self):
         self.axis.figure.canvas.draw()
 
@@ -395,11 +342,17 @@ class Baseline:
         self.baselinepars  = None
         self.order = None
         self.basespec = zeros(specplotter.spectrum.shape[0])
+        self.excludemask = zeros(specplotter.spectrum.shape[0],dtype='bool')
+        self.OKmask = ones(specplotter.spectrum.shape[0],dtype='bool')
         self.specplotter = specplotter
         self.blleg = None
+        self.click = 0
+        self.nclicks_b1 = 0
+        self.nclicks_b2 = 0
+        self.fitregion=[]
 
     def __call__(self, order=1, annotate=False, excludefit=False,
-            exclude=None, exclusionlevel=0.01, **kwargs):
+            exclude=None, exclusionlevel=0.01, interactive=False, **kwargs):
         """
         Fit and remove a polynomial from the spectrum.  
         It will be saved in the variable "self.basespec"
@@ -420,24 +373,31 @@ class Baseline:
         procedure multiple times without losing information
         """
         specfit = self.specplotter.specfit
-        if excludefit and specfit.modelpars is not None:
-            #vlo = self.specplotter.specfit.modelpars[1] - 2*self.specplotter.specfit.modelpars[2]
-            #vhi = self.specplotter.specfit.modelpars[1] + 2*self.specplotter.specfit.modelpars[2]
-            #exclude = [argmin(abs(self.specplotter.vind-vlo)),argmin(abs(self.specplotter.vind-vhi))]
-            specfit.fullsizemodel() # make sure the spectrum is the right size
-            excludemask = abs(specfit.model) > exclusionlevel*abs(min(specfit.modelpars[0::3]))
-        else:
-            excludemask = False # can make it a scalar because it's only used in this code
-        fitp = zeros(order+1)
-        spectofit = self.specplotter.spectrum+self.basespec
-        OKmask = (spectofit==spectofit)
-        self.specplotter.spectrum, self.baselinepars = baseline(
-                spectofit,
-                xarr=self.specplotter.vind,
-                order=order, exclude=exclude, 
-                mask=(True-OKmask)+excludemask,
-                **kwargs)
         self.order = order
+        fitp = zeros(self.order+1)
+        self.spectofit = self.specplotter.spectrum+self.basespec
+        self.OKmask = (self.spectofit==self.spectofit)
+        if exclude == 'interactive' or interactive:
+            self.excludemask[:] = True
+            self.click = self.specplotter.axis.figure.canvas.mpl_connect('button_press_event',self.selectregion)
+        else:
+            if excludefit and specfit.modelpars is not None:
+                #vlo = self.specplotter.specfit.modelpars[1] - 2*self.specplotter.specfit.modelpars[2]
+                #vhi = self.specplotter.specfit.modelpars[1] + 2*self.specplotter.specfit.modelpars[2]
+                #exclude = [argmin(abs(self.specplotter.vind-vlo)),argmin(abs(self.specplotter.vind-vhi))]
+                specfit.fullsizemodel() # make sure the spectrum is the right size
+                self.excludemask = abs(specfit.model) > exclusionlevel*abs(min(specfit.modelpars[0::3]))
+            else:
+                self.excludemask[:] = False
+            self.dofit(exclude=exclude,annotate=annotate,**kwargs)
+
+    def dofit(self,exclude=None,annotate=False,**kwargs):
+        self.specplotter.spectrum, self.baselinepars = baseline(
+                self.spectofit,
+                xarr=self.specplotter.vind,
+                order=self.order, exclude=exclude, 
+                mask=(True-self.OKmask)+self.excludemask,
+                **kwargs)
         self.basespec = poly1d(self.baselinepars)(self.specplotter.vind)
         if self.specplotter.spectrumplot is not None: 
             [self.specplotter.axis.lines.remove(p) for p in self.specplotter.spectrumplot]
@@ -446,10 +406,38 @@ class Baseline:
             [self.specplotter.axis.lines.remove(p) for p in self.specplotter.errorplot if isinstance(p,matplotlib.lines.Line2D)]
         self.specplotter.plotspec()
         self.specplotter.axis.set_ylim(
-                abs(self.specplotter.spectrum[OKmask].min())*1.1*sign(self.specplotter.spectrum[OKmask].min()),
-                abs(self.specplotter.spectrum[OKmask].max())*1.1*sign(self.specplotter.spectrum[OKmask].max()))
+                abs(self.specplotter.spectrum[self.OKmask].min())*1.1*sign(self.specplotter.spectrum[self.OKmask].min()),
+                abs(self.specplotter.spectrum[self.OKmask].max())*1.1*sign(self.specplotter.spectrum[self.OKmask].max()))
         if annotate: self.annotate() # refreshes automatically
         elif self.specplotter.autorefresh: self.specplotter.refresh()
+
+    def selectregion(self,event,annotate=False):
+        """
+        select regions for baseline fitting
+        """
+        if event.button == 1:
+            if self.nclicks_b1 == 0:
+                self.bx1 = argmin(abs(event.xdata-self.specplotter.vind))
+                self.nclicks_b1 += 1
+            elif self.nclicks_b1 == 1:
+                self.bx2 = argmin(abs(event.xdata-self.specplotter.vind))
+                self.nclicks_b1 -= 1
+                if self.bx1 > self.bx2: self.bx1,self.bx2 = self.bx2,self.bx1
+                self.fitregion += self.specplotter.axis.plot(
+                        self.specplotter.vind[self.bx1:self.bx2],
+                        self.specplotter.spectrum[self.bx1:self.bx2]+self.specplotter.offset,
+                        drawstyle='steps-mid',
+                        color='g',alpha=0.5)
+                self.specplotter.refresh()
+                self.excludemask[self.bx1:self.bx2] = False
+        if event.button in [2,3]:
+            disconnect(self.click)
+            self.dofit(exclude=None,annotate=annotate)
+            for p in self.fitregion:
+                p.set_visible(False)
+                self.specplotter.axis.lines.remove(p)
+            self.fitregion=[] # I should be able to just remove from the list... but it breaks the loop...
+            self.specplotter.refresh()
 
     def annotate(self,loc='upper left'):
         bltext = "bl: $y=$"+"".join(["$%+6.3gx^{%i}$" % (f,self.order-i)
@@ -591,7 +579,7 @@ class Specfit:
         self.chi2 = chi2
         self.dof  = self.gx2-self.gx1-self.ngauss*3-vheight
         if vheight: 
-            self.specplotter.baseline.baselinepars = mpp[0]
+            self.specplotter.baseline.baselinepars = mpp[:1] # first item in list form
             self.model = model - mpp[0]
         else: self.model = model
         self.residuals = self.spectofit[self.gx1:self.gx2] - self.model
@@ -655,6 +643,7 @@ class Specfit:
                 loc=loc,markerscale=0.01,
                 borderpad=0.1, handlelength=0.1, handletextpad=0.1
                 )
+        self.gaussleg.draggable(True)
         self.specplotter.axis.add_artist(self.gaussleg)
         if self.specplotter.autorefresh: self.specplotter.refresh()
 

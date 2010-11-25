@@ -380,12 +380,12 @@ def onedgaussfit(xax, data, err=None,
 def n_gaussian(pars=None,a=None,dx=None,sigma=None):
     """
     Returns a function that sums over N gaussians, where N is the length of
-    dx,sigma,a *OR* N = len(pars) / 3
+    a,dx,sigma *OR* N = len(pars) / 3
 
     The background "height" is assumed to be zero (you must "baseline" your
     spectrum before fitting)
 
-    pars  - a list with len(pars) = 3n, assuming dx,sigma,a repeated
+    pars  - a list with len(pars) = 3n, assuming a,dx,sigma repeated
     dx    - offset (velocity center) values
     sigma - line widths
     a     - amplitudes
@@ -466,7 +466,7 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
     if xax == None:
         xax = numpy.arange(len(data))
 
-    parnames = {0:"SHIFT",1:"WIDTH",2:"AMPLITUDE"}
+    parnames = {0:"AMPLITUDE",1:"SHIFT",2:"WIDTH"}
 
     parinfo = [ {'n':ii, 'value':params[ii],
         'limits':[minpars[ii],maxpars[ii]],
