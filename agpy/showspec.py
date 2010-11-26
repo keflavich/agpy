@@ -133,6 +133,8 @@ class SpecPlotter:
       to specify the location in the cube
       """
   
+      if kwargs.has_key('fignum'): kwargs.pop('fignum')  # HACK because I want __init__ to accept different kwargs
+      if kwargs.has_key('fig'): kwargs.pop('fig')        # is there a better workaround?
       if scale  is not None: self.scale = scale
       if units  is not None: self.units = units
       if xunits is not None: self.xunits= xunits
@@ -946,7 +948,7 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
         specname = filename.rstrip(".fits")
     if hdr.get('CUNIT1'+wcstype) in ['m/s','M/S']:
         conversion_factor = 1000.0
-        xunits = 'm/s'
+        xunits = 'km/s' # change to km/s because you're converting units
     else:
         xunits = hdr.get('CUNIT1'+wcstype)
         if xunits in ("hz","Hz"):
