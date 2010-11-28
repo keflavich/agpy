@@ -60,7 +60,8 @@ class SpecPlotter:
             x: x, xtora=lambda x: x, ytodec=lambda x: x, specname=None,
             dv=None, color='k', hdr=None, errspec=None,  maskspec=None,
             fig=None, fignum=1, clear=True, title=None, xunits='km/s',
-            erralpha=0.2, ivconv=None, autorefresh=True, **kwargs ):
+            erralpha=0.2, ivconv=None, autorefresh=True, reffreq=None,
+            **kwargs ):
       self.vconv = vconv
       self.xtora = xtora
       self.ytodec = ytodec
@@ -68,6 +69,7 @@ class SpecPlotter:
       self.spectrum = cube # spectrum is what's plotted; cube is the "raw data"
       self.specname=specname
       self.dv=dv
+      self.reffreq=reffreq
       self.scale=1.0
       self.units='K'
       self.xunits=xunits
@@ -80,8 +82,8 @@ class SpecPlotter:
       self.specfit = Specfit(self)
       self.fitspec = self.specfit
       self.baseline = Baseline(self)
-      self.fft = FFT(self)
-      self.psd = self.fft.psd
+      #self.fft = FFT(self)
+      #self.psd = self.fft.psd
       self.vmin=None
       self.vmax=None
       self.title=title
@@ -125,7 +127,7 @@ class SpecPlotter:
     def plotspec(self, i=0, j=0, cube=False, title=None,
             button=1, clear=False,color=None, continuum=None,
             axis=None, offset=None, scale=None, voff=None, vmin=None,
-            vmax=None, units=None, xunits=None, erralpha=None, 
+            vmax=None, units=None, xunits=None, erralpha=None, plotpix=False,
             errstyle='fill', autorefresh=None, **kwargs):
       """
       Plot a spectrum
@@ -150,8 +152,10 @@ class SpecPlotter:
       if axis is None: axis=self.axis # allow spectrum to be plotted on other axis
       if clear: axis.clear()
   
-      self.vind = self.vconv(arange(self.cube.shape[0])) + self.voff
-      xind = arange(self.cube.shape[0])
+      if plotpix:
+          self.vind = arange(self.cube.shape[0])
+      else:
+          self.vind = self.vconv(arange(self.cube.shape[0])) + self.voff
   
       if kwargs.has_key('fignum'): kwargs.pop('fignum')
       if kwargs.has_key('linewidth'):
@@ -213,6 +217,7 @@ class SpecPlotter:
         axis.set_ylabel("$S_\\nu$ (Jy)")
       else:
         axis.set_ylabel(self.units)
+      if self.autorefresh: self.refresh()
   
     def save(self,fname,**kwargs):
       """
@@ -220,6 +225,9 @@ class SpecPlotter:
       """
       newfile = pyfits.PrimaryHDU(data=self.cube,header=self.header)
       newfile.writeto(fname,**kwargs)
+
+    def savefig(self,fname,bbox_inches='tight',**kwargs):
+        self.axis.figure.savefig(fname,bbox_inches=bbox_inches,**kwargs)
   
     def showlines(self,linefreqs,linenames,ctype='freq',cunit='hz',yscale=0.8,vofflines=0.0,
             voffunit='km/s',**kwargs):
@@ -234,8 +242,11 @@ class SpecPlotter:
         if ctype != 'freq':
             print "Sorry, non-frequency units not implemented yet."
             return
-  
+
         speedoflight=2.99792458e5
+        if self.reffreq and self.xunits in ('km/s','m/s'):
+            linefreqs = -(array(linefreqs)-self.reffreq)/self.reffreq * speedoflight
+  
         if 'hz' in cunit or 'Hz' in cunit:
             linefreqs *= (1.0 + vofflines / speedoflight)
         else:
@@ -273,7 +284,7 @@ class FFT:
             self.axis=axis
             self.figure=self.axis.figure
             self.fignum=None
-        self.axis.clear()
+        #self.axis.clear()
         self.color=color
         self.fftplot=None
         self.setspec()
@@ -353,7 +364,7 @@ class Baseline:
         self.nclicks_b2 = 0
         self.fitregion=[]
 
-    def __call__(self, order=1, annotate=False, excludefit=False,
+    def __call__(self, order=1, annotate=False, excludefit=False, save=True,
             exclude=None, exclusionlevel=0.01, interactive=False, **kwargs):
         """
         Fit and remove a polynomial from the spectrum.  
@@ -392,6 +403,7 @@ class Baseline:
             else:
                 self.excludemask[:] = False
             self.dofit(exclude=exclude,annotate=annotate,**kwargs)
+        if save: self.savefit()
 
     def dofit(self,exclude=None,annotate=False,**kwargs):
         self.specplotter.spectrum, self.baselinepars = baseline(
@@ -461,6 +473,12 @@ class Baseline:
             if self.blleg in self.specplotter.axis.artists:
                 self.specplotter.axis.artists.remove(self.blleg)
 
+    def savefit(self):
+        if self.baselinepars is not None:
+            for ii,p in enumerate(self.baselinepars):
+                self.specplotter.header.update('BLCOEF%0.2i' % (ii),p,comment="Baseline power-law best-fit coefficient x^%i" % (self.order-ii-1))
+
+
 class Specfit:
 
     def __init__(self,specplotter):
@@ -487,7 +505,7 @@ class Specfit:
         #self.seterrspec()
 
     def __call__(self, interactive=False, usemoments=True, fitcolor='r',
-            multifit=False, guesses=None, annotate=True, 
+            multifit=False, guesses=None, annotate=True, save=True,
             **kwargs):
         """
         Fit gaussians to a spectrum
@@ -521,6 +539,7 @@ class Specfit:
                 self.onedfit(usemoments=usemoments,annotate=annotate,
                         vheight=False,height=0.0,**kwargs)
             if self.specplotter.autorefresh: self.specplotter.refresh()
+        if save: self.savefit()
 
     def seterrspec(self,usestd=None,useresiduals=True):
         if self.specplotter.errspec is not None and not usestd:
@@ -638,9 +657,9 @@ class Specfit:
         self.gaussleg = self.specplotter.axis.legend(
                 tuple([pl]*3*self.ngauss),
                 tuple(flatten(
-                    [("c%i=%6.3g $\\pm$ %6.3g" % (jj,self.modelpars[1+jj*3],self.modelerrs[1+jj*3]),
-                      "w%i=%6.3g $\\pm$ %6.3g" % (jj,self.modelpars[2+jj*3],self.modelerrs[2+jj*3]),
-                      "a%i=%6.3g $\\pm$ %6.3g" % (jj,self.modelpars[0+jj*3],self.modelerrs[0+jj*3]))
+                    [("c%i=%6.4g $\\pm$ %6.4g" % (jj,self.modelpars[1+jj*3],self.modelerrs[1+jj*3]),
+                      "w%i=%6.4g $\\pm$ %6.4g" % (jj,self.modelpars[2+jj*3],self.modelerrs[2+jj*3]),
+                      "a%i=%6.4g $\\pm$ %6.4g" % (jj,self.modelpars[0+jj*3],self.modelerrs[0+jj*3]))
                       for jj in range(self.ngauss)])),
                 loc=loc,markerscale=0.01,
                 borderpad=0.1, handlelength=0.1, handletextpad=0.1
@@ -722,7 +741,14 @@ class Specfit:
             self.gaussleg.set_visible(False)
             if self.gaussleg in self.specplotter.axis.artists:
                 self.specplotter.axis.artists.remove(self.gaussleg)
-        
+    
+    def savefit(self):
+        if self.modelpars is not None:
+            for ii,p in enumerate(self.modelpars):
+                if ii % 3 == 0: self.specplotter.header.update('AMP%1i' % (ii/3),p,comment="Gaussian best fit amplitude #%i" % (ii/3))
+                if ii % 3 == 1: self.specplotter.header.update('CEN%1i' % (ii/3),p,comment="Gaussian best fit center #%i" % (ii/3))
+                if ii % 3 == 2: self.specplotter.header.update('WID%1i' % (ii/3),p,comment="Gaussian best fit width #%i" % (ii/3))
+
 
 def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
     
@@ -965,8 +991,12 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
         xtype = hdr.get('CTYPE1'+wcstype)
     else:
         xtype = 'VLSR'
+    if hdr.get('REFFREQ'+wcstype):
+        reffreq = hdr.get('REFFREQ'+wcstype)
+    else:
+        reffreq = None
 
-    return dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units,xunits,errspec,maskspec
+    return dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname,units,xunits,errspec,maskspec,reffreq
 
 def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
@@ -983,7 +1013,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     if vpars and vconv and hdr and spec and xtora and ytora:
         dv,v0,p3 = vpars
     else:
-        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits,errspec,maskspec = \
+        dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits,errspec,maskspec,reffreq = \
                 open_1d(filename,specnum=specnum,wcstype=wcstype,errspecnum=errspecnum,maskspecnum=maskspecnum)
         if specname is None: specname=specname_file
         if units is None and kwargs.has_key('units'): units = kwargs.pop('units')
@@ -1070,7 +1100,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         hdr.update('CDELT1'+wcstype,dv)
 
     sp = SpecPlotter(specplot, vconv=vconv, xtora=xtora, ytodec=ytodec,
-            specname=specname, dv=dv/conversion_factor, hdr=hdr,
+            specname=specname, dv=dv/conversion_factor, hdr=hdr, reffreq=reffreq,
             errspec=errspec, maskspec=maskspec, xunits=xunits, **kwargs)
 
     if plotspectrum:
