@@ -472,6 +472,7 @@ class Baseline:
             self.blleg.set_visible(False)
             if self.blleg in self.specplotter.axis.artists:
                 self.specplotter.axis.artists.remove(self.blleg)
+        if self.specplotter.autorefresh: self.specplotter.refresh()
 
     def savefit(self):
         if self.baselinepars is not None:
@@ -741,6 +742,7 @@ class Specfit:
             self.gaussleg.set_visible(False)
             if self.gaussleg in self.specplotter.axis.artists:
                 self.specplotter.axis.artists.remove(self.gaussleg)
+        if self.specplotter.autorefresh: self.specplotter.refresh()
     
     def savefit(self):
         if self.modelpars is not None:
