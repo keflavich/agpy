@@ -1,5 +1,6 @@
 from pylab import *
 from numpy import *
+import agpy
 from agpy import readcol
 try:
     import pyfits
@@ -17,9 +18,12 @@ c=2.99792e10
 k=1.3806503e-16
 e=4.803e-12
 
+tablepath = agpy.__path__[0]+"/h2fit/"
+
 def h2level_energy(V,J):
     """ Returns the theoretical level energy as a function of the
     vibrational (V) and rotational (J) state of the molecule. 
+    in units of ergs
     
     Constants are from NIST: 
     http://webbook.nist.gov/cgi/cbook.cgi?ID=C1333740&Units=SI&Mask=1000#Diatomic
@@ -36,20 +40,22 @@ def h2level_energy(V,J):
     return h * c * (We*(V+0.5) + Be*(J*(J+1)) - WeXe*(V+.5)**2 - De*J**2*(J+1)**2 - Ae*(V+.5)*(J+1)*J)
 
 # read in rest energies before calling function
-tablepath='/Users/adam/work/IRAS05358/code/'
 resten = readcol(tablepath+'dalgarno1984_table5.txt',verbose=0)
 
-def restwl(vu,vl,ju,jl):
-    """ Uses energy levels measured by Dalgarno, Can J. Physics, 62,1639,1984 
+def restwl(vu,vl,ju,jl,calc=False):
+    """ Uses energy levels measured by Dabrowski & Herzberg, Can J. Physics, 62,1639,1984 
     vu,vl - upper and lower vibrational states
     ju,jl - upper and lower rotational states 
     returns wavelength in microns"""
-    if ju >= resten.shape[0] or vu >= resten.shape[1]:
-        return 0
-    dl = .01/(resten[ju][vu]-resten[jl][vl])
-    return dl * 1e6
+    if calc:
+        return 1e4*h*c / (h2level_energy(vu,ju) - h2level_energy(vl,jl))
+    else:
+        if ju >= resten.shape[0] or vu >= resten.shape[1]:
+            return 0
+        dl = .01/(resten[ju][vu]-resten[jl][vl])
+        return dl * 1e6
 
-def linename_to_restwl(linelistfile = '/Users/adam/work/IRAS05358/code/linelist.txt',outfile='/Users/adam/work/IRAS05358/code/newlinelist.txt'):
+def linename_to_restwl(linelistfile = tablepath+'linelist.txt',outfile=tablepath+'newlinelist.txt'):
 
     lines = readcol(linelistfile,fsep='|',twod=False)
     outf = open(outfile,'w')
@@ -122,10 +128,10 @@ def aval(v,ju,jl):
 aval_vect=vectorize(aval)
 
 # atran = pyfits.open('/Users/adam/observations/triplespec/Spextool2/data/atran2000.fits')
-atran = readcol('/Users/adam/work/IRAS05358/code/atran.txt')
+atran = readcol(tablepath+'atran.txt')
 atran_wl = atran[:,0]*1e4
 atran_tr = atran[:,1]
-atran_arc = readcol('/Users/adam/work/IRAS05358/code/atran_arcturus.txt')
+atran_arc = readcol(tablepath+'atran_arcturus.txt')
 ARCSORT = argsort(atran_arc[:,0])
 atran_arcwl = atran_arc[ARCSORT,0]*1e4
 atran_arctr = atran_arc[ARCSORT,1]
