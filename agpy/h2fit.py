@@ -46,7 +46,11 @@ def restwl(vu,vl,ju,jl,calc=False):
     """ Uses energy levels measured by Dabrowski & Herzberg, Can J. Physics, 62,1639,1984 
     vu,vl - upper and lower vibrational states
     ju,jl - upper and lower rotational states 
-    returns wavelength in microns"""
+    returns wavelength in microns
+    online versions of this table:
+    http://www.astronomy.ohio-state.edu/~depoy/research/observing/molhyd.htm
+    http://www.jach.hawaii.edu/UKIRT/astronomy/calib/spec_cal/h2_s.html
+    """
     if calc:
         return 1e4*h*c / (h2level_energy(vu,ju) - h2level_energy(vl,jl))
     else:
@@ -298,6 +302,7 @@ def modelspec(x,T,A,w,dx,op,Ak=0,extinction=False):
             wl = restwl(v,v-1,j,j) * 10**4
             model += A*mult*(2*(j)+1)*aval(v,j,j)*exp(-h2level_energy(v,j)/(k*T)) * exp( - ( x - wl - dx )**2 / (2*w**2) )
     if extinction:
+        # alpha=1.8 comes from Martin & Whittet 1990.  alpha=1.75 from Rieke and Lebofsky 1985
         Al = Ak * (x/22000.0)**(-1.75)
         model *= exp(-Al)
     return model
@@ -597,7 +602,8 @@ def extinctfit(ss): #ss1,ss2):
                                      # alpha = 1.8 comes from Martin & Whittet 1990
     tau1 = dtau12 / ( (midwl[s]/midwl[q])**-1.8 - 1 )
     AL = 100**(.2) * log10(exp(1)) * tau1 # conversion from optical depth to magnitude
-    AK = AL * (midwl[q]/22000.0)**-1.8 # again alpha comes from Martin & Whittet 1990.  alpha=1.75 from Rieke and Lebofsky 1985
+    # AK = AL * lambda^-alpha
+    AK = AL * (midwl[q]/22000.0)**-1.8 # again alpha=1.8 comes from Martin & Whittet 1990.  alpha=1.75 from Rieke and Lebofsky 1985
 
     return AK,AL,SdivQ,ASdivAQ
 

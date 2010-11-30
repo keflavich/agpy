@@ -363,9 +363,12 @@ class Baseline:
         self.nclicks_b1 = 0
         self.nclicks_b2 = 0
         self.fitregion=[]
+        self.excludevelo = []
+        self.excludepix  = []
 
     def __call__(self, order=1, annotate=False, excludefit=False, save=True,
-            exclude=None, exclusionlevel=0.01, interactive=False, **kwargs):
+            exclude=None, exclusionlevel=0.01,
+            interactive=False, **kwargs):
         """
         Fit and remove a polynomial from the spectrum.  
         It will be saved in the variable "self.basespec"
@@ -392,6 +395,8 @@ class Baseline:
         self.OKmask = (self.spectofit==self.spectofit)
         if exclude == 'interactive' or interactive:
             self.excludemask[:] = True
+            self.excludevelo = []
+            self.excludepix  = []
             self.click = self.specplotter.axis.figure.canvas.mpl_connect('button_press_event',self.selectregion)
         else:
             if excludefit and specfit.modelpars is not None:
@@ -405,11 +410,34 @@ class Baseline:
             self.dofit(exclude=exclude,annotate=annotate,**kwargs)
         if save: self.savefit()
 
-    def dofit(self,exclude=None,annotate=False,**kwargs):
+    def dofit(self, exclude=None, excludeunits='velo', annotate=False,
+            **kwargs):
+        """
+        Do the baseline fitting and save and plot the results.
+
+        Can specify a region to exclude using velocity units or pixel units
+        """
+        if exclude is not None and excludeunits in ['velo','km/s']:
+            if len(exclude) % 2 == 0:
+                self.excludevelo = exclude
+                self.excludepix = []
+                for vl,vu in zip(exclude[::2],exclude[1::2]):
+                    xl = argmin(abs(self.specplotter.vind-vl))
+                    xu = argmin(abs(self.specplotter.vind-vu))
+                    if xl > xu: xl,xu=xu,xl
+                    self.excludemask[xl:xu] = True
+                    self.excludepix += [xl,xu]
+        elif excludeunits in ['pix','pixel','chan','channel']:
+            if len(exclude) % 2 == 0:
+                self.excludepix = []
+                for xl,xu in zip(exclude[::2],exclude[1::2]):
+                    if xl > xu: xl,xu=xu,xl
+                    self.excludemask[xl:xu] = True
+                    self.excludepix += [xl,xu]
         self.specplotter.spectrum, self.baselinepars = baseline(
                 self.spectofit,
                 xarr=self.specplotter.vind,
-                order=self.order, exclude=exclude, 
+                order=self.order, exclude=None, 
                 mask=(True-self.OKmask)+self.excludemask,
                 **kwargs)
         self.basespec = poly1d(self.baselinepars)(self.specplotter.vind)
@@ -418,7 +446,7 @@ class Baseline:
         if self.specplotter.errorplot is not None: 
             [self.specplotter.axis.collections.remove(p) for p in self.specplotter.errorplot if isinstance(p,matplotlib.collections.PolyCollection)]
             [self.specplotter.axis.lines.remove(p) for p in self.specplotter.errorplot if isinstance(p,matplotlib.lines.Line2D)]
-        self.specplotter.plotspec()
+        self.specplotter.plotspec(**self.specplotter.plotkwargs)
         self.specplotter.axis.set_ylim(
                 abs(self.specplotter.spectrum[self.OKmask].min())*1.1*sign(self.specplotter.spectrum[self.OKmask].min()),
                 abs(self.specplotter.spectrum[self.OKmask].max())*1.1*sign(self.specplotter.spectrum[self.OKmask].max()))
@@ -432,6 +460,8 @@ class Baseline:
         if event.button == 1:
             if self.nclicks_b1 == 0:
                 self.bx1 = argmin(abs(event.xdata-self.specplotter.vind))
+                self.excludevelo += [self.specplotter.vind]
+                self.excludepix  += [self.bx1]
                 self.nclicks_b1 += 1
             elif self.nclicks_b1 == 1:
                 self.bx2 = argmin(abs(event.xdata-self.specplotter.vind))
@@ -444,6 +474,8 @@ class Baseline:
                         color='g',alpha=0.5)
                 self.specplotter.refresh()
                 self.excludemask[self.bx1:self.bx2] = False
+                self.excludevelo += [self.specplotter.vind]
+                self.excludepix  += [self.bx2]
         if event.button in [2,3]:
             disconnect(self.click)
             self.dofit(exclude=None,annotate=annotate)
@@ -1040,15 +1072,17 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
 
     if argvmin > argvmax:
         argvmin,argvmax = argvmax,argvmin
-        if exclude is not None: exclude = exclude[::-1]
+        #if exclude is not None: exclude = exclude[::-1]
     elif argvmin == argvmax:
         raise Exception("Error: no data in velocity range %g:%g for source %s."
                 % (vmin,vmax,filename))
 
-    if exclude is not None:
-        exclude[0] = argmin(abs(varr-exclude[0]))
-        exclude[1] = argmin(abs(varr-exclude[1]))
-        exclude = array(exclude) - argvmin
+    # these lines were meant to automatically put "exclude" into velocity
+    # units; this is now done in the baseline code
+    #if exclude is not None:
+    #    exclude[0] = argmin(abs(varr-exclude[0]))
+    #    exclude[1] = argmin(abs(varr-exclude[1]))
+    #    exclude = array(exclude) - argvmin
 
     vconv = lambda v: ((v-p3+argvmin+1)*dv+v0) / conversion_factor
     ivconv = lambda V: p3-1-argvmin+(V*conversion_factor-v0)/dv
