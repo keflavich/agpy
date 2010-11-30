@@ -57,7 +57,7 @@ def restwl(vu,vl,ju,jl,calc=False):
 
 def linename_to_restwl(linelistfile = tablepath+'linelist.txt',outfile=tablepath+'newlinelist.txt'):
 
-    lines = readcol(linelistfile,fsep='|',twod=False)
+    lines = readcol(linelistfile,fsep='|',twod=False,comment="#")
     outf = open(outfile,'w')
 
     for line in transpose(lines):
