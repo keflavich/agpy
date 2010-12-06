@@ -818,7 +818,7 @@ def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
     """
     dv,v0,p3,hdr,cube,xtora,ytodec,vconv = open_3d(filename)
 
-    splat_1d(vpars=[dv,v0,p3],hdr=hdr/Users/adam/work/bgps_pipeline/markwardt/mpfit2dpeak.pro,cube=cube[:,0,0],xtora=xtora,ytodec=ytodec,vconv=vconv)
+    splat_1d(vpars=[dv,v0,p3],hdr=hdr,cube=cube[:,0,0],xtora=xtora,ytodec=ytodec,vconv=vconv)
 
     varr = vconv(arange(cube.shape[0]))
     if vmin is None: argvmin = 0
