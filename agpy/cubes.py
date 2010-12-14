@@ -47,10 +47,15 @@ def speccen_header(header,lon=None,lat=None):
     newheader = header.copy()
     newheader.update('CRVAL1',header.get('CRVAL3'))
     newheader.update('CRPIX1',header.get('CRPIX3'))
-    if header.has_key('CD3_3'): newheader.update('CDELT1',header.get('CD3_3'))
     if header.has_key('CD1_1'): newheader.rename_key('CD1_1','OLDCD1_1')
+    elif header.has_key('CDELT1'): newheader.rename_key('CDELT1','OLDCDEL1')
+    if header.has_key('CD3_3'): newheader.update('CDELT1',header.get('CD3_3'))
+    elif header.has_key('CDELT3'): newheader.update('CDELT1',header.get('CDELT3'))
     newheader.update('CTYPE1','VRAD')
-    newheader.update('CUNIT1',header.get('CUNIT3'))
+    if header.get('CUNIT3'): newheader.update('CUNIT1',header.get('CUNIT3'))
+    else: 
+        print "Assuming CUNIT3 is km/s in speccen_header"
+        newheader.update('CUNIT1','km/s')
     newheader.update('CRPIX2',1)
     newheader.update('CTYPE2','RA---TAN')
     newheader.update('CRPIX3',1)
@@ -339,7 +344,10 @@ def getspec_reg(cubefilename,region):
 
     l,b,r = region.coord_list
     #pos = coords.Position([l,b],system=ds9tocoords[region.coord_format])
-    cubefile = pyfits.open(cubefilename)
+    if isinstance(cubefilename,pyfits.HDUList):
+        cubefile = cubefilename
+    else:
+        cubefile = pyfits.open(cubefilename)
     header = cubefile[0].header
     cube = cubefile[0].data
     if len(cube.shape) == 4: cube = cube[0,:,:,:]
@@ -347,6 +355,29 @@ def getspec_reg(cubefilename,region):
     sp = getspec(l,b,r,cube,header,wunit='degree')
 
     return sp
+
+def coords_in_image(fitsfile,lon,lat,system='galactic'):
+    """
+    Determine whether the coordinates are inside the image
+    """
+    if not isinstance(fitsfile,pyfits.HDUList):
+        fitsfile = pyfits.open(fitsfile)
+
+    wcs = pywcs.WCS(flatten_header(fitsfile[0].header))
+
+    if 'RA' in wcs.wcs.ctype[0]:
+        pos = coords.Position((lon,lat),system=system)
+        lon,lat = pos.j2000()
+    if 'GLON' in wcs.wcs.ctype[0]:
+        pos = coords.Position((lon,lat),system=system)
+        lon,lat = pos.galactic()
+
+    x,y = wcs.wcs_sky2pix(lon,lat,0)
+    #DEBUG print x,y,wcs.naxis1,wcs.naxis2
+    if (0 < x < wcs.naxis1) and (0 < y < wcs.naxis2):
+        return True
+    else:
+        return False
 
 def smooth_cube(cube,cubedim=0,parallel=True,numcores=None,**kwargs):
     """
