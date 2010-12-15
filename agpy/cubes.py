@@ -330,7 +330,7 @@ def getspec(lon,lat,rad,cube,header,r_fits=True,inherit=True,wunit='arcsec'):
     else:
         return spec
 
-def getspec_reg(cubefilename,region):
+def getspec_reg(cubefilename,region,**kwargs):
     """
     Aperture extraction from a cube using a pyregion circle region
 
@@ -352,7 +352,7 @@ def getspec_reg(cubefilename,region):
     cube = cubefile[0].data
     if len(cube.shape) == 4: cube = cube[0,:,:,:]
 
-    sp = getspec(l,b,r,cube,header,wunit='degree')
+    sp = getspec(l,b,r,cube,header,wunit='degree',**kwargs)
 
     return sp
 
