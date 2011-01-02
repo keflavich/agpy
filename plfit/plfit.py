@@ -35,7 +35,7 @@ class plfit:
     from http://www.santafe.edu/~aaronc/powerlaws/
 
     See A. Clauset, C.R. Shalizi, and M.E.J. Newman, "Power-law distributions
-    in empirical data" SIAM Review, to appear (2009). (arXiv:0706.1062)
+    in empirical data" SIAM Review, 51, 661-703 (2009). (arXiv:0706.1062)
     http://arxiv.org/abs/0706.1062
 
     The output "alpha" is defined such that p(x) ~ (x/xmin)^-alpha
@@ -86,7 +86,7 @@ class plfit:
         from http://www.santafe.edu/~aaronc/powerlaws/
 
         See A. Clauset, C.R. Shalizi, and M.E.J. Newman, "Power-law distributions
-        in empirical data" SIAM Review, to appear (2009). (arXiv:0706.1062)
+        in empirical data" SIAM Review, 51, 661-703 (2009). (arXiv:0706.1062)
         http://arxiv.org/abs/0706.1062
 
         nosmall is on by default; it rejects low s/n points
@@ -247,6 +247,11 @@ class plfit:
         pylab.gca().set_xlim(min(x),max(x))
 
     def plotppf(self,x=None,xmin=None,alpha=None,dolog=True,**kwargs):
+        """
+        Plots the power-law-predicted value on the Y-axis against the real
+        values along the X-axis.  Can be used as a diagnostic of the fit 
+        quality.
+        """
         if not(xmin): xmin=self._xmin
         if not(alpha): alpha=self._alpha
         if not(x): x=numpy.sort(self.data[self.data>xmin])
@@ -266,6 +271,8 @@ class plfit:
         else:
             pylab.plot(x,xmodel,'.',**kwargs)
         pylab.plot([min(x),max(x)],[min(x),max(x)],'k--')
+        pylab.xlabel("Real Value")
+        pylab.ylable("Power-Law Model Value")
 
     def test_pl(self,niter=1e3,**kwargs):
         """
@@ -276,7 +283,7 @@ class plfit:
         Will randomly select values from the data < xmin.  The number of values selected will
         be chosen from a uniform random distribution with p(<xmin) = n(<xmin)/n.
 
-        Once the sample is created, is fit using above methods, then the best fit is used to
+        Once the sample is created, it is fit using above methods, then the best fit is used to
         compute a Kolmogorov-Smirnov statistic.  The KS stat distribution is compared to the 
         KS value for the fit to the actual data, and p = fraction of random ks values greater
         than the data ks value is computed.  If p<.1, the data may be inconsistent with a 

@@ -298,7 +298,7 @@ class FFT:
         else:
             self.fft(shift=shift)
     
-    def fft(self,shift=True,logplot=False):
+    def fft(self,shift=True,logplot=False,**kwargs):
         self.clear()
         self.setshift(shift)
         if logplot: self.axis.set_yscale('log')
@@ -307,19 +307,20 @@ class FFT:
         self.realfft = self.fftspec.real
         self.imagfft = self.fftspec.imag
         self.fftplot = self.axis.plot(self.shiftfunc(self.realfft),
-                drawstyle='steps-mid',color=self.color)
+                drawstyle='steps-mid',color=self.color,**kwargs)
         self.refresh()
 
-    def psd(self,logplot=True,shift=True):
+    def psd(self,logplot=True,shift=True,**kwargs):
         self.clear()
         if logplot: self.axis.set_yscale('log')
         else: self.axis.set_yscale('linear')
         self.setshift(shift)
         self.psdspec = fft(self.spectofft) * fft(self.spectofft[::-1])
-        self.psdreal = self.psdspec.real
-        if logplot:
-            self.fftplot = self.axis.semilogy(self.shiftfunc(self.psdreal),
-                    drawstyle='steps-mid',color=self.color)
+        self.psdreal = abs(self.psdspec)
+        self.fftplot = self.axis.plot(self.shiftfunc(self.psdreal),
+                drawstyle='steps-mid',color=self.color,**kwargs)
+        if logplot: self.axis.set_yscale('log')
+        else: self.axis.set_yscale('linear')
         self.refresh()
 
     def setshift(self,shift=True):
