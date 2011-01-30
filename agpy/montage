@@ -65,6 +65,7 @@ echo Extra Parameters: $params
 if [ ${#files} -gt 0 ] 
 then
     echo "Creating temporary directory and hard-linking (not sym-linking) all files into it"
+    #echo "Creating temporary directory and sym-linking all files into it"
     mkdir tmp
     #echo ln ${files[@]} tmp/
     ln ${files[@]} tmp/

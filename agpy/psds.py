@@ -13,7 +13,7 @@ except ImportError:
     ifft2 = numpy.fft.ifft2
 
 
-def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,fft_pad=False):
+def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,fft_pad=False,return_stddev=False):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -37,10 +37,15 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,fft_pad=
 
         if return_index:
             if wavenumber:
-                return len(freq)/freq,zz
+                return_vals = list((len(freq)/freq,zz))
             else:
-                return freq/len(freq),zz
+                return_vals = list((freq/len(freq),zz))
         else:
-            return zz
+            return_vals = list(zz)
+        if return_stddev:
+            zzstd = azimuthalAverage(psd2,stddev=True)
+            return_vals.append(zzstd)
+
+        return return_vals
     else:
         return psd2

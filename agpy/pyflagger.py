@@ -28,8 +28,8 @@ matplotlib.rcParams['image.aspect']=1
 matplotlib.defaultParams['image.origin']='lower'
 matplotlib.defaultParams['image.interpolation']='nearest'
 matplotlib.defaultParams['image.aspect']=1
-if matplotlib.rcParams['text.usetex']:
-  texOn = True
+if matplotlib.rcParams['text.usetex']: texOn = True
+else: texOn = False
 # matplotlib.rcParams['text.usetex']=False
 # matplotlib.defaultParams['text.usetex']=False
 
@@ -64,6 +64,7 @@ class Flagger:
     B - unflag bolometer
     c - toggle current scan
     v - display data value
+    P - display the PCA decomposition of the displayed timestream
  
   Map Key Commands:
     c - toggle current scan
@@ -160,6 +161,8 @@ class Flagger:
       self.datafig = None
       self.scanim = None
       self.PCA = False
+      self.powerspec_plotted = False
+      self.powerspectra_whole = None
 
       self.showmap(vmax=vmax)
       self.dcon()
@@ -174,6 +177,7 @@ class Flagger:
       self.tsfile = None
 
       self.ncscans = self.sav.variables['bgps']['scans_info'][0]
+      self.sample_interval = self.sav.variables['bgps']['sample_interval'][0]
       if len(self.ncscans.shape) == 1: self.ncscans.shape = [1,2]
       self.scanlengths = self.ncscans[:,1]+1-self.ncscans[:,0]
       self.scanlen = numpy.max(self.scanlengths)
@@ -513,7 +517,7 @@ class Flagger:
           self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename.replace("_","\\_"));
         else:
           self.flagtitle = pylab.title("Flags for Scan "+str(self.scannum)+" in "+self.ncfilename);
-        xlabel('Bolometer number'); ylabel('Time (0.1s)')
+        xlabel('Bolometer number'); ylabel('Time (0.%0.2fs)' % self.sample_interval)
         self.flagim = pylab.imshow(self.flags[scannum,:,:],interpolation='nearest',
                 origin='lower',aspect=self.aspect)
         self.flagcb = pylab.colorbar()
@@ -522,7 +526,7 @@ class Flagger:
           self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename.replace("_","\\_"));
         else:
           self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename);
-        xlabel('Bolometer number'); ylabel('Time (0.1s)')
+        xlabel('Bolometer number'); ylabel('Time (0.%0.2fs)' % self.sample_interval)
         self.dataim = pylab.imshow(plotdata,interpolation='nearest',
                 origin='lower',aspect=self.aspect)
         self.datacb = pylab.colorbar()
@@ -743,7 +747,15 @@ class Flagger:
   def plot_column(self,tsx):
       self.bolofig=figure(4)
       self.bolofig.clf()
-      pylab.plot(self.plane[:,numpy.round(tsx)])
+      if self.powerspec_plotted:
+          xlen = self.plane.shape[0]
+          pylab.plot(fftfreq(xlen,d=self.sample_interval)[:xlen/2],self.plane[:xlen/2,numpy.round(tsx)],
+                  linewidth=0.5,color='k')
+          xlabel("Frequency (Hz)")
+          ylabel("Power (Jy$^2$)")
+      else:
+          pylab.plot(self.plane[:,numpy.round(tsx)],
+                  linewidth=0.5,color='k')
 
   def plot_line(self,tsy):
       self.bolofig=figure(4)
@@ -895,7 +907,7 @@ class Flagger:
               self._y1 = numpy.floor(event.ydata)
       elif event.key == 's' or event.key == 'w': # "whole" scan
           self.flags[self.scannum,:,:] += 1
-      elif event.key == 'S':
+      elif event.key == 'S' or event.key == 'W':
           self.flags[self.scannum,:,:] -= (self.flags[self.scannum,:,:] > 0)
       elif event.key == 'b':
           self.flag_bolo(event.xdata,event.key)
@@ -907,6 +919,8 @@ class Flagger:
           self.plot_column(event.xdata)
       elif event.key == 'L':
           self.plot_line(event.ydata)
+      elif event.key == 'z':
+          self.powerspec()
       elif event.key == 'a':
           if self._lastkey == 'a':
               self._y2 = round(event.ydata)
@@ -923,6 +937,41 @@ class Flagger:
           vpt = self.data[self.scannum,y,x]
           fpt = self.flags[self.scannum,y,x]
           print "Value at %i,%i: %f  Flagged=%i" % (x,y,vpt,fpt)
+      elif event.key == '?':
+          print """
+
+  Key commands:
+    left click - flag
+    right click - unflag
+    n - next scan
+    p,N - previous scan
+    q - save and quit
+    Q - quit (no save)
+    . - point to this point in the map
+    f - plot footprint of array at this time point
+    R - reverse order of flag boxes (to delete things hiding on the bottom)
+    r - redraw
+    d - delete flag box
+    t - flag timepoint
+    s - flag scan
+    w - flag Whole scan (this is the same as s, except some python backends catch / steal 's')
+    S,W - unflag scan
+    b - flag bolometer
+    T - unflag timepoint
+    B - unflag bolometer
+    c - toggle current scan
+    v - display data value
+    P - display the PCA decomposition of the displayed timestream
+    o - make a map of the array at the sampled time
+    z - display the power spectra of the displayed timestream (use 'C' to plot one)
+ 
+  Map Key Commands:
+    c - toggle current scan
+    . - show point in timestream
+    click - show point in timestream
+    r - redraw
+
+      """
       if set_lastkey: 
           self._lastkey = event.key
 
@@ -1064,6 +1113,24 @@ class Flagger:
     self.x1 = event.xdata
     self.y1 = event.ydata
 
+  def powerspec(self):
+      self.powerspectra = real(fft(self.plane,axis=0) * conj(fft(self.plane,axis=0)))
+      self.plotscan(self.scannum,data=self.powerspectra,flag=False,logscale=True)
+      ylabel('Frequency')
+      self.powerspec_plotted = True
+
+  def powerspec_whole(self,bolonum=0):
+      if self.powerspectra_whole is None:
+          wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
+          self.powerspectra_whole = real(fft(wholedata,axis=0) * conj(fft(wholedata,axis=0)))
+      datashape = self.powerspectra_whole.shape[0]
+      self.plotfig=figure(4)
+      self.plotfig.clear()
+      plot(fftfreq(datashape,d=self.sample_interval)[0:datashape/2],
+              self.powerspectra_whole[0:datashape/2,bolonum],
+              linewidth=0.5,color='k')
+      xlabel("Frequency (Hz)")
+      
   
   def write_ncdf(self):
       if not self.ncfile:
@@ -1133,6 +1200,7 @@ class Flagger:
       if self.plotfig is not None:
           self.plotfig.canvas.draw()
       self.PCA = False
+      self.powerspec_plotted = False
 
 def nantomask(arr):
     mask = (arr != arr)
@@ -1175,7 +1243,6 @@ def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,smooth=True,xsize=None,ysize
         dm = map
 
     return downsample(dm,downsample_factor)
-
 
 def _hdr_string_to_card(str):
     name = str[:7].strip()
