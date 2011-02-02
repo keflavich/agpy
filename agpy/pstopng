@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+for i in $*; do
+    outfile=`echo $i | sed -E "s/e?ps$/png/"`
+
+    echo gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
+    gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
+
+
+    # Timing tests:
+    #export TIMEFORMAT="TIMING: R: %R  U: %U  S: %S"
+    # density 300 is required to prevent alpha-off turning it to crap
+    # alpha-off is the only way to make the background opaque
+    #echo "/usr/local/bin/convert -density 300 -alpha Off $i $outfile "
+    #time /usr/local/bin/convert -density 300 -alpha Off $i $outfile 
+    #echo "/usr/local/bin/convert -limit area 4096 -limit memory 4096 -density 300 -alpha Off $i $outfile "
+    #time /usr/local/bin/convert -limit area 4096 -limit memory 4096 -density 300 -alpha Off $i $outfile 
+    #echo gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
+    #time gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
+
+done
