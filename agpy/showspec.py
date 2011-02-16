@@ -821,9 +821,9 @@ def open_3d(filename):
     cube = f[0].data
     if len(cube.shape) == 4: cube=cube[0,:,:,:]
     #cube = reshape(cube.mean(axis=2).mean(axis=1),[cube.shape[0],1,1])
-    dv,v0,p3 = hdr['CD3_3'],hdr['CRVAL3'],hdr['CRPIX3']
-    dr,r0,p1 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
-    dd,d0,p2 = hdr['CD2_2'],hdr['CRVAL2'],hdr['CRPIX2']
+    dv,v0,p3 = hdr.get('CD3_3'),hdr.get('CRVAL3'),hdr.get('CRPIX3')
+    dr,r0,p1 = hdr.get('CD1_1'),hdr.get('CRVAL1'),hdr.get('CRPIX1')
+    dd,d0,p2 = hdr.get('CD2_2'),hdr.get('CRVAL2'),hdr.get('CRPIX2')
     if dv is None: dv = hdr.get('CDELT3')
     if dr is None: dr = hdr.get('CDELT1')
     if dd is None: dd = hdr.get('CDELT2')
@@ -851,9 +851,9 @@ def gaia(filename,estimator='max',axis=0):
     f = pyfits.open(filename)
     hdr = f[0].header
     cube = f[0].data
-    dv,v0,p3 = hdr['CD3_3'],hdr['CRVAL3'],hdr['CRPIX3']
-    dr,r0,p1 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
-    dd,d0,p2 = hdr['CD2_2'],hdr['CRVAL2'],hdr['CRPIX2']
+    dv,v0,p3 = hdr.get('CD3_3'),hdr.get('CRVAL3'),hdr.get('CRPIX3')
+    dr,r0,p1 = hdr.get('CD1_1'),hdr.get('CRVAL1'),hdr.get('CRPIX1')
+    dd,d0,p2 = hdr.get('CD2_2'),hdr.get('CRVAL2'),hdr.get('CRPIX2')
     if dv is None: dv = hdr.get('CDELT3')
     if dr is None: dr = hdr.get('CDELT1')
     if dd is None: dd = hdr.get('CDELT2')
@@ -977,7 +977,7 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
     else:
         dv,v0,p3 = hdr['CDELT1'+wcstype],hdr['CRVAL1'+wcstype],hdr['CRPIX1'+wcstype]
     if hdr.get('OBJECT'):
-        specname = hdr['OBJECT']
+        specname = hdr.get('OBJECT')
     elif hdr.get('GLON') and hdr.get('GLAT'):
         specname = "%s %s" % (hdr.get('GLON'),hdr.get('GLAT'))
     else:
@@ -1143,7 +1143,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         glon,glat = sp.glon,sp.glat
         if glat < 0: pm="" 
         else: pm = "+"
-        savename = savepre + "G%07.3f%0s%07.3f_" % (glon,pm,glat) + hdr['MOLECULE'].replace(' ','') + hdr['TRANSITI'].replace(' ','')
+        savename = savepre + "G%07.3f%0s%07.3f_" % (glon,pm,glat) + hdr.get('MOLECULE').replace(' ','') + hdr.get('TRANSITI').replace(' ','')
         savefig(savename+'.png')
 
     return sp
