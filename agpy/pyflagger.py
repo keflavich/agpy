@@ -197,12 +197,12 @@ class Flagger:
 
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
+      self.raw         = self.sav.variables['needed_once_struct']['raw'][0][self.whscan,:].astype('float')
+      self.dc_bolos    = self.sav.variables['needed_once_struct']['dc_bolos'][0][self.whscan,:].astype('float')
       self.astrosignal = self.sav.variables['bgps']['astrosignal'][0][self.whscan,:].astype('float')
       self.atmosphere  = self.sav.variables['bgps']['atmosphere'][0][self.whscan,:].astype('float')
-      self.raw         = self.sav.variables['bgps']['raw'][0][self.whscan,:].astype('float')
       self.ac_bolos    = self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:].astype('float')
       self.atmo_one    = self.sav.variables['bgps']['atmo_one'][0][self.whscan,:].astype('float')
-      self.dc_bolos    = self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:].astype('float')
       self.noise       = self.sav.variables['bgps']['noise'][0][self.whscan,:].astype('float')
       self.scalearr    = self.sav.variables['bgps']['scalearr'][0][self.whscan,:].astype('float')
       self.weight      = self.sav.variables['bgps']['weight'][0][self.whscan,:].astype('float')

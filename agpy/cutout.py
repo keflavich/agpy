@@ -4,13 +4,19 @@ Generate a cutout image from a .fits file
 import pyfits
 import numpy
 import pywcs
+try:
+    import montage
+    import os
+    CanUseMontage=True
+except ImportError:
+    CanUseMontage=False
 
-def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
+def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True,useMontage=False):
     """
     Inputs:
         file  - .fits filename or pyfits HDUList (must be 2D)
-        xc,yc - x and y coordinates in the fits files' coordinate system
-        xw,yw - x and y width 
+        xc,yc - x and y coordinates in the fits files' coordinate system (CTYPE)
+        xw,yw - x and y width (pixels or wcs)
         units - specify units to use: either pixels or wcs
         outfile - optional output file
     """
@@ -27,51 +33,58 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True):
 
     if head['NAXIS'] > 2:
         raise Exception("Too many (%i) dimensions!" % head['NAXIS'])
-    try:
-        cd1 = head['CDELT1']
-        cd2 = head['CDELT2']
-    except KeyError:
-        try:
-            cd1 = head['CD1_1']
-            cd2 = head['CD2_2']
-        except KeyError:
-            raise Exception("No CD or CDELT keywords in header")
+    cd1 = head.get('CDELT1') if head.get('CDELT1') else head.get('CD1_1')
+    cd2 = head.get('CDELT2') if head.get('CDELT2') else head.get('CD2_2')
+    if cd1 is None or cd2 is None:
+        raise Exception("Missing CD or CDELT keywords in header")
 
-    lonarr = ((numpy.arange(head['NAXIS1'])-head['CRPIX1'])*cd1 + head['CRVAL1'] )
-    latarr = ((numpy.arange(head['NAXIS2'])-head['CRPIX2'])*cd2 + head['CRVAL2'] )
+    if useMontage and CanUseMontage:
+        head['CRVAL1'] = xc
+        head['CRVAL2'] = yc
+        if units == 'pixels':
+            head['CRPIX1'] = xw
+            head['CRPIX2'] = yw
+            head['NAXIS1'] = int(xw*2)
+            head['NAXIS2'] = int(yw*2)
+        elif units == 'wcs':
+            cdelt = numpy.sqrt(cd1**2+cd2**2)
+            head['CRPIX1'] = xw   / cdelt
+            head['CRPIX2'] = yw   / cdelt
+            head['NAXIS1'] = int(xw*2 / cdelt)
+            head['NAXIS2'] = int(yw*2 / cdelt)
 
-    wcs = pywcs.WCS(head)
-
-    #xx = numpy.argmin(numpy.abs(xc-lonarr))
-    #yy = numpy.argmin(numpy.abs(yc-latarr))
-    xx,yy = wcs.wcs_sky2pix(xc,yc,0)
-
-
-    if units=='pixels':
-        xmin,xmax = numpy.max([0,xx-xw]),numpy.min([head['NAXIS1'],xx+xw])
-        ymin,ymax = numpy.max([0,yy-yw]),numpy.min([head['NAXIS2'],yy+yw])
-    elif units=='wcs':
-        xmin,xmax = numpy.max([0,xx-xw/numpy.abs(cd1)]),numpy.min([head['NAXIS1'],xx+xw/numpy.abs(cd1)])
-        ymin,ymax = numpy.max([0,yy-yw/numpy.abs(cd2)]),numpy.min([head['NAXIS2'],yy+yw/numpy.abs(cd2)])
+        head.toTxtFile('temp_montage.hdr',clobber=True)
+        newfile = montage.wrappers.reproject_hdu(file[0],header='temp_montage.hdr',exact_size=True)
+        os.remove('temp_montage.hdr')
     else:
-        raise Exception("Can't use units %s." % units)
+        wcs = pywcs.WCS(head)
 
-    if xmax < 0 or ymax < 0:
-        raise ValueError("Max Coordinate is outside of map: %f,%f." % (xmax,ymax))
-    if ymin >= head.get('NAXIS2') or xmin >= head.get('NAXIS1'):
-        raise ValueError("Min Coordinate is outside of map: %f,%f." % (xmin,ymin))
+        xx,yy = wcs.wcs_sky2pix(xc,yc,0)
 
-    img = file[0].data[ymin:ymax,xmin:xmax]
+        if units=='pixels':
+            xmin,xmax = numpy.max([0,xx-xw]),numpy.min([head['NAXIS1'],xx+xw])
+            ymin,ymax = numpy.max([0,yy-yw]),numpy.min([head['NAXIS2'],yy+yw])
+        elif units=='wcs':
+            xmin,xmax = numpy.max([0,xx-xw/numpy.abs(cd1)]),numpy.min([head['NAXIS1'],xx+xw/numpy.abs(cd1)])
+            ymin,ymax = numpy.max([0,yy-yw/numpy.abs(cd2)]),numpy.min([head['NAXIS2'],yy+yw/numpy.abs(cd2)])
+        else:
+            raise Exception("Can't use units %s." % units)
 
-    head['CRPIX1']-=xmin
-    head['CRPIX2']-=ymin
-    head['NAXIS1']=img.shape[1]
-    head['NAXIS2']=img.shape[0]
+        if xmax < 0 or ymax < 0:
+            raise ValueError("Max Coordinate is outside of map: %f,%f." % (xmax,ymax))
+        if ymin >= head.get('NAXIS2') or xmin >= head.get('NAXIS1'):
+            raise ValueError("Min Coordinate is outside of map: %f,%f." % (xmin,ymin))
 
-    if head.get('NAXIS1') == 0 or head.get('NAXIS2') == 0:
-        raise ValueError("Map has a 0 dimension: %i,%i." % (head.get('NAXIS1'),head.get('NAXIS2')))
+        head['CRPIX1']-=xmin
+        head['CRPIX2']-=ymin
+        head['NAXIS1']=int(xmax-xmin)
+        head['NAXIS2']=int(ymax-ymin)
 
-    newfile = pyfits.PrimaryHDU(data=img,header=head)
+        if head.get('NAXIS1') == 0 or head.get('NAXIS2') == 0:
+            raise ValueError("Map has a 0 dimension: %i,%i." % (head.get('NAXIS1'),head.get('NAXIS2')))
+
+        img = file[0].data[ymin:ymax,xmin:xmax]
+        newfile = pyfits.PrimaryHDU(data=img,header=head)
 
     if isinstance(outfile,str):
         newfile.writeto(outfile,clobber=clobber)

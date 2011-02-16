@@ -2,11 +2,18 @@ from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum,nansum
 from math import acos,atan2,tan
 import copy
 import pyfits
-import pyregion
 try:
-    import pywcs, coords
+    import coords
 except ImportError:
-    print "cubes.py requires pywcs and coords"
+    print "cubes.py requires coords for aper_world2pix and coords_in_image"
+try:
+    import pyregion
+except ImportError:
+    print "cubes.py requires pyregion for getspec_reg"
+try:
+    import pywcs
+except ImportError:
+    print "cubes.py requires pywcs for some subimage_integ,aper_wordl2pix,getspec, and coords_in_image"
 
 dtor = pi/180.0
 

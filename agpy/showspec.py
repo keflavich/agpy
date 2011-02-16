@@ -811,7 +811,7 @@ def open_3d(filename):
     return dv,v0,p3,hdr,cube,xtora,ytodec,vconv
  
 def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
-        smooth=None,smoothtype='gaussian',order=1,savepre=None,**kwargs):
+        smooth=None,smoothto=None,smoothtype='gaussian',order=1,savepre=None,**kwargs):
     """
     Inputs:
         vmin,vmax - range over which to baseline and plottransform = ax.transAxes
@@ -840,6 +840,9 @@ def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
     ivconv = lambda V: p3-1-argvmin+(V-v0)/dv
     #if dobaseline: specplot = array([[baseline(cube[argvmin:argvmax].squeeze(),exclude=exclude,order=order)]]).T
     specplot = cube[argvmin:argvmax]
+
+    if smoothto:
+        smooth = abs(smoothto/dv)
 
     if smooth:
         #specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
@@ -995,6 +998,9 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
             spec = spec[specnum,:].mean(axis=0)
         elif isinstance(specnum,int):
             spec = spec[specnum,:]
+        else:
+            raise TypeError("Specnum is of wrong type (not a list of integers or an integer).  Type: %s" %
+                    str(type(specnum)))
     elif hdr.get('NAXIS') > 2:
         raise ValueError("Too many axes for open_1d (splat_1d) - use cube instead")
     if hdr.get('CD1_1'+wcstype):
@@ -1021,7 +1027,7 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
     vconv = lambda v: ((v-p3+1)*dv+v0)/conversion_factor
     xtora=None
     ytodec=None
-    units = hdr.get('BUNIT')
+    units = hdr.get('BUNIT').strip()
     if hdr.get('CTYPE1'+wcstype):
         xtype = hdr.get('CTYPE1'+wcstype)
     else:
@@ -1038,6 +1044,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
         specname=None,quiet=True,specnum=0,errspecnum=None,wcstype='',
         offset=0.0, continuum=0.0, annotatebaseline=False, plotspectrum=True,
+        smoothto=None,
         smoothtype='gaussian',convmode='valid',maskspecnum=None,**kwargs):
     """
     Inputs:
@@ -1091,6 +1098,9 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
     specplot = spec[argvmin:argvmax]
     if errspec is not None: errspec=errspec[argvmin:argvmax]
     if maskspec is not None: maskspec=maskspec[argvmin:argvmax]
+
+    if smoothto:
+        smooth = abs(smoothto/dv)
 
     if smooth:
         roundsmooth = round(smooth) # can only downsample by integers
