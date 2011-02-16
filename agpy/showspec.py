@@ -824,6 +824,9 @@ def open_3d(filename):
     dv,v0,p3 = hdr['CD3_3'],hdr['CRVAL3'],hdr['CRPIX3']
     dr,r0,p1 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
     dd,d0,p2 = hdr['CD2_2'],hdr['CRVAL2'],hdr['CRPIX2']
+    if dv is None: dv = hdr.get('CDELT3')
+    if dr is None: dr = hdr.get('CDELT1')
+    if dd is None: dd = hdr.get('CDELT2')
     xtora = lambda x: (x-p1+1)*dr+r0    # convert pixel coordinates to RA/Dec/Velocity
     ytodec = lambda y: (y-p2+1)*dd+d0
     vconv = lambda v: (v-p3+1)*dv+v0
@@ -851,6 +854,9 @@ def gaia(filename,estimator='max',axis=0):
     dv,v0,p3 = hdr['CD3_3'],hdr['CRVAL3'],hdr['CRPIX3']
     dr,r0,p1 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
     dd,d0,p2 = hdr['CD2_2'],hdr['CRVAL2'],hdr['CRPIX2']
+    if dv is None: dv = hdr.get('CDELT3')
+    if dr is None: dr = hdr.get('CDELT1')
+    if dd is None: dd = hdr.get('CDELT2')
     xtora = lambda x: (x-p1+1)*dr+r0    # convert pixel coordinates to RA/Dec/Velocity
     ytodec = lambda y: (y-p2+1)*dd+d0
     vconv = lambda v: (v-p3+1)*dv+v0
