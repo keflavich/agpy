@@ -61,12 +61,15 @@ class SpecPlotter:
             dv=None, color='k', hdr=None, errspec=None,  maskspec=None,
             fig=None, fignum=1, clear=True, title=None, xunits='km/s',
             erralpha=0.2, ivconv=None, autorefresh=True, reffreq=None,
-            **kwargs ):
+            gaiafignum=0, gaiafig=None, clickid=None, **kwargs ):
       self.vconv = vconv
       self.xtora = xtora
       self.ytodec = ytodec
       self.cube = cube # where(numpy.isnan(cube),0,cube)
-      self.spectrum = cube # spectrum is what's plotted; cube is the "raw data"
+      if len(self.cube.shape) > 1:
+          self.spectrum = cube[:,0,0] # spectrum is what's plotted; cube is the "raw data"
+      else:
+          self.spectrum = cube # spectrum is what's plotted; cube is the "raw data"
       self.specname=specname
       self.dv=dv
       self.reffreq=reffreq
@@ -91,6 +94,9 @@ class SpecPlotter:
       self.autorefresh=autorefresh
       self.spectrumplot=None
       self.errorplot=None
+      self.gaiafignum = gaiafignum
+      self.gaiafig = gaiafig
+      self.clickid = clickid
       self.plotkwargs = kwargs
       if maskspec is not None:
           self.maskspec = maskspec
@@ -121,8 +127,19 @@ class SpecPlotter:
         clickX = event.xdata
         clickY = event.ydata
         tb = get_current_fig_manager().toolbar
-        if ((self.axis is None) or (self.axis==event.inaxes)) and tb.mode=='':
-          self.plotspec(clickY,clickX,button=event.button)
+        #if ((self.axis is None) or (self.axis==event.inaxes)) and tb.mode=='':
+        if event.button==1 and tb.mode=='':
+            print "OverPlotting spectrum from point %i,%i" % (clickX,clickY)
+            self.plotspec(clickY,clickX,button=event.button,cube=True)
+        elif event.button==2:
+            print "Plotting spectrum from point %i,%i" % (clickX,clickY)
+            self.plotspec(clickY,clickX,button=event.button,cube=True,clear=True)
+        elif event.button==3:
+            print "Disconnecting GAIA-like tool"
+            self.gaiafig.canvas.mpl_disconnect(self.clickid)
+        else:
+            print "Call failed for some reason: "
+            print "event: ",event
   
     def plotspec(self, i=0, j=0, cube=False, title=None,
             button=1, clear=False,color=None, continuum=None,
@@ -785,14 +802,17 @@ class Specfit:
                 if ii % 3 == 2: self.specplotter.header.update('WID%1i' % (ii/3),p,comment="Gaussian best fit width #%i" % (ii/3))
 
 
-def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x):
+def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x, gaiafignum=0, specfignum=1):
     
-    figure(0)
-    clf()
-    imshow(plane)
+    gaiafig = figure(gaiafignum)
+    gaiafig.clf()
+    gaiaax = gaiafig.add_subplot(111)
+    gaiaax.imshow(plane)
 
-    sp = SpecPlotter(cube,vconv=vconv,xtora=xtora,ytodec=ytodec)
-    connect('button_press_event',sp)
+    sp = SpecPlotter(cube, vconv=vconv, xtora=xtora, ytodec=ytodec,
+            gaiafignum=gaiafignum, fignum=specfignum, gaiafig=gaiafig)
+    sp.clickid = gaiafig.canvas.mpl_connect('button_press_event',sp)
+    #connect('button_press_event',sp)
 
 
 def open_3d(filename):
@@ -800,7 +820,7 @@ def open_3d(filename):
     hdr = f[0].header
     cube = f[0].data
     if len(cube.shape) == 4: cube=cube[0,:,:,:]
-    cube = reshape(cube.mean(axis=2).mean(axis=1),[cube.shape[0],1,1])
+    #cube = reshape(cube.mean(axis=2).mean(axis=1),[cube.shape[0],1,1])
     dv,v0,p3 = hdr['CD3_3'],hdr['CRVAL3'],hdr['CRPIX3']
     dr,r0,p1 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
     dd,d0,p2 = hdr['CD2_2'],hdr['CRVAL2'],hdr['CRPIX2']
@@ -810,7 +830,7 @@ def open_3d(filename):
 
     return dv,v0,p3,hdr,cube,xtora,ytodec,vconv
  
-def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
+def splat_3d(filename,xi=0,yi=0,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
         smooth=None,smoothto=None,smoothtype='gaussian',order=1,savepre=None,**kwargs):
     """
     Inputs:
@@ -819,68 +839,8 @@ def splat(filename,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
     """
     dv,v0,p3,hdr,cube,xtora,ytodec,vconv = open_3d(filename)
 
-    splat_1d(vpars=[dv,v0,p3],hdr=hdr,cube=cube[:,0,0],xtora=xtora,ytodec=ytodec,vconv=vconv)
-
-    varr = vconv(arange(cube.shape[0]))
-    if vmin is None: argvmin = 0
-    else: argvmin = argmin(abs(varr-vmin))
-    if vmax is None: argvmax = cube.shape[0]
-    else: argvmax = argmin(abs(varr-vmax))
-
-    if argvmin > argvmax:
-        argvmin,argvmax = argvmax,argvmin
-        if exclude is not None: exclude = exclude[::-1]
-
-    if exclude is not None:
-        exclude[0] = argmin(abs(varr-exclude[0]))
-        exclude[1] = argmin(abs(varr-exclude[1]))
-        exclude = array(exclude) - argvmin
-
-    vconv = lambda v: (v-p3+argvmin+1)*dv+v0
-    ivconv = lambda V: p3-1-argvmin+(V-v0)/dv
-    #if dobaseline: specplot = array([[baseline(cube[argvmin:argvmax].squeeze(),exclude=exclude,order=order)]]).T
-    specplot = cube[argvmin:argvmax]
-
-    if smoothto:
-        smooth = abs(smoothto/dv)
-
-    if smooth:
-        #specplot[:,0,0] = convolve(specplot[:,0,0],hanning(smooth)/hanning(smooth).sum(),'same')
-        # change fitter first
-        if smoothtype == 'hanning': 
-            specplot = convolve(specplot[:,0,0],hanning(2+smooth)/hanning(2+smooth).sum(),'same')[::smooth,newaxis,newaxis]
-        elif smoothtype == 'boxcar':
-            specplot = convolve(specplot[:,0,0],ones(smooth)/float(smooth),'same')[::smooth,newaxis,newaxis]
-        elif smoothtype == 'gaussian':
-            speclen = specplot.shape[0]
-            xkern  = linspace(-1*smooth,smooth,smooth*3)
-            kernel = exp(-xkern**2/(2*(smooth/sqrt(8*log(2)))**2))
-            kernel /= kernel.sum()
-            specplot = convolve(specplot[:,0,0],kernel,'same')[::smooth,newaxis,newaxis] 
-        # this bit of code may also make sense, but I'm shifting the center pixel instead
-        # b/c it's easier (?) to deal with velocity range
-        #v0 += (abs(dv)*smooth - abs(dv))/2.0 # pixel center moves by half the original pixel size
-        dv *= smooth
-        newrefpix = (p3-0.5-argvmin)/smooth  # this was resolved by advanced guess-and check
-        # but also, sort of makes sense: FITS refers to the *center* of a pixel.  You want to 
-        # shift 1/2 pixel to the right so that the first pixel goes from 0 to 1
-        vconv = lambda v: ((v-newrefpix)*dv+v0)/conversion_factor
-        ivconv = lambda V: newrefpix+(V*conversion_factor-v0)/dv
-
-    sp = SpecPlotter(specplot,vconv=vconv,xtora=xtora,ytodec=ytodec,dv=dv)
-
-    sp.dv = dv
-    sp.plotspec(button=button,cube=True,**kwargs)
-    if dobaseline: 
-        sp.baseline(exclude=exclude,order=order,quiet=quiet)
-    sp.axis.set_xlim(vmin,vmax)
-
-    if savepre is not None:
-        glon,glat = coords.Position([xtora(0),ytodec(0)]).galactic()
-        if glat < 0: pm="" 
-        else: pm = "+"
-        savename = savepre + "G%07.3f%0s%07.3f_" % (glon,pm,glat) + hdr['MOLECULE'].replace(' ','') + hdr['TRANSITI'].replace(' ','')
-        savefig(savename+'.png')
+    sp = splat_1d(vpars=[dv, v0, p3], hdr=hdr, spec=cube[:, yi, xi],
+            xtora=xtora, ytodec=ytodec, vconv=vconv, **kwargs)
 
     return sp
 
@@ -918,9 +878,12 @@ def baseline_file(filename,outfilename,vmin=None,vmax=None,order=1,crop=False):
     f = pyfits.open(filename)
     hdr = f[0].header
     cube = f[0].data.squeeze()
-    dv,v0,p3 = hdr['CD3_3'],hdr['CRVAL3'],hdr['CRPIX3']
-    dr,r0,p1 = hdr['CD1_1'],hdr['CRVAL1'],hdr['CRPIX1']
-    dd,d0,p2 = hdr['CD2_2'],hdr['CRVAL2'],hdr['CRPIX2']
+    dv,v0,p3 = hdr.get('CD3_3'),hdr.get('CRVAL3'),hdr.get('CRPIX3')
+    dr,r0,p1 = hdr.get('CD1_1'),hdr.get('CRVAL1'),hdr.get('CRPIX1')
+    dd,d0,p2 = hdr.get('CD2_2'),hdr.get('CRVAL2'),hdr.get('CRPIX2')
+    if dv is None: dv = hdr.get('CDELT3')
+    if dr is None: dr = hdr.get('CDELT1')
+    if dd is None: dd = hdr.get('CDELT2')
     vconv = lambda v: (v-p3+1)*dv+v0
     varr = vconv(arange(cube.shape[-1]))
     if vmin is None: argvmin = None
@@ -1041,7 +1004,7 @@ def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
 
 def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude=None,smooth=None,order=1,savepre=None,vcrop=True,
-        vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytora=None,
+        vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytodec=None,
         specname=None,quiet=True,specnum=0,errspecnum=None,wcstype='',
         offset=0.0, continuum=0.0, annotatebaseline=False, plotspectrum=True,
         smoothto=None,
@@ -1052,8 +1015,15 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude - (internal) range to exclude from baseline fit
         vcrop - will vmin/vmax crop out data, or just set the plot limits?
     """
-    if vpars and vconv and hdr and spec and xtora and ytora:
+    if vpars and vconv and hdr and spec is not None and xtora and ytodec:
         dv,v0,p3 = vpars
+        errspec = None
+        maskspec = None
+        conversion_factor = 1
+        reffreq = None
+        xunits = 'km/s'
+        units = None
+        if units is None and kwargs.has_key('units'): units = kwargs.pop('units')
     else:
         dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits,errspec,maskspec,reffreq = \
                 open_1d(filename,specnum=specnum,wcstype=wcstype,errspecnum=errspecnum,maskspecnum=maskspecnum)
