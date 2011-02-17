@@ -180,7 +180,7 @@ class SpecPlotter:
       else:
           linewidth=0.5
   
-      if cube:
+      if cube or len(self.cube.shape) == 3:
           self.spectrum = self.cube[:,i,j]*self.scale+self.continuum-self.baseline.basespec
           self.spectrumplot = axis.plot(self.vind,self.spectrum+self.offset,color=self.plotcolor,
                   linestyle='steps-mid',linewidth=linewidth,
@@ -814,24 +814,6 @@ def mapplot(plane,cube,vconv=lambda x: x,xtora=lambda x: x,ytodec=lambda x: x, g
     sp.clickid = gaiafig.canvas.mpl_connect('button_press_event',sp)
     #connect('button_press_event',sp)
 
-
-def open_3d(filename):
-    f = pyfits.open(filename)
-    hdr = f[0].header
-    cube = f[0].data
-    if len(cube.shape) == 4: cube=cube[0,:,:,:]
-    #cube = reshape(cube.mean(axis=2).mean(axis=1),[cube.shape[0],1,1])
-    dv,v0,p3 = hdr.get('CD3_3'),hdr.get('CRVAL3'),hdr.get('CRPIX3')
-    dr,r0,p1 = hdr.get('CD1_1'),hdr.get('CRVAL1'),hdr.get('CRPIX1')
-    dd,d0,p2 = hdr.get('CD2_2'),hdr.get('CRVAL2'),hdr.get('CRPIX2')
-    if dv is None: dv = hdr.get('CDELT3')
-    if dr is None: dr = hdr.get('CDELT1')
-    if dd is None: dd = hdr.get('CDELT2')
-    xtora = lambda x: (x-p1+1)*dr+r0    # convert pixel coordinates to RA/Dec/Velocity
-    ytodec = lambda y: (y-p2+1)*dd+d0
-    vconv = lambda v: (v-p3+1)*dv+v0
-
-    return dv,v0,p3,hdr,cube,xtora,ytodec,vconv
  
 def splat_3d(filename,xi=0,yi=0,vmin=None,vmax=None,button=1,dobaseline=False,exclude=None,
         smooth=None,smoothto=None,smoothtype='gaussian',order=1,savepre=None,**kwargs):
@@ -840,10 +822,16 @@ def splat_3d(filename,xi=0,yi=0,vmin=None,vmax=None,button=1,dobaseline=False,ex
         vmin,vmax - range over which to baseline and plottransform = ax.transAxes
         exclude - (internal) range to exclude from baseline fit
     """
-    dv,v0,p3,hdr,cube,xtora,ytodec,vconv = open_3d(filename)
+    dv,v0,p3,hdr,cube,xtora,ytodec,vconv,xunits,conversion_factor,units = open_3d(filename)
 
+    if units is None: units="UNITS"
+    if xunits is None: xunits="km/s"
+    if conversion_factor == 0 or conversion_factor is None: conversion_factor=1.0
     sp = splat_1d(vpars=[dv, v0, p3], hdr=hdr, spec=cube[:, yi, xi],
-            xtora=xtora, ytodec=ytodec, vconv=vconv, **kwargs)
+            xtora=xtora, ytodec=ytodec, vconv=vconv, units=units,
+            conversion_factor=conversion_factor, xunits=xunits, **kwargs)
+
+    sp.cube = cube
 
     return sp
 
@@ -948,6 +936,36 @@ def baseline(spectrum,xarr=None,xmin='default',xmax='default',order=1,quiet=True
 
     return (spectrum-bestfit),fitp
 
+def open_3d(filename):
+    f = pyfits.open(filename)
+    hdr = f[0].header
+    cube = f[0].data
+    if len(cube.shape) == 4: cube=cube[0,:,:,:]
+    #cube = reshape(cube.mean(axis=2).mean(axis=1),[cube.shape[0],1,1])
+    dv,v0,p3 = hdr.get('CD3_3'),hdr.get('CRVAL3'),hdr.get('CRPIX3')
+    dr,r0,p1 = hdr.get('CD1_1'),hdr.get('CRVAL1'),hdr.get('CRPIX1')
+    dd,d0,p2 = hdr.get('CD2_2'),hdr.get('CRVAL2'),hdr.get('CRPIX2')
+    if dv is None: dv = hdr.get('CDELT3')
+    if dr is None: dr = hdr.get('CDELT1')
+    if dd is None: dd = hdr.get('CDELT2')
+    xtora = lambda x: (x-p1+1)*dr+r0    # convert pixel coordinates to RA/Dec/Velocity
+    ytodec = lambda y: (y-p2+1)*dd+d0
+    vconv = lambda v: (v-p3+1)*dv+v0
+    if hdr.get('CUNIT3') in ['m/s','M/S']:
+        conversion_factor = 1000.0
+        xunits = 'km/s' # change to km/s because you're converting units
+    else:
+        xunits = hdr.get('CUNIT3')
+        if xunits in ("hz","Hz"):
+            print "Converting from Hz to GHz"
+            xunits = "GHz"
+            conversion_factor = 1.0e9
+        else:
+            conversion_factor = 1.0
+    units = hdr.get('BUNIT')
+
+    return dv,v0,p3,hdr,cube,xtora,ytodec,vconv,xunits,conversion_factor,units
+
 def open_1d(filename,specnum=0,wcstype='',errspecnum=None,maskspecnum=None):
     """
     Grabs all the relevant pieces of a 1d spectrum for plotting
@@ -1013,7 +1031,7 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         vconv=None,vpars=None,hdr=None,spec=None,xtora=None,ytodec=None,
         specname=None,quiet=True,specnum=0,errspecnum=None,wcstype='',
         offset=0.0, continuum=0.0, annotatebaseline=False, plotspectrum=True,
-        smoothto=None,
+        smoothto=None, xunits=None, units=None, conversion_factor=None,
         smoothtype='gaussian',convmode='valid',maskspecnum=None,**kwargs):
     """
     Inputs:
@@ -1021,14 +1039,12 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         exclude - (internal) range to exclude from baseline fit
         vcrop - will vmin/vmax crop out data, or just set the plot limits?
     """
-    if vpars and vconv and hdr and spec is not None and xtora and ytodec:
+    if (vpars and vconv and hdr and spec is not None and xtora and ytodec 
+            and units and xunits and conversion_factor):
         dv,v0,p3 = vpars
         errspec = None
         maskspec = None
-        conversion_factor = 1
         reffreq = None
-        xunits = 'km/s'
-        units = None
         if units is None and kwargs.has_key('units'): units = kwargs.pop('units')
     else:
         dv,v0,p3,conversion_factor,hdr,spec,vconv,xtora,ytodec,specname_file,units,xunits,errspec,maskspec,reffreq = \
