@@ -2,6 +2,7 @@ from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum,nansum
 from math import acos,atan2,tan
 import numpy
 import copy
+import os
 import pyfits
 import tempfile
 import posang # agpy code
@@ -520,9 +521,8 @@ try:
         # will not overwrite by default
         tempcube = tempfile.mktemp(suffix='.fits')
         sc.writeto(tempcube)
-        print tempcube
         
-        pa = posang.posang(x1,y1,x2,y2,system=coord_system)
+        pa = posang.posang(x1,y1,x2,y2,system=coord_system) - 90
 
         newheader = sc.header.copy()
         cd11 = newheader.get('CDELT1') if newheader.get('CDELT1') else newheader.get('CD1_1')
@@ -536,8 +536,36 @@ try:
         montage.mHdr("%s %1s%s" % (xcen, ycensign, numpy.abs(ycen)), xwidth*cdelt,
                 tempheader, system=out_system, height=ywidth*cdelt,
                 pix_size=cdelt*3600.0, rotation=pa)
+        os.system("sed -i bck '/END/d' %s" % (tempheader))
+        newheader2 = pyfits.Header()
+        newheader2.fromTxtFile(tempheader)
+        for key in ('CRPIX3','CRVAL3','CDELT3','CD3_3','CUNIT3','WCSTYPE3','CTYPE3'):
+            if newheader.get(key):
+                newheader2.update(key,newheader.get(key))
+        if newheader.get('CD3_3') and newheader2.get('CDELT3') is None:
+            newheader2.update('CDELT3',newheader.get('CD3_3'))
+        newheader2.toTxtFile(tempheader,clobber=True)
+        #if newheader2.get('CDELT3') is None:
+        #    raise Exception("No CD3_3 or CDELT3 in header.")
 
         montage.wrappers.reproject_cube(tempcube,outname,header=tempheader,clobber=clobber)
+        #print "\n",outname
+        #os.system('imhead %s | grep CDELT' % outname)
+
+        # AWFUL hack because montage removes CDELT3
+        tempcube = pyfits.open(outname)
+        tempcube.header = newheader2
+        #if tempcube.header.get('CDELT3') is None:
+        #    raise Exception("No CD3_3 or CDELT3 in header.")
+        #print tempcube.header.get('CDELT3')
+        tempcube.writeto(outname,clobber=True)
+        #print tempcube.get('CDELT3')
+        #print "\n",outname
+        #os.system('imhead %s | grep CDELT' % outname)
+
+        #print "\nnewheader2"
+        #print newheader2.ascard
+        #print
         
         return
 
