@@ -6,7 +6,15 @@ publication-quality plots (which, while splat may do, it does unreproducibly)
 
 TO DO:
     -add spectrum arithmetic tools
-    -add gaussfitter
+        (as is, you can use numpy.interp with sp.vind and sp.spectrum pretty
+        easily)
+    -implement other fitters
+        -e.g., NH3 hyperfine, Voigt
+    -move to object-oriented pylab/pyplot implementation (for bulk / speedup work)
+    -allow for non-plotting fitting work (curious... I've never needed that yet)
+    -Equivalent Width measurement without gaussian fitting
+        -probably should be part of the baseline code
+    -write documentation other people can read
 
 """
 
@@ -28,11 +36,6 @@ import gaussfitter
 
 from numpy import isnan
 from mad import MAD,nanmedian
-
-try:
-    import coords
-except ImportError:
-    print "showspec requires coords"
 
 def steppify(arr,isX=False,interval=0,sign=+1.0):
     """
@@ -560,6 +563,8 @@ class Specfit:
             **kwargs):
         """
         Fit gaussians to a spectrum
+
+        guesses = [height,amplitude,center,width]
         """
   
         self.fitcolor = fitcolor
@@ -609,6 +614,7 @@ class Specfit:
     def multifit(self):
         self.ngauss = len(self.guesses)/3
         self.setfitspec()
+        if self.fitkwargs.has_key('negamp'): self.fitkwargs.pop('negamp')
         mpp,model,mpperr,chi2 = gaussfitter.multigaussfit(
                 self.specplotter.vind[self.gx1:self.gx2], 
                 self.spectofit[self.gx1:self.gx2], 
@@ -1034,6 +1040,12 @@ def splat_1d(filename=None,vmin=None,vmax=None,button=1,dobaseline=False,
         smoothto=None, xunits=None, units=None, conversion_factor=None,
         smoothtype='gaussian',convmode='valid',maskspecnum=None,**kwargs):
     """
+    Wrapper for specplotter creation.  Works nicely with 1D spectra with well-defined
+    FITS headers (i.e., CRVAL1, CRPIX1, CDELT1, and optionally CUNIT1 and CTYPE1)
+
+    This documentation needs to be updated a lot... I implemented a lot of features
+    without documenting them, which was a mistake
+
     Inputs:
         vmin,vmax - range over which to baseline and plot
         exclude - (internal) range to exclude from baseline fit
