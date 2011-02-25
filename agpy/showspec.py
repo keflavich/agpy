@@ -49,14 +49,11 @@ def steppify(arr,isX=False,interval=0,sign=+1.0):
 
 class SpecPlotter:
     """
-    callback for matplotlib to display an annotation when points are clicked on.  The
-    point which is closest to the click and within xtol and ytol is identified.
-      
-    Register this function like this:
-      
-    scatter(xdata, ydata)
-    af = AnnoteFinder(xdata, ydata, annotes)
-    connect('button_press_event', af)
+    SpecPlotter class.  Takes in a spectrum or data cube, plotting properties,
+    and a velocity axis determination function.  Look at splat_1d for a wrapper
+    that might actually be useful.
+
+    Whew, needs more documentation
     """
 
     def __init__(self,  cube,  axis=None,  xtol=None,  ytol=None, vconv=lambda
@@ -126,6 +123,9 @@ class SpecPlotter:
       if clear: self.axis.clear()
   
     def __call__(self, event):
+      """
+      Connects map cube to specplotter...
+      """
       if event.inaxes:
         clickX = event.xdata
         clickY = event.ydata
@@ -247,6 +247,9 @@ class SpecPlotter:
       newfile.writeto(fname,**kwargs)
 
     def savefig(self,fname,bbox_inches='tight',**kwargs):
+        """
+        simple wrapper of maplotlib's savefig.  
+        """
         self.axis.figure.savefig(fname,bbox_inches=bbox_inches,**kwargs)
   
     def showlines(self,linefreqs,linenames,ctype='freq',cunit='hz',yscale=0.8,vofflines=0.0,
