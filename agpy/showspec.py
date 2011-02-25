@@ -23,7 +23,6 @@ TO DO:
 import math
 
 import pylab
-#from pylab import indices,figure,clf,savefig,plot,legend,text,axes,title,imshow,connect,get_current_fig_manager
 from pylab import *
 import matplotlib
 
@@ -43,8 +42,8 @@ def steppify(arr,isX=False,interval=0,sign=+1.0):
     Converts an array to double-length for step plotting
     """
     if isX and interval==0:
-        interval = abs(arr[1]-arr[0]) / 2.0
-    newarr = array(zip(arr-sign*interval,arr+sign*interval)).ravel()
+        interval = pylab.abs(arr[1]-arr[0]) / 2.0
+    newarr = pylab.array(zip(arr-sign*interval,arr+sign*interval)).ravel()
     return newarr
 
 class SpecPlotter:
@@ -145,7 +144,7 @@ class SpecPlotter:
             print "event: ",event
   
     def plotspec(self, i=0, j=0, cube=False, title=None,
-            button=1, clear=False,color=None, continuum=None,
+            clear=False, color=None, continuum=None,
             axis=None, offset=None, scale=None, voff=None, vmin=None,
             vmax=None, units=None, xunits=None, erralpha=None, plotpix=False,
             errstyle='fill', autorefresh=None, **kwargs):
@@ -153,6 +152,32 @@ class SpecPlotter:
       Plot a spectrum
       Originally written to plot spectra from data cubes, hence the i,j parameter
       to specify the location in the cube
+
+      Now, cube defaults to False, but you can still pass in a data cube.
+
+      Inputs:
+        title,color, kwargs - semi-obvious plot-related comands
+        axis - You can pass in a Matplotlib axis instance and it will plot on that
+        clear - Clear the axis before plotting?
+        continuum - if you've already subtracted out a continuum, you can add
+            it back in (only if it is a constant offset).  It will be included in 
+            the spectrum
+        offset - Like continuum, but ONLY for plotting purposes.  Will move the 
+            plot vertically but will NOT include values in the .spectrum 
+        scale - multiplicative factor to scale the data by (NOT for plotting
+            purposes; modifies spectrum)
+        voff - Shift the spectrum on the velocity axis by this amount
+        vmin,vmax - only plot within this range
+            (note that these keywords passed to splat_1d MAY crop the spectrum)
+        units - units of the data.  At the moment, no conversions are done
+        xunits - units of the Y axis.  Can affect other procedures, like show_lines,
+            and some unit conversion (Hz to GHz) is done
+        erralpha - Transparency of the errorbars if plotted
+        errstyle - style of errorbars if plotted
+        plotpix - if set, will plot against a pixel (channel) axis instead of a
+            physical axis
+        autorefresh - automatically update the plot when fitting gaussians, labeling,
+            etc?
       """
   
       if kwargs.has_key('fignum'): kwargs.pop('fignum')  # HACK because I want __init__ to accept different kwargs
