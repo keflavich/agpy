@@ -160,7 +160,8 @@ def integ(file,vrange,xcen=None,xwidth=None,ycen=None,ywidth=None,**kwargs):
     return subimage_integ(cube,xcen,xwidth,ycen,ywidth,vrange,header=header,**kwargs)
 
 def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
-        average=mean, dvmult=False, return_HDU=False, units="pixels"):
+        average=mean, dvmult=False, return_HDU=False, units="pixels",
+        zunits=None):
     """
     Returns a sub-image from a data cube integrated over the specified velocity range
 
@@ -186,7 +187,6 @@ def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
         ylo = int( max([ycen-ywidth,0])              )
         xhi = int( min([xcen+xwidth,cube.shape[2]])  )
         yhi = int( min([ycen+ywidth,cube.shape[1]])  )
-        zrange = vrange
     elif units=="wcs" and header:
         newxcen,newycen = wcs.wcs_sky2pix(xcen,ycen,0)
         try:
@@ -197,9 +197,15 @@ def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
         ylo = int( max([newycen-newywid,0]) )
         xhi = int( min([newxcen+newxwid,cube.shape[2]]) )
         yhi = int( min([newycen+newywid,cube.shape[1]]) )
-        zrange = ( array(vrange)-header.get('CRVAL3') ) / CD3 - 1 + header.get('CRPIX3')
     else:
         print "Can only use wcs if you pass a header."
+
+    if zunits is None:
+        zunits = units
+    if zunits == 'pixels':
+        zrange = vrange
+    if zunits == 'wcs':
+        zrange = ( array(vrange)-header.get('CRVAL3') ) / CD3 - 1 + header.get('CRPIX3')
 
     subim = average(cube[zrange[0]:zrange[1],ylo:yhi,xlo:xhi],axis=0)
     if dvmult and CD3: subim *= CD3
