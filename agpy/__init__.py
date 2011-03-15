@@ -26,7 +26,7 @@ from convolve import convolve,smooth
 from radialprofile import azimuthalAverage
 #import showspec # imports matplotlib = BAD
 from contributed import parallel_map
-from timer import timer
+from timer import print_timing
 
 
 # import all of the functions but not the modules...
