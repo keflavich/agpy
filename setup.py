@@ -16,5 +16,5 @@ setup(name='agpy',
         'h2fit_support/dalgarno1984_table5.txt',
         'h2fit_support/linelist.txt'])],
       url='http://code.google.com/p/agpy/',
-      packages=['agpy','plfit','mpfit','contributed'],
+      packages=['agpy','plfit','mpfit','contributed','radex'],
      )
