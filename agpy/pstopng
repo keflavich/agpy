@@ -1,11 +1,34 @@
 #!/bin/bash
 
+# http://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+# :r = -r has no options
+# a: = -a takes an option
+
+doremove=0
+while getopts :r OPT; do
+    case "$OPT" in 
+        r)
+            doremove=1
+            ;;
+    esac
+done
+# DEBUG echo "Before shift" $*  "Optind: $OPTIND"
+shift `expr $OPTIND - 1`
+# DEBUG echo "After shift" $*
+# ALTERNATIVE SYNTAX args=`getopt abc:d $*`
+# ALTERNATIVE SYNTAX set -- $args
+
 
 for i in $*; do
     outfile=`echo $i | sed -E "s/e?ps$/png/"`
 
     echo gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
     gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i > /dev/null
+    if [ $doremove == 1 ]
+    then
+        echo "rm $i"
+        rm $i
+    fi
 
 
     # Timing tests:

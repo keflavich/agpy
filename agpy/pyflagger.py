@@ -65,11 +65,17 @@ class Flagger:
     c - toggle current scan
     v - display data value
     P - display the PCA decomposition of the displayed timestream
+    o - make a map of the array at the sampled time
+    z - display the power spectra of the displayed timestream (use 'C' to plot one)
+    Z - display the power spectra of the displayed timestream over all time
+    C,L - plot Column/Line
+    k - plot whole timestream for selected bolo
  
   Map Key Commands:
     c - toggle current scan
     . - show point in timestream
     click - show point in timestream
+    middle click - list all points that contribute to that pixel
     r - redraw
 
   """
@@ -197,8 +203,12 @@ class Flagger:
 
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
-      self.raw         = self.sav.variables['needed_once_struct']['raw'][0][self.whscan,:].astype('float')
-      self.dc_bolos    = self.sav.variables['needed_once_struct']['dc_bolos'][0][self.whscan,:].astype('float')
+      try:
+          self.raw         = self.sav.variables['needed_once_struct']['raw'][0][self.whscan,:].astype('float')
+          self.dc_bolos    = self.sav.variables['needed_once_struct']['dc_bolos'][0][self.whscan,:].astype('float')
+      except KeyError:
+          self.raw         = self.sav.variables['bgps']['raw'][0][self.whscan,:].astype('float')
+          self.dc_bolos    = self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:].astype('float')
       self.astrosignal = self.sav.variables['bgps']['astrosignal'][0][self.whscan,:].astype('float')
       self.atmosphere  = self.sav.variables['bgps']['atmosphere'][0][self.whscan,:].astype('float')
       self.ac_bolos    = self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:].astype('float')
@@ -233,6 +243,7 @@ class Flagger:
       self.flagfn = savfile.replace("sav","_flags.fits")
 
       self.map      = nantomask( self.sav.variables['mapstr']['astromap'][0] )
+      self.model    = nantomask( self.sav.variables['mapstr']['model'][0] )
       self.tstomap  = reshape( self.sav.variables['mapstr']['ts'][0][self.whscan,:] , self.datashape )
 
       self.mapped_timestream = self.atmo_one - self.atmosphere + self.astrosignal
@@ -753,7 +764,11 @@ class Flagger:
                   linewidth=0.5,color='k')
           xlabel("Frequency (Hz)")
           ylabel("Power (Jy$^2$)")
+          title("Bolo %i" % tsx)
       else:
+          title("Bolo %i" % tsx)
+          xlabel("Time Samples")
+          ylabel("Flux (Jy)")
           pylab.plot(self.plane[:,numpy.round(tsx)],
                   linewidth=0.5,color='k')
 
@@ -763,6 +778,9 @@ class Flagger:
       if self.PCA:
           pylab.plot(self.efuncarr[numpy.round(tsy),:])
       else:
+          title("Line %i" % tsy)
+          xlabel("Bolometer")
+          ylabel("Flux (Jy)")
           pylab.plot(self.plane[numpy.round(tsy),:])
 
   def dcon(self):
@@ -921,6 +939,10 @@ class Flagger:
           self.plot_line(event.ydata)
       elif event.key == 'z':
           self.powerspec()
+      elif event.key == 'Z':
+          self.powerspec_whole(event.xdata)
+      elif event.key == 'k':
+          self.timestream_whole(event.xdata)
       elif event.key == 'a':
           if self._lastkey == 'a':
               self._y2 = round(event.ydata)
@@ -964,11 +986,15 @@ class Flagger:
     P - display the PCA decomposition of the displayed timestream
     o - make a map of the array at the sampled time
     z - display the power spectra of the displayed timestream (use 'C' to plot one)
+    Z - display the power spectra of the displayed timestream over all time
+    C,L - plot Column/Line
+    k - plot whole timestream for selected bolo
  
   Map Key Commands:
     c - toggle current scan
     . - show point in timestream
     click - show point in timestream
+    middle click - list all points that contribute to that pixel
     r - redraw
 
       """
@@ -980,7 +1006,10 @@ class Flagger:
       self.timepoints =  nonzero(self.tstomap == mappoint)
       wtavg = (self.mapped_timestream[self.timepoints]*self.weight[self.timepoints]).sum() / self.weight[self.timepoints].sum()
       uwtavg = self.mapped_timestream[self.timepoints].mean()
-      print "Map value: %f   Weighted average: %f   Unweighted Average: %f" % (self.map[y,x],wtavg,uwtavg)
+      medavg = median(self.mapped_timestream[self.timepoints])
+      print ""
+      print "Location: %i,%i" % (x,y)
+      print "Map value: %f   Weighted average: %f   Unweighted Average: %f  Median: %f" % (self.map[y,x],wtavg,uwtavg,medavg)
       print "scan,bolo,time: %12s%12s%12s%12s%12s" % ('mapped','astro','flags','weight','scale')
       for ii,jj,kk in transpose(self.timepoints):
           print "%4i,%4i,%4i: %12f%12f%12f%12f%12f" % (ii,kk,jj,
@@ -1130,7 +1159,12 @@ class Flagger:
               self.powerspectra_whole[0:datashape/2,bolonum],
               linewidth=0.5,color='k')
       xlabel("Frequency (Hz)")
-      
+
+  def timestream_whole(self,bolonum=0,clear=True):
+      wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
+      self.plotfig=figure(4)
+      if clear: self.plotfig.clear()
+      plot(wholedata[:,bolonum],linewidth=0.5)
   
   def write_ncdf(self):
       if not self.ncfile:
