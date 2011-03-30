@@ -177,7 +177,8 @@ class Flagger:
       print "Beginning IDLsave file read."
       t0 = time.time()
       self.sav = idlsave.read(savfile)
-      print "Completed IDLsave file read in %f seconds." % (time.time() - t0)
+      t1 = time.time()
+      print "Completed IDLsave file read in %f seconds." % (t1 - t0)
 
       self.ncfilename = savfile
       self.tsfile = None
@@ -243,6 +244,7 @@ class Flagger:
       self.flagfn = savfile.replace("sav","_flags.fits")
 
       self.map      = nantomask( self.sav.variables['mapstr']['astromap'][0] )
+      self.default_map = nantomask( self.sav.variables['mapstr']['astromap'][0] )
       self.model    = nantomask( self.sav.variables['mapstr']['model'][0] )
       self.tstomap  = reshape( self.sav.variables['mapstr']['ts'][0][self.whscan,:] , self.datashape )
 
@@ -257,6 +259,8 @@ class Flagger:
 
       self.tsplot = 'default'
       self.set_tsplot(**kwargs)
+
+      print "Completed the rest of initialization in an additional %f seconds" % (time.time()-t1)
 
   
   def set_tsplot(self,tsplot=None):
@@ -276,6 +280,7 @@ class Flagger:
       raw
       rawscaled
       noise
+      zeromedian
       """
       if tsplot is not None:
           self.tsplot=tsplot
@@ -315,6 +320,11 @@ class Flagger:
           self.data = self.noise
       elif self.tsplot=='mapped_astrosignal':
           self.data = self.mapped_astrosignal
+      elif self.tsplot=='zeromedian':
+          mediants = self.ac_bolos.copy()
+          for i in xrange(5):
+              mediants = mediants - numpy.median(mediants,axis=1)*0.8
+          self.data = mediants
       else:
           print "No option for %s" % self.tsplot
           return
@@ -337,8 +347,8 @@ class Flagger:
         self.flags = reshape(ft[:,self.bolo_indices],[self.nscans,self.scanlen,self.ngoodbolos])
 
 
-  def showmap(self,colormap=cm.spectral,vmin=None,vmax=None):
-    self.mapfig=figure(0); clf(); 
+  def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0):
+    self.mapfig=figure(fignum); clf(); 
     if vmax is None:
         vmax = self.map.mean()+7*self.map.std()
     elif vmax=='max':
@@ -348,6 +358,33 @@ class Flagger:
     elif vmin=='min':
         vmin = self.map.min()
     self.mapim = pylab.imshow(self.map,
+            vmin=vmin,vmax=vmax,
+            interpolation='nearest',
+            cmap=colormap); 
+    self.mapim.axes.patch.set_fc('gray')
+    colorbar()
+    try:
+        disconnect(self.MtoT)
+        disconnect(self.MtoTkey)
+    except:
+        pass
+    self.MtoT = connect('button_press_event',self.mapclick)
+    self.MtoTkey = connect('key_press_event',self.mapkeypress)
+    self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
+    self.mapconnections.append(self.MtoT)
+    self.mapconnections.append(self.MtoTkey)
+
+  def showmodel(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=6):
+    self.modelfig=figure(fignum); clf(); 
+    if vmax is None:
+        vmax = self.model.mean()+7*self.model.std()
+    elif vmax=='max':
+        vmax = self.model.max()
+    if vmin is None:
+        vmin = self.model.mean()-2*self.model.std()
+    elif vmin=='min':
+        vmin = self.model.min()
+    self.modelim = pylab.imshow(self.model,
             vmin=vmin,vmax=vmax,
             interpolation='nearest',
             cmap=colormap); 
@@ -423,6 +460,7 @@ class Flagger:
       self.bolonhits.flat[self.tstomap[:,:,bolonum].ravel()] += hits
       self.bolommap /= self.bolonhits
       self.bolomapim = pylab.imshow(self.bolommap,interpolation='nearest',origin='lower')
+      title("Bolometer %i" % bolonum)
       try:
           disconnect(self.gfit_connection)
       except:
@@ -432,7 +470,8 @@ class Flagger:
       return self.bolommap
 
   def gfit_map(self,event,map,ax=None):
-      if event.xdata and event.ydata:
+      tb = self.bolofig.canvas.manager.toolbar
+      if tb.mode=='' and event.xdata and event.ydata:
           gf = gaussfitter.gaussfit(masktozero(map),
                   params=   [0,0,event.xdata,event.ydata,0,0,0],
                   usemoment=[1,1,          0,          0,1,1,1],
@@ -857,6 +896,8 @@ class Flagger:
           self.tsarrow(clickX,clickY)
       elif event.button == 2:
           self.find_all_points(clickX,clickY)
+      elif event.button == 3:
+          self.hist_all_points(clickX,clickY)
 
   def mapkeypress(self,event):
       if event.inaxes is None: return
@@ -958,7 +999,9 @@ class Flagger:
           x,y = round(event.xdata),round(event.ydata)
           vpt = self.data[self.scannum,y,x]
           fpt = self.flags[self.scannum,y,x]
-          print "Value at %i,%i: %f  Flagged=%i" % (x,y,vpt,fpt)
+          xmap = self.tstomap[self.scannum,y,x] / self.map.shape[1]
+          ymap = self.tstomap[self.scannum,y,x] % self.map.shape[1]
+          print "Value at %i,%i: %f  Flagged=%i  Maps to: %i,%i" % (x,y,vpt,fpt,xmap,ymap)
       elif event.key == '?':
           print """
 
@@ -1005,21 +1048,47 @@ class Flagger:
       mappoint = y * self.map.shape[1] + x
       self.timepoints =  nonzero(self.tstomap == mappoint)
       wtavg = (self.mapped_timestream[self.timepoints]*self.weight[self.timepoints]).sum() / self.weight[self.timepoints].sum()
+      # not a real thing wtsclavg = (self.mapped_timestream[self.timepoints]*self.weight[self.timepoints]*self.scalearr[self.timepoints]).sum() / (self.weight[self.timepoints]*self.scalearr[self.timepoints]).sum()
       uwtavg = self.mapped_timestream[self.timepoints].mean()
       medavg = median(self.mapped_timestream[self.timepoints])
+      Hmad = MAD(self.mapped_timestream[self.timepoints])
+      Hstd = std(self.mapped_timestream[self.timepoints])
       print ""
       print "Location: %i,%i" % (x,y)
       print "Map value: %f   Weighted average: %f   Unweighted Average: %f  Median: %f" % (self.map[y,x],wtavg,uwtavg,medavg)
-      print "scan,bolo,time: %12s%12s%12s%12s%12s" % ('mapped','astro','flags','weight','scale')
+      print "MAD: %f   StdDev: %f" % (Hmad,Hstd)
+      print "scan,bolo,time: %12s%12s%12s%12s%12s%12s" % ('mapped','mapped_astr','astro','flags','weight','scale')
       for ii,jj,kk in transpose(self.timepoints):
-          print "%4i,%4i,%4i: %12f%12f%12f%12f%12f" % (ii,kk,jj,
+          print "%4i,%4i,%4i: %12f%12f%12f%12f%12f%12f" % (ii,kk,jj,
                   self.mapped_timestream[ii,jj,kk],
-                  #self.mapped_astrosignal[ii,jj,kk],
+                  self.mapped_astrosignal[ii,jj,kk],
                   self.astrosignal[ii,jj,kk],
                   self.flags[ii,jj,kk],
                   self.weight[ii,jj,kk],
                   self.scalearr[ii,jj,kk])
 
+  def hist_all_points(self,x,y,clear=True):
+      mappoint = y * self.map.shape[1] + x
+      self.timepoints =  nonzero(self.tstomap == mappoint)
+      wtavg = (self.mapped_timestream[self.timepoints]*self.weight[self.timepoints]).sum() / self.weight[self.timepoints].sum()
+      uwtavg = self.mapped_timestream[self.timepoints].mean()
+      medavg = median(self.mapped_timestream[self.timepoints])
+      Hmad = MAD(self.mapped_timestream[self.timepoints])
+      Hstd = std(self.mapped_timestream[self.timepoints])
+      datapts = self.mapped_timestream[self.tstomap==mappoint]
+      self.plotfig=figure(4)
+      self.plotfig.clear()
+      n,bins,patches = hist(datapts,histtype='step',color='k',linewidth=2)
+      vlines(wtavg,0,max(n),color='k',linestyles='--',label="Weighted: %0.4g" % wtavg)
+      vlines(wtavg,0,max(n),color='k',linestyles='--',label="Std: %0.4g" % Hstd)
+      vlines(uwtavg,0,max(n),color='b',linestyles='--',label="Unweighted: %0.4g" % uwtavg)
+      vlines(medavg,0,max(n),color='g',linestyles='--',label="Median: %0.4g" % medavg)
+      vlines(medavg,0,max(n),color='g',linestyles='--',label="MAD: %0.4g" % Hmad)
+      Ctemp = matplotlib.collections.CircleCollection([0],facecolors='k',edgecolors='k')
+      Ctemp.set_label('Map Value: %0.4g' % (self.map[y,x]))
+      self.plotfig.axes[0].add_collection(Ctemp)
+      L=legend(loc='best')
+      L.draggable(True)
 
   def tsarrow(self,x,y):
       if self.debug: print "tsarrow at %f,%f" % (x,y)
@@ -1235,6 +1304,35 @@ class Flagger:
           self.plotfig.canvas.draw()
       self.PCA = False
       self.powerspec_plotted = False
+
+  def compute_map(self,ts=None,weights=None,showmap=True,**kwargs):
+      t0 = time.time()
+      if ts is None: ts = self.mapped_timestream
+      if weights is None: weights = self.weight
+      elif not isinstance(weights,numpy.ndarray): weights = numpy.ones(ts.shape)*weights
+      newmap = numpy.zeros(self.map.shape)
+      wm = numpy.zeros(self.map.shape)
+      #xind,yind = self.tstomap % wm.shape[1],self.tstomap / wm.shape[1]
+      #newmap[yind,xind] += ts*weights*(True-self.flags)
+      #wm[yind,xind] += weights*(True-self.flags)
+      #self.map = newmap / wm
+      # drizzling algorithm...
+      #tspoints = numpy.unique(self.tstomap)
+      #counts,indices = numpy.histogram(self.tstomap)
+      ts_to_index = masktozero((ts*weights*(True-self.flags)).ravel())
+      weights_to_index = masktozero((weights*(True-self.flags)).ravel())
+      #tsdata   = numpy.array(
+      #        [ts_to_index[ii==self.tstomap].sum() / weights_to_index[ii==self.tstomap].sum()
+      #            for ii in tspoints])
+      # Apparently this is faster than the above....
+      for jj,ii in enumerate(self.tstomap.flat):
+          newmap[ii / wm.shape[1], ii % wm.shape[1]] += ts_to_index[jj]
+          wm[ii / wm.shape[1], ii % wm.shape[1]] += weights_to_index[jj]
+      #xind,yind = tspoints % wm.shape[1],tspoints / wm.shape[1]
+      #newmap[yind,xind] = tsdata
+      self.map = newmap/wm
+      print "Computing map took %f seconds" % (time.time() - t0)
+      if showmap: self.showmap(**kwargs)
 
 def nantomask(arr):
     mask = (arr != arr)
