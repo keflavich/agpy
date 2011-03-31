@@ -69,7 +69,7 @@ class Flagger:
     z - display the power spectra of the displayed timestream (use 'C' to plot one)
     Z - display the power spectra of the displayed timestream over all time
     C,L - plot Column/Line
-    k - plot whole timestream for selected bolo
+    j - plot whole timestream for selected bolo
  
   Map Key Commands:
     c - toggle current scan
@@ -217,6 +217,7 @@ class Flagger:
       self.noise       = self.sav.variables['bgps']['noise'][0][self.whscan,:].astype('float')
       self.scalearr    = self.sav.variables['bgps']['scalearr'][0][self.whscan,:].astype('float')
       self.weight      = self.sav.variables['bgps']['weight'][0][self.whscan,:].astype('float')
+      self.zeromedian  = self.astrosignal * 0
       self.flags       = self.sav.variables['bgps']['flags'][0][self.whscan,:]
       self.flags.shape = self.datashape
 
@@ -321,10 +322,8 @@ class Flagger:
       elif self.tsplot=='mapped_astrosignal':
           self.data = self.mapped_astrosignal
       elif self.tsplot=='zeromedian':
-          mediants = self.ac_bolos.copy()
-          for i in xrange(5):
-              mediants = mediants - numpy.median(mediants,axis=1)*0.8
-          self.data = mediants
+          self.zeromedian = zeromedian(self.ac_bolos * self.scalearr)
+          self.data = self.zeromedian
       else:
           print "No option for %s" % self.tsplot
           return
@@ -794,30 +793,30 @@ class Flagger:
               arr = self.flags[self.scannum,0:h,x]
               arr[arr>0] -= 1
 
-  def plot_column(self,tsx):
+  def plot_column(self,tsx,clear=True):
       self.bolofig=figure(4)
-      self.bolofig.clf()
+      if clear: self.bolofig.clf()
       if self.powerspec_plotted:
           xlen = self.plane.shape[0]
           pylab.plot(fftfreq(xlen,d=self.sample_interval)[:xlen/2],self.plane[:xlen/2,numpy.round(tsx)],
                   linewidth=0.5,color='k')
           xlabel("Frequency (Hz)")
           ylabel("Power (Jy$^2$)")
-          title("Bolo %i" % tsx)
+          title("Bolo %i" % round(tsx))
       else:
-          title("Bolo %i" % tsx)
+          title("Bolo %i" % round(tsx))
           xlabel("Time Samples")
           ylabel("Flux (Jy)")
           pylab.plot(self.plane[:,numpy.round(tsx)],
                   linewidth=0.5,color='k')
 
-  def plot_line(self,tsy):
+  def plot_line(self,tsy,clear=True):
       self.bolofig=figure(4)
-      self.bolofig.clf()
+      if clear: self.bolofig.clf()
       if self.PCA:
           pylab.plot(self.efuncarr[numpy.round(tsy),:])
       else:
-          title("Line %i" % tsy)
+          title("Line %i" % round(tsy))
           xlabel("Bolometer")
           ylabel("Flux (Jy)")
           pylab.plot(self.plane[numpy.round(tsy),:])
@@ -982,7 +981,7 @@ class Flagger:
           self.powerspec()
       elif event.key == 'Z':
           self.powerspec_whole(event.xdata)
-      elif event.key == 'k':
+      elif event.key == 'j':
           self.timestream_whole(event.xdata)
       elif event.key == 'a':
           if self._lastkey == 'a':
@@ -1079,9 +1078,9 @@ class Flagger:
       self.plotfig=figure(4)
       self.plotfig.clear()
       n,bins,patches = hist(datapts,histtype='step',color='k',linewidth=2)
-      vlines(wtavg,0,max(n),color='k',linestyles='--',label="Weighted: %0.4g" % wtavg)
-      vlines(wtavg,0,max(n),color='k',linestyles='--',label="Std: %0.4g" % Hstd)
-      vlines(uwtavg,0,max(n),color='b',linestyles='--',label="Unweighted: %0.4g" % uwtavg)
+      vlines(wtavg,0,max(n),color='k',linestyles=':',label="Weighted: %0.4g" % wtavg)
+      vlines(wtavg,0,max(n),color='k',linestyles=':',label="Std: %0.4g" % Hstd)
+      vlines(uwtavg,0,max(n),color='b',linestyles='-.',label="Unweighted: %0.4g" % uwtavg)
       vlines(medavg,0,max(n),color='g',linestyles='--',label="Median: %0.4g" % medavg)
       vlines(medavg,0,max(n),color='g',linestyles='--',label="MAD: %0.4g" % Hmad)
       Ctemp = matplotlib.collections.CircleCollection([0],facecolors='k',edgecolors='k')
@@ -1089,6 +1088,8 @@ class Flagger:
       self.plotfig.axes[0].add_collection(Ctemp)
       L=legend(loc='best')
       L.draggable(True)
+      title("%s pixel %i,%i" % (self.filename,x,y))
+      xlabel('Flux (Jy or Volts)')
 
   def tsarrow(self,x,y):
       if self.debug: print "tsarrow at %f,%f" % (x,y)
@@ -1393,4 +1394,10 @@ def _hdr_string_list_to_cardlist(strlist):
     cardlist = [_hdr_string_to_card(s) for s in strlist]
     cardlist.remove(None)
     return pyfits.CardList(cardlist)
+
+def zeromedian(ts,scale=0.8):
+    mts = ts.copy()
+    for i in xrange(5):
+        mts = mts - numpy.median(mts,axis=1)[:,newaxis,:]*scale
+    return mts
 
