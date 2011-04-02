@@ -27,6 +27,8 @@ from radialprofile import azimuthalAverage
 #import showspec # imports matplotlib = BAD
 from contributed import parallel_map
 from timer import print_timing
+from region_photometry import region_photometry
+from region_photometry_files import region_photometry_files
 
 
 # import all of the functions but not the modules...

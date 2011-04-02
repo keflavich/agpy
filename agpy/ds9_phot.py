@@ -30,8 +30,9 @@ def ds9_photometry(xpapoint):
     except KeyError:
         print "ds9_phot failed - check for BMAJ/BMIN in header"
         pass
-    except:
+    except Exception as inst:
         print "ds9_phot failed - not a header KeyError, something else"
+        print inst.args
         pass
     return arr[mask].sum(),arr[mask].mean(),numpy.median(arr[mask]),arr[mask].std(),mask.sum()
 
