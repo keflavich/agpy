@@ -1,5 +1,12 @@
 #!/Library/Frameworks/Python.framework/Versions/Current/bin/python
-import pyregion
+try:
+    import pyregion
+except ImportError:
+    print "Region Photometry requires pyregion"
+try:
+    import pyfits
+except ImportError:
+    print "Region photometry requires pyfits"
 import pyfits
 import numpy
 from agpy import mad
@@ -41,7 +48,7 @@ def region_photometry(regionfile,fitsfilename,outfile='/dev/tty',doprint=True):
             total,avg,med,std,npix = data[regmask].sum(),data[regmask].mean(),numpy.median(data[regmask]),data[regmask].std(),regmask.sum()
             rmad = mad.MAD(data[regmask])
         else:
-            total,avg,med,std,npix = 0,0,0,0,0
+            total,avg,med,std,rmad,npix = 0,0,0,0,0,0
         if reg.attr[1].has_key('text'):
             name = reg.attr[1]['text']
         else:
