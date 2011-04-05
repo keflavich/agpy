@@ -176,10 +176,10 @@ class Flagger:
   def _loadsav(self,savfile,**kwargs):
       print "Beginning IDLsave file read."
       t0 = time.time()
-      self.sav = idlsave.read(savfile)
-      self.bgps = self.sav.get('bgps')
-      self.mapstr = self.sav.get('mapstr')
-      self.needed_once_struct = self.sav.get('needed_once_struct')
+      sav = idlsave.read(savfile)
+      self.bgps = sav.get('bgps')
+      self.mapstr = sav.get('mapstr')
+      self.needed_once_struct = sav.get('needed_once_struct')
       t1 = time.time()
       print "Completed IDLsave file read in %f seconds." % (t1 - t0)
 
