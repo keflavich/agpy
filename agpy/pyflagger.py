@@ -916,6 +916,12 @@ class Flagger:
           self.tsarrow(clickX,clickY)
       elif event.key == "r":
           self.showmap()
+      if event.key == 'a':
+          self.tsarrow(clickX,clickY)
+      elif event.key == 'm':
+          self.find_all_points(clickX,clickY)
+      elif event.key == 'h':
+          self.hist_all_points(clickX,clickY)
 
   def keypress(self,event):
       set_lastkey=True
