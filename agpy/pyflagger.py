@@ -177,23 +177,26 @@ class Flagger:
       print "Beginning IDLsave file read."
       t0 = time.time()
       self.sav = idlsave.read(savfile)
+      self.bgps = self.sav.get('bgps')
+      self.mapstr = self.sav.get('mapstr')
+      self.needed_once_struct = self.sav.get('needed_once_struct')
       t1 = time.time()
       print "Completed IDLsave file read in %f seconds." % (t1 - t0)
 
       self.ncfilename = savfile
       self.tsfile = None
 
-      self.ncscans = self.sav.variables['bgps']['scans_info'][0]
-      self.sample_interval = self.sav.variables['bgps']['sample_interval'][0]
+      self.ncscans = self.bgps['scans_info'][0]
+      self.sample_interval = self.bgps['sample_interval'][0]
       if len(self.ncscans.shape) == 1: self.ncscans.shape = [1,2]
       self.scanlengths = self.ncscans[:,1]+1-self.ncscans[:,0]
       self.scanlen = numpy.max(self.scanlengths)
-      self.ncflags = self.sav.variables['bgps']['flags'][0] 
+      self.ncflags = self.bgps['flags'][0] 
       self.timelen = self.ncflags.shape[0]
       self.nbolos = self.ncflags.shape[1]
       self.nscans = self.ncscans.shape[0]
-      self.ncbolo_params = self.sav.variables['bgps']['bolo_params'][0]
-      self.ncbolo_indices = self.sav.variables['bgps']['bolo_indices'][0]
+      self.ncbolo_params = self.bgps['bolo_params'][0]
+      self.ncbolo_indices = self.bgps['bolo_indices'][0]
       #self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
       self.bolo_indices = self.ncbolo_indices
       self.ngoodbolos = self.bolo_indices.shape[0]
@@ -204,25 +207,25 @@ class Flagger:
 
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
-      try:
-          self.raw         = self.sav.variables['needed_once_struct']['raw'][0][self.whscan,:].astype('float')
-          self.dc_bolos    = self.sav.variables['needed_once_struct']['dc_bolos'][0][self.whscan,:].astype('float')
-      except KeyError:
-          self.raw         = self.sav.variables['bgps']['raw'][0][self.whscan,:].astype('float')
-          self.dc_bolos    = self.sav.variables['bgps']['dc_bolos'][0][self.whscan,:].astype('float')
-      self.astrosignal = self.sav.variables['bgps']['astrosignal'][0][self.whscan,:].astype('float')
-      self.atmosphere  = self.sav.variables['bgps']['atmosphere'][0][self.whscan,:].astype('float')
-      self.ac_bolos    = self.sav.variables['bgps']['ac_bolos'][0][self.whscan,:].astype('float')
-      self.atmo_one    = self.sav.variables['bgps']['atmo_one'][0][self.whscan,:].astype('float')
-      self.noise       = self.sav.variables['bgps']['noise'][0][self.whscan,:].astype('float')
-      self.scalearr    = self.sav.variables['bgps']['scalearr'][0][self.whscan,:].astype('float')
-      self.weight      = self.sav.variables['bgps']['weight'][0][self.whscan,:].astype('float')
+      if self.needed_once_struct is not None:
+          self.raw         = self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
+          self.dc_bolos    = self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
+      else:
+          self.raw         = self.bgps['raw'][0][self.whscan,:].astype('float')
+          self.dc_bolos    = self.bgps['dc_bolos'][0][self.whscan,:].astype('float')
+      self.astrosignal = self.bgps['astrosignal'][0][self.whscan,:].astype('float')
+      self.atmosphere  = self.bgps['atmosphere'][0][self.whscan,:].astype('float')
+      self.ac_bolos    = self.bgps['ac_bolos'][0][self.whscan,:].astype('float')
+      self.atmo_one    = self.bgps['atmo_one'][0][self.whscan,:].astype('float')
+      self.noise       = self.bgps['noise'][0][self.whscan,:].astype('float')
+      self.scalearr    = self.bgps['scalearr'][0][self.whscan,:].astype('float')
+      self.weight      = self.bgps['weight'][0][self.whscan,:].astype('float')
       self.zeromedian  = self.astrosignal * 0
-      self.flags       = self.sav.variables['bgps']['flags'][0][self.whscan,:]
+      self.flags       = self.bgps['flags'][0][self.whscan,:]
       self.flags.shape = self.datashape
 
       try:
-          self.mapped_astrosignal = self.sav.variables['bgps']['mapped_astrosignal'][0][self.whscan,:].astype('float')
+          self.mapped_astrosignal = self.bgps['mapped_astrosignal'][0][self.whscan,:].astype('float')
       except:
           self.mapped_astrosignal = copy.copy(self.astrosignal)
 
@@ -244,17 +247,17 @@ class Flagger:
       self.ncfile = None
       self.flagfn = savfile.replace("sav","_flags.fits")
 
-      self.map      = nantomask( self.sav.variables['mapstr']['astromap'][0] )
-      self.default_map = nantomask( self.sav.variables['mapstr']['astromap'][0] )
-      self.model    = nantomask( self.sav.variables['mapstr']['model'][0] )
-      self.tstomap  = reshape( self.sav.variables['mapstr']['ts'][0][self.whscan,:] , self.datashape )
+      self.map      = nantomask( self.mapstr['astromap'][0] )
+      self.default_map = nantomask( self.mapstr['astromap'][0] )
+      self.model    = nantomask( self.mapstr['model'][0] )
+      self.tstomap  = reshape( self.mapstr['ts'][0][self.whscan,:] , self.datashape )
 
       self.mapped_timestream = self.atmo_one - self.atmosphere + self.astrosignal
 
       if self.map.sum() == 0:
-          self.map  = nantomask( self.sav.variables['mapstr']['rawmap'][0] )
+          self.map  = nantomask( self.mapstr['rawmap'][0] )
 
-      self.header = pyfits.Header(_hdr_string_list_to_cardlist( self.sav.variables['mapstr']['hdr'][0] ))
+      self.header = pyfits.Header(_hdr_string_list_to_cardlist( self.mapstr['hdr'][0] ))
 
       self._initialize_vars(**kwargs)
 
