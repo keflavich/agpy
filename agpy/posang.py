@@ -4,7 +4,7 @@ except ImportError:
     print "posang requires coords"
 from numpy import pi,arctan2,sin,cos,tan
 
-def posang(l1,b1,l2,b2,system='galactic',**kwargs):
+def posang(l1,b1,l2,b2,system='galactic',units='degrees',**kwargs):
     """
     Return the position angle between two points assuming a rectilinear
     coordinate system (I think; at the very least I am making no corrections
@@ -22,6 +22,11 @@ def posang(l1,b1,l2,b2,system='galactic',**kwargs):
 
     radiff  = (ra1-ra2)/180.*pi
 
-    angle = arctan2( sin(radiff) , cos(dec1*pi/180.)*tan(dec2*pi/180.) - sin(dec1*pi/180.)*cos(radiff) ) /pi*180
+    angle = arctan2( sin(radiff) , cos(dec1*pi/180.)*tan(dec2*pi/180.) - sin(dec1*pi/180.)*cos(radiff) ) 
 
-    return angle
+    if units == 'degrees':
+        return angle/pi*180
+    elif units == 'radians':
+        return angle
+    else:
+        raise ValueError("Invalid units: %s" % units)

@@ -185,6 +185,7 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     elif kerneltype == 'brickwall':
         if not silent: print "Smoothing with a %i pixel airy function" % kernelwidth
         # airy function is first bessel(x) / x  [like the sinc]
+        print "WARNING: I think the Airy should be (2*Besel(x)/x)^2?" # http://en.wikipedia.org/wiki/Airy_disk
         kernel = j1(rr/kernelwidth) / (rr/kernelwidth) 
         # fix NAN @ center
         kernel[rr==0] = 0.5

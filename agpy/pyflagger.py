@@ -81,6 +81,10 @@ class Flagger:
   """
 
   def __init__(self, filename, debug=False, **kwargs):
+      # Initialize plots first
+      pylab.figure(0)
+      pylab.figure(1,figsize=[16,12])
+      pylab.figure(2,figsize=[16,12])
       self.filename = filename
       self.debug = debug
       if filename[-4:] == 'fits':
@@ -169,6 +173,7 @@ class Flagger:
       self.PCA = False
       self.powerspec_plotted = False
       self.powerspectra_whole = None
+      self.gaussfit=None
 
       self.showmap(vmax=vmax)
       self.dcon()
@@ -226,7 +231,7 @@ class Flagger:
 
       try:
           self.mapped_astrosignal = self.bgps['mapped_astrosignal'][0][self.whscan,:].astype('float')
-      except:
+      except ValueError:
           self.mapped_astrosignal = copy.copy(self.astrosignal)
 
       datums=['astrosignal','atmosphere','raw','ac_bolos','atmo_one','dc_bolos','noise','scalearr','weight','mapped_astrosignal']
@@ -250,6 +255,7 @@ class Flagger:
       self.map      = nantomask( self.mapstr['astromap'][0] )
       self.default_map = nantomask( self.mapstr['astromap'][0] )
       self.model    = nantomask( self.mapstr['model'][0] )
+      self.noisemap = nantomask( self.mapstr['noisemap'][0] )
       self.tstomap  = reshape( self.mapstr['ts'][0][self.whscan,:] , self.datashape )
 
       self.mapped_timestream = self.atmo_one - self.atmosphere + self.astrosignal
@@ -260,6 +266,35 @@ class Flagger:
       self.header = pyfits.Header(_hdr_string_list_to_cardlist( self.mapstr['hdr'][0] ))
 
       self._initialize_vars(**kwargs)
+
+      self.tsplot_dict = {'astrosignal': lambda: self.astrosignal if self.astrosignal.sum() != 0 else "ERROR",
+      'dcbolos': lambda: self.dc_bolos*self.scalearr,
+      'dcbolos_noscale': lambda: self.dc_bolos,
+      'acbolos_noscale': lambda: self.ac_bolos,
+      'ac_bolos_noscale': lambda: self.ac_bolos,
+      'atmo_one': lambda:self.atmo_one,
+      'acbolos': lambda:self.ac_bolos*self.scalearr,
+      'ac_bolos': lambda:self.ac_bolos*self.scalearr,
+      'atmosphere': lambda:self.atmosphere,
+      'skysub_noscale': lambda:self.atmo_one - self.atmosphere, 
+      'new_astro': lambda: self.atmo_one - self.atmosphere,
+      'residual': lambda:self.atmo_one - self.atmosphere - self.noise,
+      'skysub': lambda:self.atmo_one - self.atmosphere + self.astrosignal,
+      'default': lambda:self.atmo_one - self.atmosphere + self.astrosignal,
+      'last_astrosignal': lambda:self.atmo_one - self.atmosphere - self.noise + self.astrosignal,
+      'acbMatmo': lambda: self.ac_bolos - self.atmo_one - self.atmosphere,
+      'acbMatmosphere': lambda: self.ac_bolos - self.atmosphere,
+      'acbMatmoone': lambda: self.ac_bolos - self.atmo_one,
+      'scale': lambda: self.scalearr,
+      'weight': lambda: self.weight,
+      'raw': lambda: self.raw,
+      'rawscaled': lambda: self.raw * self.scalearr,
+      'noise': lambda: self.noise,
+      'mapped_astrosignal': lambda: self.mapped_astrosignal,
+      'mapped_timestream': lambda: self.mapped_timestream,
+      'itermedian': lambda: itermedian(self.ac_bolos * self.scalearr),
+      'zeromedian': lambda: self.atmo_one,
+      }
 
       self.tsplot = 'default'
       self.set_tsplot(**kwargs)
@@ -288,45 +323,8 @@ class Flagger:
       """
       if tsplot is not None:
           self.tsplot=tsplot
-      if self.tsplot == 'astrosignal' and self.astrosignal.sum() != 0:
-          self.data = self.astrosignal
-      elif self.astrosignal.sum() == 0:
-          print "Astrosignal is zero."
-      elif self.tsplot == 'dcbolos':
-          self.data = self.dc_bolos*self.scalearr
-      elif self.tsplot == 'acbolos_noscale' or self.tsplot == 'ac_bolos_noscale':
-          self.data = self.ac_bolos
-      elif self.tsplot == 'atmo_one':
-          self.data = self.atmo_one
-      elif self.tsplot == 'acbolos' or self.tsplot=='ac_bolos':
-          self.data = self.ac_bolos*self.scalearr
-      elif self.tsplot == 'atmosphere':
-          self.data = self.atmosphere
-      elif self.tsplot=='skysub_noscale':
-          self.data = self.atmo_one - self.atmosphere
-      elif self.tsplot=='residual':
-          self.data = self.atmo_one - self.atmosphere - self.noise
-      elif self.tsplot=='skysub' or self.tsplot=='default':
-          self.data = self.atmo_one - self.atmosphere + self.astrosignal
-      elif self.tsplot=='last_astrosignal':
-          self.data = self.atmo_one - self.atmosphere - self.noise + self.astrosignal
-      elif self.tsplot=='default_noscale':
-          self.data = self.ac_bolos - self.atmo_one - self.atmosphere
-      elif self.tsplot=='scale':
-          self.data = self.scalearr
-      elif self.tsplot=='weight':
-          self.data = self.weight
-      elif self.tsplot=='raw':
-          self.data = self.raw
-      elif self.tsplot=='rawscaled':
-          self.data = self.raw * self.scalearr
-      elif self.tsplot=='noise':
-          self.data = self.noise
-      elif self.tsplot=='mapped_astrosignal':
-          self.data = self.mapped_astrosignal
-      elif self.tsplot=='zeromedian':
-          self.zeromedian = zeromedian(self.ac_bolos * self.scalearr)
-          self.data = self.zeromedian
+      if self.tsplot_dict.has_key(self.tsplot):
+          self.data = self.tsplot_dict[self.tsplot]()
       else:
           print "No option for %s" % self.tsplot
           return
@@ -349,7 +347,7 @@ class Flagger:
         self.flags = reshape(ft[:,self.bolo_indices],[self.nscans,self.scanlen,self.ngoodbolos])
 
 
-  def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0):
+  def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0,axlims=None):
     self.mapfig=figure(fignum); clf(); 
     if vmax is None:
         vmax = self.map.mean()+7*self.map.std()
@@ -364,6 +362,8 @@ class Flagger:
             interpolation='nearest',
             cmap=colormap); 
     self.mapim.axes.patch.set_fc('gray')
+    if axlims:
+        self.mapim.axes.axis(axlims)
     colorbar()
     try:
         disconnect(self.MtoT)
@@ -472,12 +472,23 @@ class Flagger:
       return self.bolommap
 
   def gfit_map(self,event,map,ax=None):
-      tb = self.bolofig.canvas.manager.toolbar
+      if ax is None:
+          if self.bolofig is not None:
+              tb = self.bolofig.canvas.manager.toolbar
+          elif self.mapfig is not None:
+              tb = self.mapfig.canvas.manager.toolbar
+          else:
+              raise Exception("Can't gaussian fit - no canvas exists?")
+      else: 
+          tb = ax.figure.canvas.manager.toolbar
       if tb.mode=='' and event.xdata and event.ydata:
+          errmask = 1e10 * getmask(map)+1.0
           gf = gaussfitter.gaussfit(masktozero(map),
+                  err=errmask,
                   params=   [0,0,event.xdata,event.ydata,0,0,0],
                   usemoment=[1,1,          0,          0,1,1,1],
                   rotate=1)
+          self.gaussfit = gf
           if ax:
               ax.add_patch(Ellipse(gf[2:4],numpy.max(gf[4:6])*2.35,numpy.min(gf[4:6])*2.35,gf[6],fill=False))
           print "Guess: %i,%i" % (event.xdata,event.ydata)," Fit peak: %g  Background: %g  X,Y position: %f,%f  X,Y FWHM: %f,%f   Angle: %f" % (gf[1],gf[0],gf[2],gf[3],gf[4]*2.35*7.2,gf[5]*2.35*7.2,gf[6])
@@ -796,7 +807,7 @@ class Flagger:
               arr = self.flags[self.scannum,0:h,x]
               arr[arr>0] -= 1
 
-  def plot_column(self,tsx,clear=True):
+  def plot_column(self,tsx,clear=True,timestream='data', **kwargs):
       self.bolofig=figure(4)
       if clear: self.bolofig.clf()
       if self.powerspec_plotted:
@@ -810,8 +821,13 @@ class Flagger:
           title("Bolo %i" % round(tsx))
           xlabel("Time Samples")
           ylabel("Flux (Jy)")
-          pylab.plot(self.plane[:,numpy.round(tsx)],
-                  linewidth=0.5,color='k')
+          if timestream == 'data':
+              pylab.plot(self.plane[:,numpy.round(tsx)],
+                      linewidth=0.5,color='k',**kwargs)
+          elif timestream in self.tsplot_dict.keys():
+              plane = self.tsplot_dict[timestream]()[self.scannum,:,:]
+              pylab.plot(plane[:,numpy.round(tsx)],
+                      linewidth=0.5,color='k',**kwargs)
 
   def plot_line(self,tsy,clear=True):
       self.bolofig=figure(4)
@@ -903,7 +919,10 @@ class Flagger:
 
   def mapkeypress(self,event):
       if event.inaxes is None: return
-      elif event.key == 'c':
+      else:
+          clickX = round(event.xdata)
+          clickY = round(event.ydata)
+      if event.key == 'c':
           self.toggle_currentscan()
       elif event.key == 'G':
           self.gfit_map(event,self.map,self.mapim.axes)
@@ -911,12 +930,10 @@ class Flagger:
       elif event.key == '.':
           if event.xdata == None:
               return
-          clickX = round(event.xdata)
-          clickY = round(event.ydata)
           self.tsarrow(clickX,clickY)
       elif event.key == "r":
           self.showmap()
-      if event.key == 'a':
+      elif event.key == 'a':
           self.tsarrow(clickX,clickY)
       elif event.key == 'm':
           self.find_all_points(clickX,clickY)
@@ -1065,25 +1082,31 @@ class Flagger:
       print "Location: %i,%i" % (x,y)
       print "Map value: %f   Weighted average: %f   Unweighted Average: %f  Median: %f" % (self.map[y,x],wtavg,uwtavg,medavg)
       print "MAD: %f   StdDev: %f" % (Hmad,Hstd)
-      print "scan,bolo,time: %12s%12s%12s%12s%12s%12s" % ('mapped','mapped_astr','astro','flags','weight','scale')
+      print "scan,bolo,time: %12s%12s%12s%12s%12s%12s%12s%12s" % ('mapped','mapped_astr','astro','noise','residual','flags','weight','scale')
       for ii,jj,kk in transpose(self.timepoints):
-          print "%4i,%4i,%4i: %12f%12f%12f%12f%12f%12f" % (ii,kk,jj,
+          print "%4i,%4i,%4i: %12f%12f%12f%12f%12f%12f%12f%12f" % (ii,kk,jj,
                   self.mapped_timestream[ii,jj,kk],
                   self.mapped_astrosignal[ii,jj,kk],
                   self.astrosignal[ii,jj,kk],
+                  self.noisemap[y,x],
+                  self.noise[ii,jj,kk],
                   self.flags[ii,jj,kk],
                   self.weight[ii,jj,kk],
                   self.scalearr[ii,jj,kk])
 
-  def hist_all_points(self,x,y,clear=True):
+  def hist_all_points(self,x,y,clear=True,timestream='mapped_timestream'):
       mappoint = y * self.map.shape[1] + x
       self.timepoints =  nonzero(self.tstomap == mappoint)
-      wtavg = (self.mapped_timestream[self.timepoints]*self.weight[self.timepoints]).sum() / self.weight[self.timepoints].sum()
-      uwtavg = self.mapped_timestream[self.timepoints].mean()
-      medavg = median(self.mapped_timestream[self.timepoints])
-      Hmad = MAD(self.mapped_timestream[self.timepoints])
-      Hstd = std(self.mapped_timestream[self.timepoints])
-      datapts = self.mapped_timestream[self.tstomap==mappoint]
+      if timestream in self.tsplot_dict.keys():
+          TS = self.tsplot_dict[timestream]()
+      else:
+          raise KeyError("Timestream %s is not valid" % (timestream))
+      wtavg = (TS[self.timepoints]*self.weight[self.timepoints]).sum() / self.weight[self.timepoints].sum()
+      uwtavg = TS[self.timepoints].mean()
+      medavg = median(TS[self.timepoints])
+      Hmad = MAD(TS[self.timepoints])
+      Hstd = std(TS[self.timepoints])
+      datapts = TS[self.tstomap==mappoint]
       self.plotfig=figure(4)
       self.plotfig.clear()
       n,bins,patches = hist(datapts,histtype='step',color='k',linewidth=2)
@@ -1227,9 +1250,17 @@ class Flagger:
       ylabel('Frequency')
       self.powerspec_plotted = True
 
-  def powerspec_whole(self,bolonum=0):
-      if self.powerspectra_whole is None:
-          wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
+  def powerspec_whole(self,bolonum=0,recompute=False,timestream='data'):
+      if self.powerspectra_whole is None or recompute:
+          if timestream == 'data':
+              wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
+          elif self.tsplot_dict.has_key(timestream):
+              data = self.tsplot_dict[timestream]()
+              wholedata = reshape(data,[data.shape[0]*data.shape[1],data.shape[2]])
+          else:
+              raise KeyError("Timestream %s is not valid." % timestream)
+          if hasattr(wholedata,'data'): wholedata = wholedata.data
+          wholedata[wholedata!=wholedata] = 0
           self.powerspectra_whole = real(fft(wholedata,axis=0) * conj(fft(wholedata,axis=0)))
       datashape = self.powerspectra_whole.shape[0]
       self.plotfig=figure(4)
@@ -1239,11 +1270,17 @@ class Flagger:
               linewidth=0.5,color='k')
       xlabel("Frequency (Hz)")
 
-  def timestream_whole(self,bolonum=0,clear=True):
-      wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
-      self.plotfig=figure(4)
+  def timestream_whole(self,bolonum=0,clear=True,timestream='data',fignum=4, **kwargs):
+      if timestream == 'data':
+          wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
+      elif self.tsplot_dict.has_key(timestream):
+          data = self.tsplot_dict[timestream]()
+          wholedata = reshape(data,[data.shape[0]*data.shape[1],data.shape[2]])
+      else:
+          raise KeyError("Timestream %s is not valid." % timestream)
+      self.plotfig=figure(fignum)
       if clear: self.plotfig.clear()
-      plot(wholedata[:,bolonum],linewidth=0.5)
+      plot(wholedata[:,bolonum],linewidth=0.5, **kwargs)
   
   def write_ncdf(self):
       if not self.ncfile:
@@ -1315,9 +1352,13 @@ class Flagger:
       self.PCA = False
       self.powerspec_plotted = False
 
-  def compute_map(self,ts=None,weights=None,showmap=True,**kwargs):
+  def compute_map(self,ts=None,tsname=None,weights=None,showmap=True,**kwargs):
       t0 = time.time()
-      if ts is None: ts = self.mapped_timestream
+      if ts is None: 
+          if tsname in self.tsplot_dict.keys():
+              ts = self.tsplot_dict[tsname]()
+          else:
+              ts = self.mapped_timestream
       if weights is None: weights = self.weight
       elif not isinstance(weights,numpy.ndarray): weights = numpy.ones(ts.shape)*weights
       newmap = numpy.zeros(self.map.shape)
@@ -1354,6 +1395,12 @@ def masktozero(arr):
     except AttributeError:
         arr[arr!=arr] = 0
     return numpy.array(arr)
+
+def getmask(arr):
+    if hasattr(arr,'mask'):
+        return arr.mask
+    else:
+        return numpy.isnan(arr)+(arr==0)
 
 def downsample(myarr,factor):
     factor = int(factor)
@@ -1404,9 +1451,9 @@ def _hdr_string_list_to_cardlist(strlist):
     cardlist.remove(None)
     return pyfits.CardList(cardlist)
 
-def zeromedian(ts,scale=0.8):
+def itermedian(ts,scale=0.8,niter=5):
     mts = ts.copy()
-    for i in xrange(5):
+    for i in xrange(niter):
         mts = mts - numpy.median(mts,axis=1)[:,newaxis,:]*scale
     return mts
 
