@@ -2,6 +2,7 @@
 Test of agpy.gaussfitter.gaussfit
 """
 from pylab import *
+import numpy
 import agpy
 
 # test 1 on figure 1
@@ -35,6 +36,53 @@ imshow(myfit)
 subplot(224)
 title('noisy 2d gaussian minus best fit')
 imshow(gg-myfit)
+
+# prove that it's just gaussian noise
+figure(2)
+clf()
+title('Histogram of noisy gaussian - best fit')
+hist((gg-myfit).ravel(),bins=linspace(-4,4,20))
+
+print "Input parameters:  ",[0,3,40,60,10,20,30]
+print "Fitted parameters: ",myfitpars
+
+# redo test 1 on figure 4 with masked array
+figure(4)
+clf()
+
+# set up grid
+xx,yy = indices([100,100])
+
+# Mask Indices
+n_masked = 1000
+mask_xx,mask_yy = floor(random(n_masked)*100).astype('int'),floor(random(n_masked)*100).astype('int')
+
+# make a 2D gaussian with offset & rotation
+ggm = numpy.ma.array(agpy.gaussfitter.twodgaussian([0,1,40,60,10,20,30])(xx,yy),mask=zeros([100,100],dtype='bool'))
+ggm.mask[mask_yy,mask_xx] = True
+subplot(221)
+title('2d gaussian')
+imshow(ggm)
+
+# Make a new gaussiant with some noise added
+ggmn = numpy.ma.array(agpy.gaussfitter.twodgaussian([0,3,40,60,10,20,30])(xx,yy),mask=zeros([100,100],dtype='bool')) + randn(100,100)
+ggmn.mask[mask_yy,mask_xx] = True
+subplot(222)
+title('2d gaussian with noise')
+imshow(ggm)
+
+# fit the gaussian
+myfitpars = agpy.gaussfitter.gaussfit(ggmn)
+# generate the best-fit 2D gaussian
+myfit = agpy.gaussfitter.twodgaussian(myfitpars)(xx,yy)
+subplot(223)
+title('Fit to noisy gaussian')
+imshow(myfit)
+
+# should just be noise
+subplot(224)
+title('noisy 2d gaussian minus best fit')
+imshow(ggmn-myfit)
 
 # prove that it's just gaussian noise
 figure(2)
