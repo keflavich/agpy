@@ -1,7 +1,7 @@
 import numpy as np
 
 def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return_nr=False, 
-        binsize=0.5):
+        binsize=0.5, weights=None, steps=False, interpnan=False, left=None, right=None):
     """
     Calculate the azimuthally averaged radial profile.
 
@@ -15,9 +15,19 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
     binsize - size of the averaging bin.  Can lead to strange results if
         non-binsize factors are used to specify the center and the binsize is
         too large
+    weights - can do a weighted average instead of a simple average if this keyword parameter
+        is set.  weights.shape must = image.shape.  weighted stddev is undefined, so don't
+        set weights and stddev.
+    steps - if specified, will return a double-length bin array and radial
+        profile so you can plot a step-form radial profile (which more accurately
+        represents what's going on)
+    interpnan - Interpolate over NAN values, i.e. bins where there is no data?
+        left,right - passed to interpnan; they set the extrapolated values
+
+    If a bin contains NO DATA, it will have a NAN value because of the
+    divide-by-sum-of-weights component.  I think this is a useful way to denote
+    lack of data, but users let me know if an alternative is prefered...
     
-    Taken from http://www.astrobetter.com/wiki/tiki-index.php?page=python_radial_profiles
-    via Jessica R. Lu
     """
     # Calculate the indices from the image
     y, x = np.indices(image.shape)
@@ -27,45 +37,45 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
 
     r = np.hypot(x - center[0], y - center[1])
 
-    # Get sorted radii
-    ind = np.argsort(r.flat)
-    r_sorted = r.flat[ind]
-    i_sorted = image.flat[ind]
+    if weights is None:
+        weights = np.ones(image.shape)
+    elif stddev:
+        raise ValueError("Weighted standard deviation is not defined.")
 
-    # Get the integer part of the radii (bin size = 1)
-    r_binned = np.round(r_sorted/binsize) * binsize
+    # the 'bins' as initially defined are lower/upper bounds for each bin
+    # so that values will be in [lower,upper)  
+    nbins = (np.round(r.max() / binsize)+1)
+    maxbin = nbins * binsize
+    bins = np.linspace(0,maxbin,nbins+1)
+    # but we're probably more interested in the bin centers than their left or right sides...
+    bin_centers = (bins[1:]+bins[:-1])/2.0
 
-    # Find all pixels that fall within each radial bin.
-    deltar = r_binned[1:] - r_binned[:-1]  # Assumes all radii represented
-    deltar[-1] = binsize                   # include outermost points
-    rind = np.where(deltar)[0] + 1   # location of changed radius (minimum 1 point)
-    nr = np.concatenate([rind[0:1]+1, rind[1:] - rind[:-1]]) # number of radius bin
-                                     # concatenate to include center pixel / innermost bin
+    # Find out which radial bin each point in the map belongs to
+    whichbin = np.digitize(r.flat,bins)
 
-    # Cumulative sum to figure out sums for each radius bin
-    csim = np.cumsum(i_sorted, dtype=float)
-    tbin = np.concatenate([csim[rind[0]:rind[0]+1], csim[rind[1:]] - csim[rind[:-1]]]) # include innermost bin
+    # how many per bin (i.e., histogram)?
+    # there are never any in bin 0, because the lowest index returned by digitize is 1
+    nr = np.bincount(whichbin)[1:]
 
-    radial_prof = tbin / nr
-
+    # recall that bins are from 1 to nbins (which is expressed in array terms by arange(nbins)+1 or xrange(1,nbins+1) )
+    # radial_prof.shape = bin_centers.shape
     if stddev:
-        # find azimuthal standard deviation
-        r_binned[r_binned==r_binned.max()] = r_binned.max() - 1  # set last bin equal to second-to-last bin
-        rad_mean = radial_prof[r_binned]
-        rad_diffsum = np.cumsum( (i_sorted-rad_mean)**2 )
-        rad_std = np.sqrt( ( np.concatenate([rad_diffsum[0:1], rad_diffsum[rind[1:]] - rad_diffsum[rind[:-1]]]) ) / nr )
-        
-        if returnradii: 
-            return r_binned[rind],rad_std
-        elif return_nr:
-            return nr,r_binned[rind],rad_std
-        else:
-            return rad_std
-
+        radial_prof = np.array([image.flat[whichbin==b].std() for b in xrange(1,nbins+1)])
     else:
-        if returnradii: 
-            return r_binned[rind],radial_prof
-        elif return_nr:
-            return nr,r_binned[rind],radial_prof
-        else:
-            return radial_prof
+        radial_prof = np.array([(image*weights).flat[whichbin==b].sum() / weights.flat[whichbin==b].sum() for b in xrange(1,nbins+1)])
+
+    #import pdb; pdb.set_trace()
+
+    if interpnan:
+        radial_prof = np.interp(bin_centers,bin_centers[radial_prof==radial_prof],radial_prof[radial_prof==radial_prof],left=left,right=right)
+
+    if steps:
+        xarr = np.array(zip(bins[:-1],bins[1:])).ravel() 
+        yarr = np.array(zip(radial_prof,radial_prof)).ravel() 
+        return xarr,yarr
+    elif returnradii: 
+        return bin_centers,radial_prof
+    elif return_nr:
+        return nr,bin_centers,radial_prof
+    else:
+        return radial_prof
