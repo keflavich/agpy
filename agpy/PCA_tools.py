@@ -1,7 +1,7 @@
 import numpy
 
   
-def efuncs(arr,evects=None,evals=None):
+def efuncs(arr, return_others=False):
   """
   Determine eigenfunctions of an array for use with
   PCA cleaning
@@ -14,7 +14,10 @@ def efuncs(arr,evects=None,evals=None):
   covmat = numpy.dot(arr.T,arr)
   evals,evects = numpy.linalg.eig(covmat)
   efuncarr = numpy.dot(arr,evects)
-  return efuncarr
+  if return_others:
+      return efuncarr,covmat,evals,evects
+  else:
+      return efuncarr
 
 def smooth_waterfall(arr,fwhm=4.0,unsharp=False):
     """

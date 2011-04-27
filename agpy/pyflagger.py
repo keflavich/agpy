@@ -210,6 +210,7 @@ class Flagger:
       self.whempty = concatenate([arange(i+j,i+self.scanlen) for i,j in zip(self.scanstarts,self.scanlengths) ]).ravel()
       self.whscan[self.whempty] = 0
 
+      self.tsshape = [self.nscans*self.scanlen,self.ngoodbolos]
       self.datashape = [self.nscans,self.scanlen,self.ngoodbolos]
 
       if self.needed_once_struct is not None:
@@ -224,7 +225,9 @@ class Flagger:
       self.atmo_one    = self.bgps['atmo_one'][0][self.whscan,:].astype('float')
       self.noise       = self.bgps['noise'][0][self.whscan,:].astype('float')
       self.scalearr    = self.bgps['scalearr'][0][self.whscan,:].astype('float')
+      self.scale_coeffs = self.bgps['scale_coeffs'][0].astype('float')
       self.weight      = self.bgps['weight'][0][self.whscan,:].astype('float')
+      self.weight_by_bolo = self.weight.mean(axis=0)
       self.zeromedian  = self.astrosignal * 0
       self.flags       = self.bgps['flags'][0][self.whscan,:]
       self.flags.shape = self.datashape
@@ -294,6 +297,10 @@ class Flagger:
       'mapped_timestream': lambda: self.mapped_timestream,
       'itermedian': lambda: itermedian(self.ac_bolos * self.scalearr),
       'zeromedian': lambda: self.atmo_one,
+      'PCA_acb':     lambda: reshape(efuncs(reshape(self.ac_bolos,self.tsshape)),self.datashape),
+      'PCA_astro':   lambda: reshape(efuncs(reshape(self.astrosignal,self.tsshape)),self.datashape),
+      'PCA_noise':   lambda: reshape(efuncs(reshape(self.noise,self.tsshape)),self.datashape),
+      'PCA_default': lambda: reshape(efuncs(reshape(self.atmo_one - self.atmosphere + self.astrosignal,self.tsshape)),self.datashape),
       }
 
       self.tsplot = 'default'
@@ -1280,7 +1287,7 @@ class Flagger:
           raise KeyError("Timestream %s is not valid." % timestream)
       self.plotfig=figure(fignum)
       if clear: self.plotfig.clear()
-      plot(wholedata[:,bolonum],linewidth=0.5, **kwargs)
+      plot(wholedata[:,bolonum],linewidth=0.5, label=str(bolonum), **kwargs)
   
   def write_ncdf(self):
       if not self.ncfile:
@@ -1448,7 +1455,7 @@ def _hdr_string_to_card(str):
 
 def _hdr_string_list_to_cardlist(strlist):
     cardlist = [_hdr_string_to_card(s) for s in strlist]
-    cardlist.remove(None)
+    while None in cardlist: cardlist.remove(None)
     return pyfits.CardList(cardlist)
 
 def itermedian(ts,scale=0.8,niter=5):

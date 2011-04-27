@@ -78,9 +78,8 @@ class plfit:
         return kstest
     
 
-    # should probably use a decorator here
     def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran,usecy=False,
-            xmin=None):
+            xmin=None, verbose=False):
         """
         A Python implementation of the Matlab code http://www.santafe.edu/~aaronc/powerlaws/plfit.m
         from http://www.santafe.edu/~aaronc/powerlaws/
@@ -155,7 +154,16 @@ class plfit:
         self._ngtx = n
 
         if not quiet:
-            print "xmin: %g  n(>xmin): %i  alpha: %g +/- %g  Likelihood: %g  ks: %g" % (xmin,n,alpha,self._alphaerr,L,ks)
+            if verbose: print "The lowest value included in the power-law fit, ",
+            print "xmin: %g" % xmin,
+            if verbose: print "\nThe number of values above xmin, ",
+            print "n(>xmin): %i" % n,
+            if verbose: print "\nThe derived power-law alpha (p(x)~x^-alpha) with MLE-derived error, ",
+            print "alpha: %g +/- %g  " % (alpha,self._alphaerr), 
+            if verbose: print "\nThe log of the Likelihood (the minimized parameter), ",
+            print "Log-Likelihood: %g  " % L,
+            if verbose: print "\nThe KS-test statistic between the best-fit power-law and the data, ",
+            print "ks: %g" % (ks)
 
         return xmin,alpha
 
@@ -171,8 +179,9 @@ class plfit:
         pylab.errorbar([self._ks],self._alpha,yerr=self._alphaerr,fmt='+')
 
         ax=pylab.gca()
-        ax.set_xlim(0.8*(self._ks),3*(self._ks))
-        ax.set_ylim((self._alpha)-5*self._alphaerr,(self._alpha)+5*self._alphaerr)
+        if autozoom:
+            ax.set_xlim(0.8*(self._ks),3*(self._ks))
+            ax.set_ylim((self._alpha)-5*self._alphaerr,(self._alpha)+5*self._alphaerr)
         ax.set_xlabel("KS statistic")
         ax.set_ylabel(r'$\alpha$')
         pylab.draw()
@@ -196,8 +205,12 @@ class plfit:
         nc = xcdf[argmax(x>=xmin)]
         fcdf_norm = nc*fcdf
 
+        plotx = pylab.linspace(q.min(),q.max(),1000)
+        ploty = (plotx/xmin)**(1-alpha) * nc
+
         pylab.loglog(x,xcdf,marker='+',color='k',**kwargs)
-        pylab.loglog(q,fcdf_norm,color='r',**kwargs)
+        pylab.loglog(plotx,ploty,'r',**kwargs)
+        #pylab.loglog(q,fcdf_norm,color='r',**kwargs)
 
     def plotpdf(self,x=None,xmin=None,alpha=None,nbins=50,dolog=True,dnds=False,
             drawstyle='steps-post', **kwargs):
@@ -241,8 +254,14 @@ class plfit:
         norm = numpy.median( h[plotloc] / ((alpha-1)/xmin * (b[plotloc]/xmin)**(-alpha))  )
         px = px*norm
 
-        pylab.loglog(q,px,'r',**kwargs)
-        pylab.vlines(xmin,0.1,max(px),colors='r',linestyle='dashed')
+        plotx = pylab.linspace(q.min(),q.max(),1000)
+        ploty = (alpha-1)/xmin * (plotx/xmin)**(-alpha) * norm
+
+        #pylab.loglog(q,px,'r',**kwargs)
+        pylab.loglog(plotx,ploty,'r',**kwargs)
+
+        axlims = pylab.axis()
+        pylab.vlines(xmin,axlims[2],max(px),colors='r',linestyle='dashed')
 
         pylab.gca().set_xlim(min(x),max(x))
 
@@ -272,7 +291,7 @@ class plfit:
             pylab.plot(x,xmodel,'.',**kwargs)
         pylab.plot([min(x),max(x)],[min(x),max(x)],'k--')
         pylab.xlabel("Real Value")
-        pylab.ylable("Power-Law Model Value")
+        pylab.ylabel("Power-Law Model Value")
 
     def test_pl(self,niter=1e3,**kwargs):
         """
