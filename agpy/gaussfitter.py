@@ -56,7 +56,7 @@ def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
         mylist = mylist + [width]
     return mylist
 
-def twodgaussian(inpars, circle=0, rotate=1, vheight=1, shape=None):
+def twodgaussian(inpars, circle=False, rotate=True, vheight=True, shape=None):
     """Returns a 2d gaussian function of the form:
         x' = numpy.cos(rota) * x - numpy.sin(rota) * y
         y' = numpy.sin(rota) * x + numpy.cos(rota) * y
@@ -135,7 +135,7 @@ def twodgaussian(inpars, circle=0, rotate=1, vheight=1, shape=None):
     else:
         return rotgauss
 
-def gaussfit(data,err=None,params=[],autoderiv=1,return_all=0,circle=0,
+def gaussfit(data,err=None,params=[],autoderiv=True,return_all=False,circle=False,
         fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
         limitedmax=[False,False,False,False,False,False,True],
         usemoment=numpy.array([],dtype='bool'),

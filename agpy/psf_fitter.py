@@ -1,7 +1,11 @@
 # Fit a PSF of type Airy or Gaussian...
 from gaussfitter import twodgaussian,moments
+import numpy
+import scipy
+from numpy import pi
+from mpfit import mpfit
 
-def airy(inpars, circle=1, rotate=0, vheight=1, shape=None):
+def airy(inpars, circle=True, rotate=False, vheight=True, shape=None, fwhm=False):
     """Returns a 2d Airy *function* of the form:
         x' = numpy.cos(rota) * x - numpy.sin(rota) * y
         y' = numpy.sin(rota) * x + numpy.cos(rota) * y
@@ -31,6 +35,10 @@ def airy(inpars, circle=1, rotate=0, vheight=1, shape=None):
                 parameter by setting this to 0
             shape=None - if shape is set (to a 2-parameter list) then returns
                 an image with the gaussian defined by inpars
+        fwhm - if set, assumes the Width parameters input are FWHM widths, so
+            they'll be converted to "Sigma" widths by s = FWHM/2.0/1.61633
+            (http://en.wikipedia.org/wiki/Airy_disk 
+            and http://home.fnal.gov/~neilsen/notebook/astroPSF/astroPSF.html)
         """
     inpars_old = inpars
     inpars = list(inpars)
@@ -64,6 +72,10 @@ def airy(inpars, circle=1, rotate=0, vheight=1, shape=None):
         raise ValueError("There are still input parameters:" + str(inpars) + \
                 " and you've input: " + str(inpars_old) + \
                 " circle=%d, rotate=%d, vheight=%d" % (circle,rotate,vheight) )
+
+    if fwhm:
+        width_x /= 2.0 * 1.61633
+        width_y /= 2.0 * 1.61633
             
     def rotairy(x,y):
         if rotate==1:
@@ -72,9 +84,10 @@ def airy(inpars, circle=1, rotate=0, vheight=1, shape=None):
         else:
             xp = x
             yp = y
-        rr = (((rcen_x-xp)/width_x)**2+
+        rr = numpy.sqrt(((rcen_x-xp)/width_x)**2+
              ((rcen_y-yp)/width_y)**2)
-        airy_func = 2.0 * scipy.special.j1(rr) / rr
+        # http://en.wikipedia.org/wiki/Airy_disk
+        airy_func = (2.0 * scipy.special.j1(rr) / rr)**2
         airy_func[rr==0] = 1.0
         airy = height + amplitude * airy_func
 
@@ -92,6 +105,7 @@ def psffit(data,err=None,params=[],autoderiv=1,return_all=0,circle=1,
         rotate=0,vheight=1,quiet=True,returnmp=False,
         returnfitimage=False,
         psffunction=airy, 
+        extra_pars=None,
         **kwargs):
     """
     PSF fitter with the ability to fit a variety of different forms of
@@ -123,6 +137,8 @@ def psffit(data,err=None,params=[],autoderiv=1,return_all=0,circle=1,
         usemoment - can choose which parameters to use a moment estimation for.
             Other parameters will be taken from params.  Needs to be a boolean
             array.
+        extra_pars - If your psffunction requires extra parameters, pass their
+            parinfo dictionaries through this variable
 
     Output:
         Default output is a set of Gaussian parameters with the same shape as
@@ -179,6 +195,10 @@ def psffit(data,err=None,params=[],autoderiv=1,return_all=0,circle=1,
         parinfo.append({'n':5,'value':params[5],'limits':[minpars[5],maxpars[5]],'limited':[limitedmin[5],limitedmax[5]],'fixed':fixed[5],'parname':"YWIDTH",'error':0})
         if rotate == 1:
             parinfo.append({'n':6,'value':params[6],'limits':[minpars[6],maxpars[6]],'limited':[limitedmin[6],limitedmax[6]],'fixed':fixed[6],'parname':"ROTATION",'error':0})
+
+    if extra_pars:
+        for P in extra_pars:
+            parinfo.append(P)
 
     if autoderiv == 0:
         # the analytic derivative, while not terribly difficult, is less
