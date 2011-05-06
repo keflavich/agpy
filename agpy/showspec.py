@@ -147,7 +147,7 @@ class SpecPlotter:
             clear=False, color=None, continuum=None,
             axis=None, offset=None, scale=None, voff=None, vmin=None,
             vmax=None, units=None, xunits=None, erralpha=None, plotpix=False,
-            errstyle='fill', autorefresh=None, **kwargs):
+            errstyle='fill', autorefresh=None, button=None, **kwargs):
       """
       Plot a spectrum
       Originally written to plot spectra from data cubes, hence the i,j parameter

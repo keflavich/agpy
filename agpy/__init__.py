@@ -29,6 +29,7 @@ from contributed import parallel_map
 from timer import print_timing
 from region_photometry import region_photometry
 from region_photometry_files import region_photometry_files
+from PCA_tools import efuncs,pca_subtract,unpca_subtract,smooth_waterfall
 
 
 # import all of the functions but not the modules...

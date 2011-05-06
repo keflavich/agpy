@@ -32,7 +32,7 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,fft_pad=
     if oned:
         #freq = 1 + numpy.arange( numpy.floor( numpy.sqrt((image.shape[0]/2)**2+(image.shape[1]/2)**2) ) ) 
 
-        freq,zz = azimuthalAverage(psd2,returnradii=True)
+        freq,zz = azimuthalAverage(psd2,returnradii=True,interpnan=True)
         freq = freq.astype('float') + 1.0
 
         if return_index:
@@ -43,7 +43,7 @@ def PSD2(image,image2=None,oned=True,return_index=True,wavenumber=False,fft_pad=
         else:
             return_vals = list(zz)
         if return_stddev:
-            zzstd = azimuthalAverage(psd2,stddev=True)
+            zzstd = azimuthalAverage(psd2,stddev=True,interpnan=True)
             return_vals.append(zzstd)
 
         return return_vals
