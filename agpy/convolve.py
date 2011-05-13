@@ -12,7 +12,7 @@ except ImportError:
     ifft2 = np.fft.ifft2
 
 def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
-        fft_pad=True, psf_pad=False, ignore_nan=False,
+        fft_pad=True, psf_pad=False, ignore_nan=False, quiet=False,
         ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False):
     """
     Convolve an image with a kernel.  Returns something the size of an image.
@@ -45,10 +45,10 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     # NAN catching
     nanmaskimg = img!=img
     img[nanmaskimg] = 0
-    if nanmaskimg.sum() > 0 and not ignore_nan:
+    if nanmaskimg.sum() > 0 and not ignore_nan and not quiet:
         print "Warning: NOT ignoring nan values even though they are present (they are treated as 0)"
 
-    if (psf_pad or fft_pad) and not ignore_zeros and not force_ignore_zeros_off:
+    if (psf_pad or fft_pad) and not ignore_zeros and not force_ignore_zeros_off and not quiet:
         print "Warning: when psf_pad or fft_pad are enabled, ignore_zeros is forced on"
         ignore_zeros=True
     elif force_ignore_zeros_off:

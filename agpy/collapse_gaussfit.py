@@ -59,9 +59,12 @@ def double_gerr(xarr):
     return lambda p:xarr-double_gaussian(*p)(*indices(xarr.shape))
 def triple_gerr(xarr):
     return lambda p:xarr-triple_gaussian(*p)(*indices(xarr.shape))
-def return_param(xarr,params=None):
+def return_param(xarr,params=None,negamp=False):
     if params == None:
-        params = [xarr.argmax(),5,xarr.max()]
+        if negamp:
+            params = [xarr.argmin(),5,xarr.min()]
+        else:
+            params = [xarr.argmax(),5,xarr.max()]
     pars, cov, infodict, errmsg, success = optimize.leastsq(gerr(xarr), params, full_output=1)
     return pars
 def return_double_param(xarr,params=None):
@@ -216,7 +219,7 @@ def adaptive_collapse_gaussfit(cube,axis=2,nsig=3,nrsig=4,prefix='interesting',
 
     return width_arr1,width_arr2,chi2_arr,offset_arr1,offset_arr2,amp_arr1,amp_arr2,ncarr
 
-def collapse_gaussfit(cube,axis=2):
+def collapse_gaussfit(cube,axis=2,negamp=False):
     std_coll = cube.std(axis=axis)
     mean_std = median(std_coll.ravel())
     if axis > 0:
@@ -233,8 +236,14 @@ def collapse_gaussfit(cube,axis=2):
         nspec = (cube[:,i,:].max(axis=0) > mean_std).sum()
         print "Working on row %d with %d spectra to fit" % (i,nspec) ,
         for j in xrange(cube.shape[2]):
-            if cube[:,i,j].max() > mean_std:
-                pars = return_param(cube[:,i,j])
+            if not negamp and cube[:,i,j].max() > mean_std:
+                pars = return_param(cube[:,i,j],negamp=negamp)
+                width_arr[i,j] = pars[1]
+                chi2_arr[i,j] = sum(( gerr(cube[:,i,j])(pars) )**2) 
+                offset_arr[i,j] = pars[0]
+                amp_arr[i,j] = pars[2]
+            elif negamp and cube[:,i,j].min() < -1*mean_std:
+                pars = return_param(cube[:,i,j],negamp=negamp)
                 width_arr[i,j] = pars[1]
                 chi2_arr[i,j] = sum(( gerr(cube[:,i,j])(pars) )**2) 
                 offset_arr[i,j] = pars[0]

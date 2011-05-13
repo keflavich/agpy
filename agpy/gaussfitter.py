@@ -495,3 +495,52 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
 
     return mpp,n_gaussian(pars=mpp)(xax),mpperr,chi2
 
+def collapse_gaussfit(cube,xax=None,axis=2,negamp=False,usemoments=True,nsigcut=1.0,mppsigcut=1.0,
+        return_errors=False, **kwargs):
+    import time
+    std_coll = cube.std(axis=axis)
+    std_coll[std_coll==0] = numpy.nan # must eliminate all-zero spectra
+    mean_std = median(std_coll[std_coll==std_coll])
+    if axis > 0:
+        cube = cube.swapaxes(0,axis)
+    width_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
+    amp_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
+    chi2_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
+    offset_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
+    width_err = numpy.zeros(cube.shape[1:]) + numpy.nan
+    amp_err = numpy.zeros(cube.shape[1:]) + numpy.nan
+    offset_err = numpy.zeros(cube.shape[1:]) + numpy.nan
+    if xax is None:
+        xax = numpy.arange(cube.shape[0])
+    starttime = time.time()
+    print "Cube shape: ",cube.shape
+    if negamp: extremum=numpy.min
+    else: extremum=numpy.max
+    print "Fitting a total of %i spectra with peak signal above %f" % ((numpy.abs(extremum(cube,axis=0)) > (mean_std*nsigcut)).sum(),mean_std*nsigcut)
+    for i in xrange(cube.shape[1]):
+        t0 = time.time()
+        nspec = (numpy.abs(extremum(cube[:,i,:],axis=0)) > (mean_std*nsigcut)).sum()
+        print "Working on row %d with %d spectra to fit" % (i,nspec) ,
+        for j in xrange(cube.shape[2]):
+            if numpy.abs(extremum(cube[:,i,j])) > (mean_std*nsigcut):
+                mpp,gfit,mpperr,chi2 = onedgaussfit(xax,cube[:,i,j],err=numpy.ones(cube.shape[0])*mean_std,negamp=negamp,usemoments=usemoments,**kwargs)
+                if numpy.abs(mpp[1]) > (mpperr[1]*mppsigcut):
+                    width_arr[i,j] = mpp[3]
+                    offset_arr[i,j] = mpp[2]
+                    chi2_arr[i,j] = chi2
+                    amp_arr[i,j] = mpp[1]
+                    width_err[i,j] = mpperr[3]
+                    offset_err[i,j] = mpperr[2]
+                    amp_err[i,j] = mpperr[1]
+        dt = time.time()-t0
+        if nspec > 0:
+            print "in %f seconds (average: %f)" % (dt,dt/float(nspec))
+        else:
+            print "in %f seconds" % (dt)
+    print "Total time %f seconds" % (time.time()-starttime)
+
+    if return_errors:
+        return width_arr,offset_arr,amp_arr,width_err,offset_err,amp_err,chi2_arr
+    else:
+        return width_arr,offset_arr,amp_arr,chi2_arr
+

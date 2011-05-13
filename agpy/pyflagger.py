@@ -216,7 +216,7 @@ class Flagger:
       if self.needed_once_struct is not None:
           self.raw         = self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
           self.dc_bolos    = self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
-      else:
+      elif self.bgps.dtype.fields.has_key('raw'):
           self.raw         = self.bgps['raw'][0][self.whscan,:].astype('float')
           self.dc_bolos    = self.bgps['dc_bolos'][0][self.whscan,:].astype('float')
       self.astrosignal = self.bgps['astrosignal'][0][self.whscan,:].astype('float')
@@ -1257,7 +1257,7 @@ class Flagger:
       ylabel('Frequency')
       self.powerspec_plotted = True
 
-  def powerspec_whole(self,bolonum=0,recompute=False,timestream='data'):
+  def powerspec_whole(self,bolonum=0,recompute=False,timestream='data',clear=True,fignum=4,logx=False,logy=True):
       if self.powerspectra_whole is None or recompute:
           if timestream == 'data':
               wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
@@ -1270,12 +1270,40 @@ class Flagger:
           wholedata[wholedata!=wholedata] = 0
           self.powerspectra_whole = real(fft(wholedata,axis=0) * conj(fft(wholedata,axis=0)))
       datashape = self.powerspectra_whole.shape[0]
-      self.plotfig=figure(4)
-      self.plotfig.clear()
-      plot(fftfreq(datashape,d=self.sample_interval)[0:datashape/2],
+      self.plotfig=figure(fignum)
+      if clear: self.plotfig.clear()
+      if logy:
+          if logx:
+              plotcmd = loglog
+          else:
+              plotcmd = semilogy
+      else:
+          plotcmd = plot
+      plotcmd(fftfreq(datashape,d=self.sample_interval)[0:datashape/2],
               self.powerspectra_whole[0:datashape/2,bolonum],
               linewidth=0.5,color='k')
       xlabel("Frequency (Hz)")
+
+  def broken_powerfit(self,bolonum=0,plbreak=2,doplot=True,logx=True,replotspec=True,defaultplot=False,**kwargs):
+      if replotspec or (self.powerspectra_whole is None):
+          self.powerspec_whole(bolonum=bolonum,logx=True,**kwargs)
+      datashape = self.powerspectra_whole.shape[0]
+      xfreq = fftfreq(datashape,d=self.sample_interval)[1:datashape/2]
+      powerspectra_half = self.powerspectra_whole[1:datashape/2,bolonum]
+      p1 = polyfit(log10(xfreq[xfreq<plbreak]),log10(powerspectra_half[xfreq<plbreak]),1)
+      p2 = polyfit(log10(xfreq[xfreq>=plbreak]),log10(powerspectra_half[xfreq>=plbreak]),1)
+      # renormalize so that the high-frequency matches the low
+      p2nought = p2[1]
+      p2[1] = log10(10**p1[1]*(plbreak**(p1[0]-p2[0])))
+      if defaultplot:
+          plot(xfreq[xfreq<plbreak],10**4*(xfreq[xfreq<plbreak])**(-2.0),color='r')
+          plot(xfreq[xfreq>=plbreak],2.5e3*(xfreq[xfreq>=plbreak])**(0.0),color='r')
+      if doplot: 
+          P = plot(xfreq[xfreq<plbreak],10**p1[1]*(xfreq[xfreq<plbreak])**p1[0])[0]
+          plot(xfreq[xfreq>=plbreak],10**p2[1]*(xfreq[xfreq>=plbreak])**p2[0],color=P.get_color())
+      print "Best powerlaw fit: P = 10^%0.3f freq^%0.3f   { freq < %0.2f" % (p1[1],p1[0],plbreak)
+      print "                       10^%0.3f freq^%0.3f   { freq >= %0.2f" % (p2[1],p2[0],plbreak)
+      print "Reminder: the high-frequency end is forced to meet the low-freqency.  Scale was originally 10^%0.3f" % (p2nought)
 
   def timestream_whole(self,bolonum=0,clear=True,timestream='data',fignum=4, **kwargs):
       if timestream == 'data':
