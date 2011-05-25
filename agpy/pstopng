@@ -4,42 +4,49 @@
 # :r = -r has no options
 # a: = -a takes an option
 
-doremove=0
-while getopts :r OPT; do
-    case "$OPT" in 
-        r)
-            doremove=1
-            ;;
-    esac
-done
-# DEBUG echo "Before shift" $*  "Optind: $OPTIND"
-shift `expr $OPTIND - 1`
-# DEBUG echo "After shift" $*
-# ALTERNATIVE SYNTAX args=`getopt abc:d $*`
-# ALTERNATIVE SYNTAX set -- $args
+python /Users/adam/bin/pstopng.py $*
 
-
-for i in $*; do
-    outfile=`echo $i | sed -E "s/e?ps$/png/"`
-
-    echo gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
-    gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i > /dev/null
-    if [ $doremove == 1 ]
-    then
-        echo "rm $i"
-        rm $i
-    fi
-
-
-    # Timing tests:
-    #export TIMEFORMAT="TIMING: R: %R  U: %U  S: %S"
-    # density 300 is required to prevent alpha-off turning it to crap
-    # alpha-off is the only way to make the background opaque
-    #echo "/usr/local/bin/convert -density 300 -alpha Off $i $outfile "
-    #time /usr/local/bin/convert -density 300 -alpha Off $i $outfile 
-    #echo "/usr/local/bin/convert -limit area 4096 -limit memory 4096 -density 300 -alpha Off $i $outfile "
-    #time /usr/local/bin/convert -limit area 4096 -limit memory 4096 -density 300 -alpha Off $i $outfile 
-    #echo gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
-    #time gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
-
-done
+#doremove=0
+#multipage=0
+#while getopts :r:m OPT; do
+#    case "$OPT" in 
+#        r) doremove=1 ;;
+#        m) multipage=1 ;;
+#    esac
+#done
+## DEBUG echo "Before shift" $*  "Optind: $OPTIND"
+#shift `expr $OPTIND - 1`
+## DEBUG echo "After shift" $*
+## ALTERNATIVE SYNTAX args=`getopt abc:d $*`
+## ALTERNATIVE SYNTAX set -- $args
+#
+#
+#for i in $*; do
+#    if [ $multipage == 1 ] 
+#    then
+#        outfile=`echo $i | sed -E "s/\.e?ps$/_%d.png/"`
+#    else
+#        outfile=`echo $i | sed -E "s/\.e?ps$/.png/"`
+#    fi
+#
+#    echo gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
+#    gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i > /dev/null
+#    if [ $doremove == 1 ]
+#    then
+#        echo "rm $i"
+#        rm $i
+#    fi
+#
+#
+#    # Timing tests:
+#    #export TIMEFORMAT="TIMING: R: %R  U: %U  S: %S"
+#    # density 300 is required to prevent alpha-off turning it to crap
+#    # alpha-off is the only way to make the background opaque
+#    #echo "/usr/local/bin/convert -density 300 -alpha Off $i $outfile "
+#    #time /usr/local/bin/convert -density 300 -alpha Off $i $outfile 
+#    #echo "/usr/local/bin/convert -limit area 4096 -limit memory 4096 -density 300 -alpha Off $i $outfile "
+#    #time /usr/local/bin/convert -limit area 4096 -limit memory 4096 -density 300 -alpha Off $i $outfile 
+#    #echo gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
+#    #time gs -dBATCH -sDEVICE=png16m -r300 -dEPSCrop -dNOPAUSE -sOutputFile=$outfile $i
+#
+#done

@@ -16,6 +16,8 @@
 
 origdir=`pwd`
 
+debug=0
+
 if [ $# -eq 0 ]
 then
     echo montage wrapper
@@ -25,7 +27,7 @@ then
     echo
     echo Keyword parameters:
     echo   combine - 'median', 'average', or 'sum'
-    echo   header  - Filename of fits file from which to create mosaic.hdr
+    echo "  header  - Filename of fits file from which to create mosaic.hdr (or the .hdr file)"
     echo "             (if header is not specified, assumed to be mosaic.hdr in pwd)"
     echo   outfile - Output fits filename
     exit
@@ -53,6 +55,9 @@ else
         then
             params="$params,${ii%=*}=${ii#*=}"
         # note that you can say "header=blah.fits" because it is checked for earlier
+        elif [ $ii == "debug" ] 
+        then
+            debug=1
         elif [ `echo $ii | grep ".fits"` ] 
         then
             files=( ${files[@]} $ii )
@@ -72,15 +77,23 @@ then
     #echo ln $headerfile tmp/
     ln $headerfile tmp/
     cd tmp/
+    #ls -lh
 fi
 
 if [ -f $headerfile ] 
 then 
     echo "$headerfile exists, continuing"
 
+    if [ $debug == 1 ] 
+    then
+      cmd="python -m pdb -c "
+    else
+      cmd="python -c "
+    fi
+
     dir=`pwd`
-    echo python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
-    python -c "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
+    echo $cmd "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
+    $cmd "import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
     if [ $? != 0 ]
     then
       echo "There was a python error!"

@@ -1,3 +1,4 @@
+#!python
 
 import math
 
@@ -170,7 +171,7 @@ class Flagger:
       self.flagfig = None
       self.datafig = None
       self.scanim = None
-      self.PCA = False
+      self.PCAflag = False
       self.powerspec_plotted = False
       self.powerspectra_whole = None
       self.gaussfit=None
@@ -185,6 +186,9 @@ class Flagger:
       self.bgps = sav.get('bgps')
       self.mapstr = sav.get('mapstr')
       self.needed_once_struct = sav.get('needed_once_struct')
+      if self.needed_once_struct is None:
+          sav_once = idlsave.read(savfile.replace('preiter','neededonce').replace('postiter','neededonce'))
+          self.needed_once_struct = sav_once.get('needed_once_struct')
       t1 = time.time()
       print "Completed IDLsave file read in %f seconds." % (t1 - t0)
 
@@ -239,13 +243,14 @@ class Flagger:
 
       datums=['astrosignal','atmosphere','raw','ac_bolos','atmo_one','dc_bolos','noise','scalearr','weight','mapped_astrosignal']
       for d in datums:
-          self.__dict__[d][self.whempty,:] = NaN
-          self.__dict__[d].shape = self.datashape
-          self.__dict__[d] = nantomask(self.__dict__[d])
-          try:
-              self.__dict__[d].mask[self.flags > 0] = True
-          except TypeError:
-              self.__dict__[d].mask = (self.flags > 0)
+          if self.__dict__.has_key(d):
+              self.__dict__[d][self.whempty,:] = NaN
+              self.__dict__[d].shape = self.datashape
+              self.__dict__[d] = nantomask(self.__dict__[d])
+              try:
+                  self.__dict__[d].mask[self.flags > 0] = True
+              except TypeError:
+                  self.__dict__[d].mask = (self.flags > 0)
       #import pdb; pdb.set_trace()
 
       if list(self.ac_bolos.shape) != self.datashape:
@@ -749,12 +754,12 @@ class Flagger:
           self.maparrow(x2i,y2i)
  
   def flag_bolo(self,x,button):
-      if button=='b' and self.PCA:
+      if button=='b' and self.PCAflag:
           x=round(x)
           PCAsub = self.data[self.scannum,:,:] - outer(self.plane[:,x],ones(self.plane.shape[1]))
-          self.PCA = False
+          self.PCAflag = False
           self.plotscan(self.scannum,data=PCAsub)
-      elif button=='b' and not self.PCA:
+      elif button=='b' and not self.PCAflag:
 #          print x,round(x),button,self.data.shape
           x=round(x)
           h=self.data.shape[1]
@@ -839,7 +844,7 @@ class Flagger:
   def plot_line(self,tsy,clear=True):
       self.bolofig=figure(4)
       if clear: self.bolofig.clf()
-      if self.PCA:
+      if self.PCAflag:
           pylab.plot(self.efuncarr[numpy.round(tsy),:])
       else:
           title("Line %i" % round(tsy))
@@ -962,7 +967,7 @@ class Flagger:
               print "At first scan, can't go further back"
       elif event.key == 'P': # PCA
           self.plotscan(self.scannum,data=efuncs(self.plane),flag=False,logscale=True)
-          self.PCA = True
+          self.PCAflag = True
       elif event.key == 'q':
           self.close()
       elif event.key == 'Q':
@@ -1239,7 +1244,7 @@ class Flagger:
     self.y2 = event.ydata
     self.event = event
     tb = get_current_fig_manager().toolbar
-    if tb.mode=='' and not self.PCA:
+    if tb.mode=='' and not self.PCAflag:
         self.flag_box(self.x1,self.y1,self.x2,self.y2,event.button)
 #        if abs(self.x2-self.x1) > 1 or abs(self.y2-self.y1) > 1:
 #        else:
@@ -1384,8 +1389,25 @@ class Flagger:
           self.mapfig.canvas.draw()
       if self.plotfig is not None:
           self.plotfig.canvas.draw()
-      self.PCA = False
+      self.PCAflag = False
       self.powerspec_plotted = False
+
+  def doPCA(self,clear=True,timestream='data', fignum=7, plotitem='evects', **kwargs):
+
+      if timestream == 'data':
+          self.efuncarr,self.covmat,self.evals,self.evects = efuncs(reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]]),return_others=True)
+      elif self.tsplot_dict.has_key(timestream):
+          data = self.tsplot_dict[timestream]()
+          self.efuncarr,self.covmat,self.evals,self.evects = efuncs(reshape(data,[data.shape[0]*data.shape[1],data.shape[2]]),return_others=True)
+      else:
+          raise KeyError("Timestream %s is not valid." % timestream)
+      self.PCAfig=figure(fignum)
+      if clear: self.PCAfig.clear()
+    
+      plotitem_dict = {'evects':self.evects,'efuncarr':self.efuncarr,'covmat':self.covmat,'evals':self.evals}
+      plottype_dict = {'evects':imshow,'efuncarr':imshow,'covmat':imshow,'evals':plot}
+
+      plottype_dict[plotitem](plotitem_dict[plotitem], label=plotitem, **kwargs)
 
   def compute_map(self,ts=None,tsname=None,weights=None,showmap=True,**kwargs):
       t0 = time.time()
@@ -1492,3 +1514,57 @@ def itermedian(ts,scale=0.8,niter=5):
         mts = mts - numpy.median(mts,axis=1)[:,newaxis,:]*scale
     return mts
 
+if __name__ == "__main__":
+
+    #from pylab import *
+    #from agpy import pyflagger
+    import sys
+    import optparse
+
+    parser=optparse.OptionParser()
+    parser.add_option("--timestreams","-t",help="Plot all timestreams scaled and unscaled as a diagnostic tool.  Default False",action="store_true",dest="timestreams",default=False)
+    parser.add_option("--plotscan","-p",help="Scan number to plot at the start.  Default to 0.  Set to -1 to turn off.",default=0)
+    parser.add_option("--interactive","-i",help="Start in ipython mode?  Default True",action='store_false',default=True)
+    parser.add_option("--no_interactive","-n",help="Turn off ipython (interactive) mode",action='store_false',dest="interactive")
+    parser.add_option("--close","-c",help="Close after plotting?  Useful if interactive=False",action='store_true',default=False)
+    parser.set_usage("%prog savename.sav [options]")
+    parser.set_description(
+    """
+    PYFLAGGER 
+    """)
+
+    options,args = parser.parse_args()
+
+    if options.interactive:
+        from IPython.Shell import IPShellEmbed
+        ipshell = IPShellEmbed([])
+
+        
+    plotnum = options.plotscan
+
+    for ii,filename in enumerate(args):
+        prefix = filename.replace("_preiter.sav","").replace("_postiter.sav","").replace("_save_iter0.sav","")
+
+        f=Flagger(filename)
+        if options.interactive: exec("f%i = f" % (ii) )
+
+        if plotnum >= 0: f.plotscan(plotnum)
+
+        if options.timestreams:
+            figure(6)
+            clf()
+            for ii in range(f.nbolos):
+                f.timestream_whole(ii,timestream='acbolos',clear=False,fignum=6)
+            savefig('%s_acbolos_scaled.png' % prefix)
+
+            figure(5)
+            clf()
+            for ii in range(f.nbolos):
+                f.timestream_whole(ii,timestream='acbolos_noscale',clear=False,fignum=5)
+            savefig('%s_acbolos_noscale.png' % prefix)
+
+        if options.close or not options.interactive:
+            f.close()
+
+    if options.interactive:
+        ipshell() # this call anywhere in your program will start IPython
