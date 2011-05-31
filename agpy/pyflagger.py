@@ -187,8 +187,10 @@ class Flagger:
       self.mapstr = sav.get('mapstr')
       self.needed_once_struct = sav.get('needed_once_struct')
       if self.needed_once_struct is None:
-          sav_once = idlsave.read(savfile.replace('preiter','neededonce').replace('postiter','neededonce'))
-          self.needed_once_struct = sav_once.get('needed_once_struct')
+          neededoncefile = savfile.replace('preiter','neededonce').replace('postiter','neededonce')
+          if os.path.exists(neededoncefile):
+              sav_once = idlsave.read(neededoncefile)
+              self.needed_once_struct = sav_once.get('needed_once_struct')
       t1 = time.time()
       print "Completed IDLsave file read in %f seconds." % (t1 - t0)
 
@@ -1391,6 +1393,17 @@ class Flagger:
           self.plotfig.canvas.draw()
       self.PCAflag = False
       self.powerspec_plotted = False
+
+  def histograms(self, fignum=8, clear=True, hrange=[0,2], nbins=21, dolegend=True,
+          loc='best', **kwargs):
+
+      self.histfig = figure(fignum)
+      if clear: self.histfig.clear()
+
+      hist(self.scale_coeffs,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs')
+      hist(self.weight_by_bolo,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Weights')
+      
+      if dolegend: legend(loc=loc)
 
   def doPCA(self,clear=True,timestream='data', fignum=7, plotitem='evects', **kwargs):
 

@@ -33,6 +33,7 @@ from ratosexagesimal import *
 import pyfits
 import gaussfitter
 
+import numpy
 from numpy import isnan
 from mad import MAD,nanmedian
 
@@ -42,7 +43,7 @@ def steppify(arr,isX=False,interval=0,sign=+1.0):
     Converts an array to double-length for step plotting
     """
     if isX and interval==0:
-        interval = pylab.abs(arr[1]-arr[0]) / 2.0
+        interval = numpy.abs(arr[1]-arr[0]) / 2.0
     newarr = pylab.array(zip(arr-sign*interval,arr+sign*interval)).ravel()
     return newarr
 
