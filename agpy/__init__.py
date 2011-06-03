@@ -23,7 +23,7 @@ from psds import PSD2
 #import convolve as convolve_mod
 from convolve import convolve,smooth
 #from asinh_norm import AsinhNorm
-from radialprofile import azimuthalAverage
+from radialprofile import azimuthalAverage,azimuthalAverageBins
 #import showspec # imports matplotlib = BAD
 from contributed import parallel_map
 from timer import print_timing
@@ -36,6 +36,6 @@ from PCA_tools import efuncs,pca_subtract,unpca_subtract,smooth_waterfall
 __all__ = ['readcol','gaussfitter','kdist','reg_gal2cel','posang','densitymap','downsample','correlate2d','psds','convolve','radialprofile',
         'gal2cel',
         'convolve','smooth',
-        'azimuthalAverage',
+        'azimuthalAverage','azimuthalAverageBins',
         'kdist','vector_kdist',
         'moments','twodgaussian','gaussfit','onedgaussian','onedgaussfit']

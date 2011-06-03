@@ -1,7 +1,8 @@
 import numpy as np
 
 def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return_nr=False, 
-        binsize=0.5, weights=None, steps=False, interpnan=False, left=None, right=None):
+        binsize=0.5, weights=None, steps=False, interpnan=False, left=None, right=None,
+        mask=None ):
     """
     Calculate the azimuthally averaged radial profile.
 
@@ -23,6 +24,8 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
         represents what's going on)
     interpnan - Interpolate over NAN values, i.e. bins where there is no data?
         left,right - passed to interpnan; they set the extrapolated values
+    mask - can supply a mask (boolean array same size as image with True for OK and False for not)
+        to average over only select data.
 
     If a bin contains NO DATA, it will have a NAN value because of the
     divide-by-sum-of-weights component.  I think this is a useful way to denote
@@ -42,6 +45,12 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
     elif stddev:
         raise ValueError("Weighted standard deviation is not defined.")
 
+    if mask is None:
+        # mask is only used in a flat context
+        mask = np.ones(image.shape,dtype='bool').ravel()
+    elif len(mask.shape) > 1:
+        mask = mask.ravel()
+
     # the 'bins' as initially defined are lower/upper bounds for each bin
     # so that values will be in [lower,upper)  
     nbins = (np.round(r.max() / binsize)+1)
@@ -60,9 +69,9 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
     # recall that bins are from 1 to nbins (which is expressed in array terms by arange(nbins)+1 or xrange(1,nbins+1) )
     # radial_prof.shape = bin_centers.shape
     if stddev:
-        radial_prof = np.array([image.flat[whichbin==b].std() for b in xrange(1,nbins+1)])
+        radial_prof = np.array([image.flat[mask*(whichbin==b)].std() for b in xrange(1,nbins+1)])
     else:
-        radial_prof = np.array([(image*weights).flat[whichbin==b].sum() / weights.flat[whichbin==b].sum() for b in xrange(1,nbins+1)])
+        radial_prof = np.array([(image*weights).flat[mask*(whichbin==b)].sum() / weights.flat[mask*(whichbin==b)].sum() for b in xrange(1,nbins+1)])
 
     #import pdb; pdb.set_trace()
 
@@ -79,3 +88,39 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
         return nr,bin_centers,radial_prof
     else:
         return radial_prof
+
+def azimuthalAverageBins(image,azbins,symmetric=None, center=None, **kwargs):
+    """ Compute the azimuthal average over a limited range of angles """
+    y, x = np.indices(image.shape)
+    if center is None:
+        center = np.array([(x.max()-x.min())/2.0, (y.max()-y.min())/2.0])
+    r = np.hypot(x - center[0], y - center[1])
+    theta = np.arctan2(x - center[0], y - center[1])
+    theta[theta < 0] += 2*np.pi
+    theta_deg = theta*180.0/np.pi
+
+    if isinstance(azbins,np.ndarray):
+        pass
+    elif isinstance(azbins,int):
+        if symmetric == 2:
+            azbins = np.linspace(0,90,azbins)
+            theta_deg = theta_deg % 90
+        elif symmetric == 1:
+            azbins = np.linspace(0,180,azbins)
+            theta_deg = theta_deg % 180
+        else:
+            azbins = np.linspace(0,360,azbins)
+    else:
+        raise ValueError("azbins must be an ndarray or an integer")
+
+    azavlist = []
+    for blow,bhigh in zip(azbins[:-1],azbins[1:]):
+        mask = (theta_deg > blow) * (theta_deg < bhigh)
+        rr,zz = azimuthalAverage(image,center=center,mask=mask,returnradii=True,**kwargs)
+        azavlist.append(zz)
+
+    return azbins,rr,azavlist
+
+
+
+
