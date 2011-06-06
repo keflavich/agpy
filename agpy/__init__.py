@@ -23,7 +23,7 @@ from psds import PSD2
 #import convolve as convolve_mod
 from convolve import convolve,smooth
 #from asinh_norm import AsinhNorm
-from radialprofile import azimuthalAverage,azimuthalAverageBins
+from radialprofile import azimuthalAverage,azimuthalAverageBins,radialAverage,radialAverageBins
 #import showspec # imports matplotlib = BAD
 from contributed import parallel_map
 from timer import print_timing
