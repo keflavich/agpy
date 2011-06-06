@@ -211,7 +211,7 @@ def radialAverage(image, center=None, stddev=False, returnAz=False, return_naz=F
         return xarr,yarr
     elif returnAz: 
         return bin_centers,azimuthal_prof
-    elif return_nr:
+    elif return_naz:
         return nr,bin_centers,azimuthal_prof
     else:
         return azimuthal_prof
