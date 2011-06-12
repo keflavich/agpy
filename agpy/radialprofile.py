@@ -123,7 +123,7 @@ def azimuthalAverageBins(image,azbins,symmetric=None, center=None, **kwargs):
 
 def radialAverage(image, center=None, stddev=False, returnAz=False, return_naz=False, 
         binsize=1.0, weights=None, steps=False, interpnan=False, left=None, right=None,
-        mask=None ):
+        mask=None, symmetric=None ):
     """
     Calculate the radially averaged azimuthal profile.
 
@@ -174,6 +174,12 @@ def radialAverage(image, center=None, stddev=False, returnAz=False, return_naz=F
         mask = np.ones(image.shape,dtype='bool').ravel()
     elif len(mask.shape) > 1:
         mask = mask.ravel()
+
+    # allow for symmetries
+    if symmetric == 2:
+        theta_deg = theta_deg % 90
+    elif symmetric == 1:
+        theta_deg = theta_deg % 180
 
     # the 'bins' as initially defined are lower/upper bounds for each bin
     # so that values will be in [lower,upper)  
