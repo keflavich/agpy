@@ -30,6 +30,8 @@ def lagrange_interp(image,direction='vertical',npix=5, edge_value=0.0):
     firstderiv = signal.convolve2d(image,lagrangian,mode='same',boundary='fill')
     secondderiv = signal.convolve2d(firstderiv,lagrangian,mode='same',boundary='fill')
 
+    return secondderiv
+
     yy,xx = np.indices(image.shape)
     
     pix_indices_x = np.concatenate([[xx+ii] for ii in np.arange(npix)-npix/2])
