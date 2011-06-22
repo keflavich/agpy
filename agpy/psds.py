@@ -1,6 +1,6 @@
 import numpy
 from correlate2d import correlate2d
-from radialprofile import azimuthalAverage
+from radialprofile import azimuthalAverageBins,radialAverageBins
 
 try:
     #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
@@ -15,7 +15,7 @@ except ImportError:
 
 def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
         fft_pad=False, return_stddev=False, real=False, imag=False,
-        binsize=1.0):
+        binsize=1.0, radbins=1, azbins=1, radial=False, **kwargs):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -38,10 +38,18 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
         psd2 = numpy.abs( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
     # normalization is approximately (numpy.abs(image).sum()*numpy.abs(image2).sum())
 
+    if radial:
+        azbins,az,zz = radialAverageBins(psd2,radbins=radbins, interpnan=True, binsize=binsize, **kwargs)
+        if len(zz) == 1:
+            return az,zz[0]
+        else:
+            return az,zz
+
     if oned:
         #freq = 1 + numpy.arange( numpy.floor( numpy.sqrt((image.shape[0]/2)**2+(image.shape[1]/2)**2) ) ) 
 
-        freq,zz = azimuthalAverage(psd2,returnradii=True,interpnan=True, binsize=binsize)
+        azbins,(freq,zz) = azimuthalAverageBins(psd2,azbins=azbins,interpnan=True, binsize=binsize, **kwargs)
+        if len(zz) == 1: zz=zz[0]
         freq = freq.astype('float') + 1.0
 
         if return_index:
@@ -52,9 +60,10 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
         else:
             return_vals = list(zz)
         if return_stddev:
-            zzstd = azimuthalAverage(psd2,stddev=True,interpnan=True, binsize=binsize)
+            zzstd = azimuthalAverageBins(psd2,azbins=azbins,stddev=True,interpnan=True, binsize=binsize, **kwargs)
             return_vals.append(zzstd)
 
         return return_vals
-    else:
-        return psd2
+
+    # else...
+    return psd2

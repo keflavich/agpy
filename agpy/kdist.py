@@ -125,3 +125,6 @@ def vector_kdist(x,y,z,**kwargs):
     for i,j,k in array([x,y,z]).T:
         v.append( kdist(i,j,k,**kwargs) )
     return array(v)
+
+def threekpcarm(longitude,radius=3.0,center_distance=8.5):
+    return sqrt(radius**2+center_distance**2-2*radius*center_distance*cos( (90-3*longitude) / 180. * pi ))

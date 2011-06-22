@@ -108,8 +108,10 @@ def azimuthalAverageBins(image,azbins,symmetric=None, center=None, **kwargs):
         elif symmetric == 1:
             azbins = np.linspace(0,180,azbins)
             theta_deg = theta_deg % 180
+        elif azbins == 1:
+            return azbins,azimuthalAverage(image,center=center,returnradii=True,**kwargs)
         else:
-            azbins = np.linspace(0,360,azbins)
+            azbins = np.linspace(0,359.9999999999999,azbins)
     else:
         raise ValueError("azbins must be an ndarray or an integer")
 
@@ -163,6 +165,7 @@ def radialAverage(image, center=None, stddev=False, returnAz=False, return_naz=F
     theta = np.arctan2(x - center[0], y - center[1])
     theta[theta < 0] += 2*np.pi
     theta_deg = theta*180.0/np.pi
+    maxangle = 360
 
     if weights is None:
         weights = np.ones(image.shape)
@@ -178,12 +181,14 @@ def radialAverage(image, center=None, stddev=False, returnAz=False, return_naz=F
     # allow for symmetries
     if symmetric == 2:
         theta_deg = theta_deg % 90
+        maxangle = 90
     elif symmetric == 1:
         theta_deg = theta_deg % 180
+        maxangle = 180
 
     # the 'bins' as initially defined are lower/upper bounds for each bin
     # so that values will be in [lower,upper)  
-    nbins = (np.round(theta_deg.max() / binsize)+1)
+    nbins = (np.round(maxangle / binsize))
     maxbin = nbins * binsize
     bins = np.linspace(0,maxbin,nbins+1)
     # but we're probably more interested in the bin centers than their left or right sides...
@@ -232,7 +237,9 @@ def radialAverageBins(image,radbins, corners=True, center=None, **kwargs):
     if isinstance(radbins,np.ndarray):
         pass
     elif isinstance(radbins,int):
-        if corners:
+        if radbins == 1:
+            return radbins,radialAverage(image,center=center,returnAz=True,**kwargs)
+        elif corners:
             radbins = np.linspace(0,r.max(),radbins)
         else:
             radbins = np.linspace(0,np.max(np.abs(np.array([x-center[0],y-center[1]]))),radbins)
