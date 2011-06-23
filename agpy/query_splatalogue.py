@@ -16,7 +16,9 @@ length_dict = {'meters':1.0,'m':1.0,
         'angstroms':1e-10,'A':1e-10,
         }
 
-def query_splatalogue(minwav,maxwav,waveunits='m',root_url='http://find.nrao.edu/splata-slap/slap'):
+def query_splatalogue(minwav=0.00260,maxwav=0.00261,
+        waveunits='m',root_url='http://find.nrao.edu/splata-slap/slap',
+        chemical_element=None):
     """
     Acquire an atpy table of a splatalogue searched based on wavelength.
 
@@ -29,8 +31,11 @@ def query_splatalogue(minwav,maxwav,waveunits='m',root_url='http://find.nrao.edu
 
     #query_url = "%s?REQUEST=queryData&WAVELENGTH=%f/%f" % (root_url,minwav,maxwav)
     # This is probably the more robust/pythonic way to do this sort of query:
-    query_url = urllib2.Request(url=root_url,
-            data=urllib.urlencode({"REQUEST":"queryData","WAVELENGTH":"%f/%f" % (minwav,maxwav)}))
+    request_dict = {"REQUEST":"queryData","WAVELENGTH":"%f/%f" % (minwav,maxwav)}
+    if chemical_element is not None: request_dict['CHEMICAL_ELEMENT'] = chemical_element
+    #query_url = urllib2.Request(url=root_url,
+    #        data=urllib.urlencode(request_dict))
+    query_url = "%s?%s" % (root_url,urllib.urlencode(request_dict))
 
     U = urllib2.urlopen(query_url)
 
