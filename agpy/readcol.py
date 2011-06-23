@@ -21,7 +21,7 @@ except ValueError:
 
 def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
         fixedformat=None,asdict=False,comment='#',verbose=True,nullval=None,
-        asStruct=False,namecomment=True):
+        asStruct=False,namecomment=True,removeblanks=False):
     """
     The default return is a two dimensional float array.  If you want a list of
     columns output instead of a 2D array, pass 'twod=False'.  In this case,
@@ -79,6 +79,8 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
             be blank but readcol will not report an error.
         namecomment - assumed that "Name" row is on a comment line.  If it is not - 
             e.g., it is the first non-comment line, change this to False
+        removeblanks - remove all blank entries from split lines.  This can cause lost
+            data if you have blank entries on some lines.
 
     If you get this error: "scipy could not be imported.  Your table must have
     full rows." it means readcol cannot automatically guess which columns
@@ -121,8 +123,9 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
         fstrip = map(string.strip,f)
         fseps = [ fsep for i in range(len(f)) ]
         splitarr = map(string.split,fstrip,fseps)
-        for i in xrange(splitarr.count([''])):
-            splitarr.remove([''])
+        if removeblanks:
+            for i in xrange(splitarr.count([''])):
+                splitarr.remove([''])
 
         splitarr = filter(commentfilter,splitarr)
 
@@ -133,8 +136,8 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
             ncols,nrows = mode(nperline)
             if nrows != len(splitarr):
                 if verbose:
-                    print "Removing %i rows that don't match most common length.  \
-                     \n%i rows read into array." % (len(splitarr) - nrows,nrows)
+                    print "Removing %i rows that don't match most common length %i.  \
+                     \n%i rows read into array." % (len(splitarr) - nrows,ncols,nrows)
                 for i in xrange(len(splitarr)-1,-1,-1):  # need to go backwards
                     if nperline[i] != ncols:
                         splitarr.pop(i)

@@ -17,6 +17,7 @@
 origdir=`pwd`
 
 debug=0
+copy="F"
 
 if [ $# -eq 0 ]
 then
@@ -26,10 +27,12 @@ then
     echo montage outfile=l089_reference_montage.fits 0\*_indiv13pca\*_map01.fits combine='median' \&
     echo
     echo Keyword parameters:
-    echo   combine - 'median', 'average', or 'sum'
+    echo "  combine - 'median', 'average', or 'sum'  (note that this has to be \"combine='median'\")"
+    echo "  exact_size - True or False"
     echo "  header  - Filename of fits file from which to create mosaic.hdr (or the .hdr file)"
     echo "             (if header is not specified, assumed to be mosaic.hdr in pwd)"
-    echo   outfile - Output fits filename
+    echo "  outfile - Output fits filename"
+    echo "  copy    - copy files instead of hardlinking"
     exit
 else
     for ii in $*
@@ -48,6 +51,9 @@ else
               echo "ERROR: $ii is not a valid header setting"
               headerfile="does_not_exist_I_hope.noooo"
             fi
+        elif [ ${ii} == '-copy' ]
+        then
+            copy="T"
         elif [ ${ii%=*} == 'outfile' ]
         then
             outfile=${ii#*=}
@@ -72,10 +78,16 @@ then
     echo "Creating temporary directory and hard-linking (not sym-linking) all files into it"
     #echo "Creating temporary directory and sym-linking all files into it"
     mkdir tmp
-    #echo ln ${files[@]} tmp/
-    ln ${files[@]} tmp/
-    #echo ln $headerfile tmp/
-    ln $headerfile tmp/
+    if [ $copy == "T" ] 
+    then 
+        cp ${files[@]} tmp/
+        cp $headerfile tmp/
+    else
+        #echo ln ${files[@]} tmp/
+        ln ${files[@]} tmp/
+        #echo ln $headerfile tmp/
+        ln $headerfile tmp/
+    fi
     cd tmp/
     #ls -lh
 fi

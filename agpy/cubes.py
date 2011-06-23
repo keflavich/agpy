@@ -171,7 +171,7 @@ def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
 
     xwidth and ywidth are "radius" values, i.e. half the length that will be extracted
 
-    if dvmult is set, multiple the average by DV (this is useful if you set
+    if dvmult is set, multiply the average by DV (this is useful if you set
     average=sum and dvmul=True to get an integrated value)
 
     """
