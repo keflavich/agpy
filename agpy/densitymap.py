@@ -47,6 +47,8 @@ def densitymap(header,xi,yi,smoothpix=1,outfits=None,clobber=True):
     """
     Generates a source-density map given a region file
     or a list of coordinates
+
+    this should be done with np.histogram2d
     """
 
 
