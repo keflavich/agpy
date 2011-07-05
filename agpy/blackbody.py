@@ -9,10 +9,12 @@ except ImportError:
 unitdict = {
         'cgs':{ 'h':6.626068e-27,
             'k':1.3806503e-16,
-            'c':2.99792458e10},
+            'c':2.99792458e10,
+            'mh':1.67262158e-24 * 1.00794},
         'mks':{ 'h':6.626068e-34,
             'k':1.3806503e-23,
-            'c':2.99792458e8}
+            'c':2.99792458e8,
+            'mh':1.67262158e-27 * 1.00794}
         }
 
 frequency_dict = {
@@ -23,7 +25,7 @@ frequency_dict = {
         'THz':1e12,
         }
 
-def blackbody(nu,temperature,units='cgs',frequency_units='Hz'):
+def blackbody(nu,temperature,units='cgs',frequency_units='Hz', normalize=max):
     # load constants in desired units
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
 
@@ -32,7 +34,10 @@ def blackbody(nu,temperature,units='cgs',frequency_units='Hz'):
 
     I = 2*h*nu**3 / c**2 * (exp(h*nu/(k*temperature)) - 1)**-1
 
-    return I
+    if normalize:
+        return I/normalize(I)
+    else:
+        return I
 
 wavelength_dict = {'meters':1.0,'m':1.0,
         'centimeters':1e-2,'cm':1e-2,
@@ -43,7 +48,7 @@ wavelength_dict = {'meters':1.0,'m':1.0,
         'angstroms':1e-10,'A':1e-10,'Angstroms':1e-10,
         }
 
-def blackbody_wavelength(lam,temperature,units='cgs',wavelength_units='Angstroms'):
+def blackbody_wavelength(lam,temperature,units='cgs',wavelength_units='Angstroms', normalize=max):
     # load constants in desired units
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
 
@@ -52,4 +57,58 @@ def blackbody_wavelength(lam,temperature,units='cgs',wavelength_units='Angstroms
 
     I = 2*h*c**2 / lam**5 * (exp(h*c/(k*temperature*lam)) - 1)**-1
 
-    return I
+    if normalize:
+        return I/normalize(I)
+    else:
+        return I
+
+def modified_blackbody(nu,temperature,beta=1.75, muh2=2.8, units='cgs',frequency_units='Hz',
+        kappa0=4.0, nu0=505e9, N=1e22, normalize=max):
+    """
+    Snu =  2hnu^3 c^-2  (e^(hnu/kT) - 1)^-1  (1 - e^(-tau_nu) )
+    Kappa0 and Nu0 are set as per http://arxiv.org/abs/1101.4654 which uses OH94 values.
+    beta = 1.75 is a reasonable default for Herschel data
+    N = 1e22 is the column density in cm^-2
+
+    nu0 and nu must have same units!
+    """
+    h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
+    mh = unitdict[units]['mh']
+
+    kappanu = kappa0 * (nu/nu0)**beta
+    tau  = muh2 * mh * kappanu * N
+
+    modification = (1.0 - exp(-1.0 * tau))
+
+    I = blackbody(nu,temperature,units=units,frequency_units=frequency_units)*modification
+
+    if normalize:
+        return I/normalize(I)
+    else:
+        return I
+
+def modified_blackbody_wavelength(lam,temperature,beta=1.75, muh2=2.8,
+        units='cgs', wavelength_units='Angstroms', kappa0=4.0, nu0=5.93648e-2,
+        N=1e22, normalize=max):
+    """
+    Snu =  2hnu^3 c^-2  (e^(hnu/kT) - 1)^-1  (1 - e^(-tau_nu) )
+    Kappa0 and Nu0 are set as per http://arxiv.org/abs/1101.4654 which uses OH94 values.
+    beta = 1.75 is a reasonable default for Herschel data
+    N = 1e22 is the column density in cm^-2
+
+    nu0 and nu must have same units!
+    """
+    h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
+    mh = unitdict[units]['mh']
+
+    kappanu = kappa0 * (nu/nu0)**beta
+    tau  = muh2 * mh * kappanu * N
+
+    modification = (1.0 - exp(-1.0 * tau))
+
+    I = blackbody(nu,temperature,units=units,frequency_units=frequency_units)*modification
+
+    if normalize:
+        return I/normalize(I)
+    else:
+        return I
