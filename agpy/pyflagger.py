@@ -211,7 +211,7 @@ class Flagger:
       #self.bolo_indices = asarray(nonzero(self.ncbolo_params[:,0].ravel())).ravel()
       self.bolo_indices = self.ncbolo_indices
       self.ngoodbolos = self.bolo_indices.shape[0]
-      self.whscan = asarray([arange(self.scanlen)+i for i,j in self.ncscans]).ravel()
+      self.whscan = asarray([arange(self.scanlen)+i for i,j in self.ncscans[:,:2]]).ravel()
       self.scanstarts = arange(self.nscans)*self.scanlen
       self.whempty = concatenate([arange(i+j,i+self.scanlen) for i,j in zip(self.scanstarts,self.scanlengths) ]).ravel()
       self.whscan[self.whempty] = 0
@@ -277,7 +277,7 @@ class Flagger:
 
       self._initialize_vars(**kwargs)
 
-      self.tsplot_dict = {'astrosignal': lambda: self.astrosignal if self.astrosignal.sum() != 0 else "ERROR",
+      self.tsplot_dict = {'astrosignal': lambda: self.astrosignal if self.astrosignal.sum() != 0 else 0,
       'dcbolos': lambda: self.dc_bolos*self.scalearr,
       'dcbolos_noscale': lambda: self.dc_bolos,
       'acbolos_noscale': lambda: self.ac_bolos,
@@ -1533,11 +1533,13 @@ if __name__ == "__main__":
     #from agpy import pyflagger
     import sys
     import optparse
+    import pdb
 
     parser=optparse.OptionParser()
     parser.add_option("--timestreams","-t",help="Plot all timestreams scaled and unscaled as a diagnostic tool.  Default False",action="store_true",dest="timestreams",default=False)
     parser.add_option("--plotscan","-p",help="Scan number to plot at the start.  Default to 0.  Set to -1 to turn off.",default=0)
     parser.add_option("--interactive","-i",help="Start in ipython mode?  Default True",action='store_false',default=True)
+    #parser.add_option("--debug","-d",help="Debug in ipython mode?",action='store_true',default=False)
     parser.add_option("--no_interactive","-n",help="Turn off ipython (interactive) mode",action='store_false',dest="interactive")
     parser.add_option("--close","-c",help="Close after plotting?  Useful if interactive=False",action='store_true',default=False)
     parser.set_usage("%prog savename.sav [options]")
@@ -1558,7 +1560,10 @@ if __name__ == "__main__":
     for ii,filename in enumerate(args):
         prefix = filename.replace("_preiter.sav","").replace("_postiter.sav","").replace("_save_iter0.sav","")
 
-        f=Flagger(filename)
+        try:
+            f=Flagger(filename)
+        except:
+            pdb.post_mortem()
         if options.interactive: exec("f%i = f" % (ii) )
 
         if plotnum >= 0: f.plotscan(plotnum)
