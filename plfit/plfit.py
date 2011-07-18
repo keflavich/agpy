@@ -213,9 +213,11 @@ class plfit:
         #pylab.loglog(q,fcdf_norm,color='r',**kwargs)
 
     def plotpdf(self,x=None,xmin=None,alpha=None,nbins=50,dolog=True,dnds=False,
-            drawstyle='steps-post', **kwargs):
+            drawstyle='steps-post', histcolor='k', plcolor='r', **kwargs):
         """
         Plots PDF and powerlaw.
+
+        kwargs is passed to pylab.hist and pylab.plot
         """
         if not(x): x=self.data
         if not(xmin): xmin=self._xmin
@@ -233,14 +235,14 @@ class plfit:
             b = hb[1]
             db = hb[1][1:]-hb[1][:-1]
             h = h/db
-            pylab.plot(b[:-1],h,drawstyle=drawstyle,color='k',**kwargs)
+            pylab.plot(b[:-1],h,drawstyle=drawstyle,color=histcolor,**kwargs)
             #alpha -= 1
         elif dolog:
-            hb = pylab.hist(x,bins=numpy.logspace(log10(min(x)),log10(max(x)),nbins),log=True,fill=False,edgecolor='k',**kwargs)
+            hb = pylab.hist(x,bins=numpy.logspace(log10(min(x)),log10(max(x)),nbins),log=True,fill=False,edgecolor=histcolor,**kwargs)
             alpha -= 1
             h,b=hb[0],hb[1]
         else:
-            hb = pylab.hist(x,bins=numpy.linspace((min(x)),(max(x)),nbins),fill=False,edgecolor='k',**kwargs)
+            hb = pylab.hist(x,bins=numpy.linspace((min(x)),(max(x)),nbins),fill=False,edgecolor=histcolor,**kwargs)
             h,b=hb[0],hb[1]
         # plotting points are at the center of each bin
         b = (b[1:]+b[:-1])/2.0
@@ -258,10 +260,10 @@ class plfit:
         ploty = (alpha-1)/xmin * (plotx/xmin)**(-alpha) * norm
 
         #pylab.loglog(q,px,'r',**kwargs)
-        pylab.loglog(plotx,ploty,'r',**kwargs)
+        pylab.loglog(plotx,ploty,color=plcolor,**kwargs)
 
         axlims = pylab.axis()
-        pylab.vlines(xmin,axlims[2],max(px),colors='r',linestyle='dashed')
+        pylab.vlines(xmin,axlims[2],max(px),colors=plcolor,linestyle='dashed')
 
         pylab.gca().set_xlim(min(x),max(x))
 

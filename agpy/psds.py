@@ -50,6 +50,11 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
 
         azbins,(freq,zz) = azimuthalAverageBins(psd2,azbins=azbins,interpnan=True, binsize=binsize, **kwargs)
         if len(zz) == 1: zz=zz[0]
+        # the "Frequency" is the spatial frequency f = 1/x for the standard numpy fft, which follows the convention
+        # A_k =  \sum_{m=0}^{n-1} a_m \exp\left\{-2\pi i{mk \over n}\right\}
+        # or 
+        # F_f = Sum( a_m e^(-2 pi i f x_m)  over the range m,m_max where a_m are the values of the pixels, x_m are the
+        # indices of the pixels, and f is the spatial frequency
         freq = freq.astype('float')  # there was a +1.0 here before, presumably to deal with div-by-0, but that shouldn't happen and shouldn't have been "accounted for" anyway
 
         if return_index:
