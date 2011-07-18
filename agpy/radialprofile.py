@@ -53,7 +53,7 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
 
     # the 'bins' as initially defined are lower/upper bounds for each bin
     # so that values will be in [lower,upper)  
-    nbins = (np.round(r.max() / binsize)+1)
+    nbins = int(np.round(r.max() / binsize)+1)
     maxbin = nbins * binsize
     bins = np.linspace(0,maxbin,nbins+1)
     # but we're probably more interested in the bin centers than their left or right sides...
@@ -188,7 +188,7 @@ def radialAverage(image, center=None, stddev=False, returnAz=False, return_naz=F
 
     # the 'bins' as initially defined are lower/upper bounds for each bin
     # so that values will be in [lower,upper)  
-    nbins = (np.round(maxangle / binsize))
+    nbins = int(np.round(maxangle / binsize))
     maxbin = nbins * binsize
     bins = np.linspace(0,maxbin,nbins+1)
     # but we're probably more interested in the bin centers than their left or right sides...
