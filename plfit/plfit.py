@@ -400,8 +400,11 @@ class plfit:
             fitpars = scipy.stats.lognorm.fit(self.data)
             self.lognormal_dist = scipy.stats.lognorm(*fitpars)
             self.lognormal_ksD,self.lognormal_ksP = scipy.stats.kstest(self.data,self.lognormal_dist.cdf)
+            self.lognormal_likelihood = scipy.stats.lognorm.nnlf(fitpars,self.data)
+            self.power_lognorm_likelihood = 2*(self._likelihood + self.lognormal_likelihood)
             if doprint: 
-                print "KS D: %g  p(D): %g" % (self.lognormal_ksD,self.lognormal_ksP)
+                print "Lognormal KS D: %g  p(D): %g" % (self.lognormal_ksD,self.lognormal_ksP),
+                print "  Likelihood Ratio (<0 implies power law better than lognormal): %g" % self.power_lognorm_likelihood
 
     def plot_lognormal_pdf(self,**kwargs):
         """
