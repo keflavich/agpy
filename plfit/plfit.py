@@ -28,6 +28,12 @@ cyok=False
 
 import numpy.random as npr
 from numpy import log,log10,sum,argmin,argmax,exp,min,max
+try:
+    import scipy.stats
+    scipyOK = True
+except ImportError:
+    scipyOK = False
+    print "scipy didn't import.  Can't compute certain basic statistics."
 
 class plfit:
     """
@@ -46,6 +52,9 @@ class plfit:
         Initializes and fits the power law.  Can pass "quiet" to turn off 
         output (except for warnings; "silent" turns off warnings)
         """
+        if (x<0).sum() > 0:
+            print "Removed %i negative points" % ((x<0).sum())
+            x = x[x>0]
         self.data = x
         self.plfit(**kwargs)
 
@@ -67,9 +76,12 @@ class plfit:
             """
             given a sorted data set and a minimum, returns power law MLE ks-test w/data
             data is passed as a keyword parameter so that it can be vectorized
+
+            The returned value is the "D" parameter in the ks test...
             """
             x = x[x>=xmin]
             n = float(len(x))
+            if n == 0: return numpy.inf
             a = float(n) / sum(log(x/xmin))
             cx = numpy.arange(n,dtype='float')/float(n)
             cf = 1-(xmin/x)**a
@@ -119,17 +131,17 @@ class plfit:
             else:
                 av  = numpy.asarray( map(self.alpha_(z),xmins) ,dtype='float')
                 dat = numpy.asarray( map(self.kstest_(z),xmins),dtype='float')
+                sigma = (av-1)/numpy.sqrt(len(z)-argxmins+1)
                 if nosmall:
                     # test to make sure the number of data points is high enough
                     # to provide a reasonable s/n on the computed alpha
-                    sigma = (av-1)/numpy.sqrt(len(z)-argxmins+1)
                     goodvals = sigma<0.1
                     nmax = argmin(goodvals)
                     if nmax > 0:
                         dat = dat[:nmax]
                         av = av[:nmax]
                     else:
-                        print "Not enough data left after flagging - using all data."
+                        print "Not enough data left after flagging - using all positive data."
                 if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
             self._av = av
             self._xmin_kstest = dat
@@ -140,6 +152,15 @@ class plfit:
         alpha = 1 + n / sum( log(z/xmin) )
         if finite:
             alpha = alpha*(n-1.)/n+1./n
+        if n == 1 and not silent:
+            print "Failure: only 1 point kept.  Probably not a power-law distribution."
+            self._alpha = 0
+            self._alphaerr = 0
+            self._likelihood = 0
+            self._ks = 0
+            self._ks_prob = 0
+            self._xmin = xmin
+            return xmin,0
         if n < 50 and not finite and not silent:
             print '(PLFIT) Warning: finite-size bias may be present. n=%i' % n
         ks = max(abs( numpy.arange(n)/float(n) - (1-(xmin/z)**(alpha-1)) ))
@@ -151,7 +172,10 @@ class plfit:
         self._alpha= alpha
         self._alphaerr = (alpha-1)/numpy.sqrt(n)
         self._ks = ks  # this ks statistic may not have the same value as min(dat) because of unique()
+        if scipyOK: self._ks_prob = scipy.stats.kstwobign.sf(ks*numpy.sqrt(n))
         self._ngtx = n
+        if numpy.isnan(L) or numpy.isnan(xmin) or numpy.isnan(alpha):
+            raise ValueError("plfit failed; returned a nan")
 
         if not quiet:
             if verbose: print "The lowest value included in the power-law fit, ",
@@ -163,7 +187,12 @@ class plfit:
             if verbose: print "\nThe log of the Likelihood (the minimized parameter), ",
             print "Log-Likelihood: %g  " % L,
             if verbose: print "\nThe KS-test statistic between the best-fit power-law and the data, ",
-            print "ks: %g" % (ks)
+            print "ks: %g" % (ks),
+            if scipyOK:
+                if verbose: print " occurs with probability  ",
+                print "p(ks): %g" % (self._ks_prob)
+            else:
+                print
 
         return xmin,alpha
 
@@ -205,12 +234,15 @@ class plfit:
         nc = xcdf[argmax(x>=xmin)]
         fcdf_norm = nc*fcdf
 
-        plotx = pylab.linspace(q.min(),q.max(),1000)
-        ploty = (plotx/xmin)**(1-alpha) * nc
+        D_location = argmax(xcdf[x>=xmin]-fcdf_norm)
+        pylab.vlines(q[D_location],xcdf[x>=xmin][D_location],fcdf_norm[D_location],color='m',linewidth=2)
+
+        #plotx = pylab.linspace(q.min(),q.max(),1000)
+        #ploty = (plotx/xmin)**(1-alpha) * nc
 
         pylab.loglog(x,xcdf,marker='+',color='k',**kwargs)
-        pylab.loglog(plotx,ploty,'r',**kwargs)
-        #pylab.loglog(q,fcdf_norm,color='r',**kwargs)
+        #pylab.loglog(plotx,ploty,'r',**kwargs)
+        pylab.loglog(q,fcdf_norm,'r',**kwargs)
 
     def plotpdf(self,x=None,xmin=None,alpha=None,nbins=50,dolog=True,dnds=False,
             drawstyle='steps-post', histcolor='k', plcolor='r', **kwargs):
@@ -349,6 +381,56 @@ class plfit:
         print "p(%i) = %0.3f" % (niter,p)
 
         return p,ksv
+
+    def lognormal(self,doprint=True):
+        """
+        Use the maximum likelihood estimator for a lognormal distribution to
+        produce the best-fit lognormal parameters
+        """
+        # N = float(self.data.shape[0])
+        # mu = log(self.data).sum() / N
+        # sigmasquared = ( ( log(self.data) - mu )**2 ).sum() / N
+        # self.lognormal_mu = mu
+        # self.lognormal_sigma = numpy.sqrt(sigmasquared)
+        # self.lognormal_likelihood = -N/2. * log(numpy.pi*2) - N/2. * log(sigmasquared) - 1/(2*sigmasquared) * (( self.data - mu )**2).sum()
+        # if doprint:
+        #     print "Best fit lognormal is exp( -(x-%g)^2 / (2*%g^2)" % (mu,numpy.sqrt(sigmasquared))
+        #     print "Likelihood: %g" % (self.lognormal_likelihood)
+        if scipyOK:
+            fitpars = scipy.stats.lognorm.fit(self.data)
+            self.lognormal_dist = scipy.stats.lognorm(*fitpars)
+            self.lognormal_ksD,self.lognormal_ksP = scipy.stats.kstest(self.data,self.lognormal_dist.cdf)
+            if doprint: 
+                print "KS D: %g  p(D): %g" % (self.lognormal_ksD,self.lognormal_ksP)
+
+    def plot_lognormal_pdf(self,**kwargs):
+        """
+        Plot the fitted lognormal distribution
+        """
+        if not hasattr(self,'lognormal_dist'):
+            return
+        
+        normalized_pdf = self.lognormal_dist.pdf(self.data)/self.lognormal_dist.pdf(self.data).max()
+        minY,maxY = pylab.gca().get_ylim()
+        pylab.plot(self.data,normalized_pdf*maxY,'.',**kwargs)
+
+    def plot_lognormal_cdf(self,**kwargs):
+        """
+        Plot the fitted lognormal distribution
+        """
+        if not hasattr(self,'lognormal_dist'):
+            return
+
+        x=numpy.sort(self.data)
+        n=len(x)
+        xcdf = numpy.arange(n,0,-1,dtype='float')/float(n)
+        lcdf = self.lognormal_dist.sf(x)
+
+        D_location = argmax(xcdf-lcdf)
+        pylab.vlines(x[D_location],xcdf[D_location],lcdf[D_location],color='m',linewidth=2)
+        
+        pylab.plot(x, lcdf,',',**kwargs)
+
 
 def plfit_lsq(x,y):
     """
