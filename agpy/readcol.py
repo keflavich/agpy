@@ -21,7 +21,7 @@ except ValueError:
 
 def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
         fixedformat=None,asdict=False,comment='#',verbose=True,nullval=None,
-        asStruct=False,namecomment=True,removeblanks=False):
+        asStruct=False,namecomment=True,removeblanks=False,header_badchars=None):
     """
     The default return is a two dimensional float array.  If you want a list of
     columns output instead of a 2D array, pass 'twod=False'.  In this case,
@@ -81,6 +81,8 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
             e.g., it is the first non-comment line, change this to False
         removeblanks - remove all blank entries from split lines.  This can cause lost
             data if you have blank entries on some lines.
+        header_badchars - remove these characters from a header before parsing it
+            (helpful for IPAC tables that are delimited with | )
 
     If you get this error: "scipy could not be imported.  Your table must have
     full rows." it means readcol cannot automatically guess which columns
@@ -98,6 +100,9 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
             line = f.pop(0)
             if line[0] != comment:
                 nameline = line
+                if header_badchars:
+                    for c in header_badchars:
+                        nameline = nameline.replace(c,' ')
                 nms=nameline.split(fsep)
                 break
             elif len(f) == 0:
@@ -111,6 +116,9 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
                 nameline = f.pop(0)
             if nameline[0]==comment:
                 nameline = nameline[1:]
+            if header_badchars:
+                for c in header_badchars:
+                    nameline = nameline.replace(c,' ')
             nms=nameline.split(fsep)
 
     null=[f.pop(0) for i in range(skipafter)]

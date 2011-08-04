@@ -12,10 +12,22 @@ except ImportError:
     fft2 = numpy.fft.fft2
     ifft2 = numpy.fft.ifft2
 
+def hanning2d(M, N):
+    """
+    A 2D hanning window, as per IDL's hanning function.  See numpy.hanning for the 1d description
+    """
+
+    if N <= 1:
+        return numpy.hanning(M)
+    elif M <= 1:
+        return numpy.hanning(N) # scalar unity; don't window if dims are too small
+    else:
+        return numpy.outer(numpy.hanning(M),numpy.hanning(N))
 
 def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
         fft_pad=False, return_stddev=False, real=False, imag=False,
-        binsize=1.0, radbins=1, azbins=1, radial=False, **kwargs):
+        binsize=1.0, radbins=1, azbins=1, radial=False, hanning=False, 
+        wavnum_scale=False, twopi_scale=False, **kwargs):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -24,19 +36,41 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
     wavenumber - if one dimensional and return_index set, will return a normalized wavenumber instead
     real - Only compute the real part of the PSD
     complex - Only compute the complex part of the PSD
+    hanning - Multiply the image to be PSD'd by a 2D Hanning window before performing the FTs.  
+        Reduces edge effects.  This idea courtesy Paul Ricchiazzia (May 1993), author of the
+        IDL astrolib psd.pro
+    wavnum_scale - multiply the FFT^2 by the wavenumber when computing the PSD?
+    twopi_scale - multiply the FFT^2 by 2pi?
     """
     
+    # prevent modification of input image (i.e., the next two lines of active code)
+    image = image.copy()
 
     image[image!=image] = 0
+
+    if hanning:
+        image *= hanning2d(*image.shape)
+
     if image2 is None:
         image2 = image
     if real:
         psd2 = numpy.real( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
     elif imag:
         psd2 = numpy.imag( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
-    else:
+    else: # default is absolute value
         psd2 = numpy.abs( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
     # normalization is approximately (numpy.abs(image).sum()*numpy.abs(image2).sum())
+
+    if wavnum_scale:
+        wx = numpy.concatenate([ numpy.arange(image.shape[0]/2,dtype='float') , image.shape[0]/2 - numpy.arange(image.shape[0]/2,dtype='float') -1 ]) / (image.shape[0]/2.)
+        wy = numpy.concatenate([ numpy.arange(image.shape[1]/2,dtype='float') , image.shape[1]/2 - numpy.arange(image.shape[1]/2,dtype='float') -1 ]) / (image.shape[1]/2.)
+        wx/=wx.max()
+        wy/=wy.max()
+        wavnum = numpy.sqrt( numpy.outer(wx,numpy.ones(wx.shape))**2 + numpy.outer(numpy.ones(wy.shape),wx)**2 )
+        psd2 *= wavnum
+
+    if twopi_scale:
+        psd2 *= numpy.pi * 2
 
     if radial:
         azbins,az,zz = radialAverageBins(psd2,radbins=radbins, interpnan=True, binsize=binsize, **kwargs)
