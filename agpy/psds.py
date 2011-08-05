@@ -27,7 +27,7 @@ def hanning2d(M, N):
 def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
         fft_pad=False, return_stddev=False, real=False, imag=False,
         binsize=1.0, radbins=1, azbins=1, radial=False, hanning=False, 
-        wavnum_scale=False, twopi_scale=False, **kwargs):
+        wavnum_scale=False, twopi_scale=False, view=False, **kwargs):
     """
     Two-dimensional PSD
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -41,6 +41,7 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
         IDL astrolib psd.pro
     wavnum_scale - multiply the FFT^2 by the wavenumber when computing the PSD?
     twopi_scale - multiply the FFT^2 by 2pi?
+    view - Plot the PSD (in logspace)?
     """
     
     # prevent modification of input image (i.e., the next two lines of active code)
@@ -49,7 +50,7 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
     image[image!=image] = 0
 
     if hanning:
-        image *= hanning2d(*image.shape)
+        image = hanning2d(*image.shape) * image
 
     if image2 is None:
         image2 = image
@@ -101,6 +102,11 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
         if return_stddev:
             zzstd = azimuthalAverageBins(psd2,azbins=azbins,stddev=True,interpnan=True, binsize=binsize, **kwargs)
             return_vals.append(zzstd)
+        
+        if view:
+            loglog(freq,zz)
+            xlabel("Spatial Frequency")
+            ylabel("Spectral Power")
 
         return return_vals
 

@@ -70,7 +70,14 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
     # radial_prof.shape = bin_centers.shape
     if stddev:
         radial_prof = np.array([image.flat[mask*(whichbin==b)].std() for b in xrange(1,nbins+1)])
-    else:
+    else: # this code is very slow.  The indexing causes the slowness.
+        # separate code for line-profiling radial_prof_a = np.zeros(nbins)
+        # separate code for line-profiling for b in xrange(1,nbins+1):
+        # separate code for line-profiling     flat_weighted_image = (image*weights).ravel()
+        # separate code for line-profiling     rad_sum = flat_weighted_image[mask*(whichbin==b)].sum()
+        # separate code for line-profiling     weight_sum = weights.flat[mask*(whichbin==b)].sum()
+        # separate code for line-profiling     radial_prof_a[b-1] = rad_sum/weight_sum
+
         radial_prof = np.array([(image*weights).flat[mask*(whichbin==b)].sum() / weights.flat[mask*(whichbin==b)].sum() for b in xrange(1,nbins+1)])
 
     #import pdb; pdb.set_trace()
