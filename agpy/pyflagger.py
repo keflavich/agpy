@@ -71,6 +71,8 @@ class Flagger:
     Z - display the power spectra of the displayed timestream over all time
     C,L - plot Column/Line
     j - plot whole timestream for selected bolo
+    a - create a footprint movie between two selected points
+    M,m - flag highest, lowest point in map
  
   Map Key Commands:
     c - toggle current scan
@@ -92,6 +94,47 @@ class Flagger:
           self._loadfits(filename,**kwargs)
       elif filename[-3:] == 'sav':
           self._loadsav(filename,**kwargs)
+
+      help = """
+
+  Key commands:
+    left click - flag
+    right click - unflag
+    n - next scan
+    p,N - previous scan
+    q - save and quit
+    Q - quit (no save)
+    . - point to this point in the map
+    f - plot footprint of array at this time point
+    R - reverse order of flag boxes (to delete things hiding on the bottom)
+    r - redraw
+    d - delete flag box
+    t - flag timepoint
+    s - flag scan
+    w - flag Whole scan (this is the same as s, except some python backends catch / steal 's')
+    S,W - unflag scan
+    b - flag bolometer
+    T - unflag timepoint
+    B - unflag bolometer
+    c - toggle current scan
+    v - display data value
+    P - display the PCA decomposition of the displayed timestream
+    o - make a map of the array at the sampled time
+    z - display the power spectra of the displayed timestream (use 'C' to plot one)
+    Z - display the power spectra of the displayed timestream over all time
+    C,L - plot Column/Line
+    j - plot whole timestream for selected bolo
+    a - create a footprint movie between two selected points
+    M,m - flag highest, lowest point in map
+ 
+  Map Key Commands:
+    c - toggle current scan
+    . - show point in timestream
+    click - show point in timestream
+    middle click - list all points that contribute to that pixel
+    r - redraw
+
+      """
 
   def _loadfits(self, filename, ncfilename='', flagfile='', mapnum='', axis=None, **kwargs):
       fnsearch = re.compile(
@@ -523,6 +566,7 @@ class Flagger:
   def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False,smooth=True):
       y1 = numpy.round(y1)
       y2 = numpy.round(y2)
+      print "Making footprint movie from %i to %i" % (y1,y2)
       self.footscatter.set_visible(False)
       #if isinstance(self.data,numpy.ma.masked_array):
       #    plotdata = self.data.data
@@ -1042,44 +1086,7 @@ class Flagger:
           ymap = self.tstomap[self.scannum,y,x] % self.map.shape[1]
           print "Value at %i,%i: %f  Flagged=%i  Maps to: %i,%i" % (x,y,vpt,fpt,xmap,ymap)
       elif event.key == '?':
-          print """
-
-  Key commands:
-    left click - flag
-    right click - unflag
-    n - next scan
-    p,N - previous scan
-    q - save and quit
-    Q - quit (no save)
-    . - point to this point in the map
-    f - plot footprint of array at this time point
-    R - reverse order of flag boxes (to delete things hiding on the bottom)
-    r - redraw
-    d - delete flag box
-    t - flag timepoint
-    s - flag scan
-    w - flag Whole scan (this is the same as s, except some python backends catch / steal 's')
-    S,W - unflag scan
-    b - flag bolometer
-    T - unflag timepoint
-    B - unflag bolometer
-    c - toggle current scan
-    v - display data value
-    P - display the PCA decomposition of the displayed timestream
-    o - make a map of the array at the sampled time
-    z - display the power spectra of the displayed timestream (use 'C' to plot one)
-    Z - display the power spectra of the displayed timestream over all time
-    C,L - plot Column/Line
-    k - plot whole timestream for selected bolo
- 
-  Map Key Commands:
-    c - toggle current scan
-    . - show point in timestream
-    click - show point in timestream
-    middle click - list all points that contribute to that pixel
-    r - redraw
-
-      """
+          print self.help
       if set_lastkey: 
           self._lastkey = event.key
 
@@ -1491,6 +1498,7 @@ def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,smooth=True,xsize=None,ysize
     else:
         map = zeros([yrange,xrange])
     map[numpy.round(yax),numpy.round(xax)] += v
+    map[map!=map] = 0
 
     if smooth:
         xax,yax = numpy.indices(map.shape)

@@ -30,12 +30,12 @@ from timer import print_timing
 from region_photometry import region_photometry
 from region_photometry_files import region_photometry_files
 from PCA_tools import efuncs,pca_subtract,unpca_subtract,smooth_waterfall
+import constants
 
 
 # import all of the functions but not the modules...
-__all__ = ['readcol','gaussfitter','kdist','reg_gal2cel','posang','densitymap','downsample','correlate2d','psds','convolve','radialprofile',
-        'gal2cel',
-        'convolve','smooth',
-        'azimuthalAverage','azimuthalAverageBins',
-        'kdist','vector_kdist',
-        'moments','twodgaussian','gaussfit','onedgaussian','onedgaussfit']
+__all__ = ['readcol', 'gaussfitter', 'kdist', 'reg_gal2cel', 'posang',
+    'densitymap', 'downsample', 'correlate2d', 'psds', 'convolve', 'radialprofile',
+    'constants' 'gal2cel', 'convolve', 'smooth', 'azimuthalAverage',
+    'azimuthalAverageBins', 'kdist', 'vector_kdist', 'moments', 'twodgaussian',
+    'gaussfit', 'onedgaussian', 'onedgaussfit']
