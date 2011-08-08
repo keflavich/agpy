@@ -88,7 +88,8 @@ def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return
         return radial_prof
 
 def azimuthalAverageBins(image,azbins,symmetric=None, center=None, **kwargs):
-    """ Compute the azimuthal average over a limited range of angles """
+    """ Compute the azimuthal average over a limited range of angles 
+    kwargs are passed to azimuthalAverage """
     y, x = np.indices(image.shape)
     if center is None:
         center = np.array([(x.max()-x.min())/2.0, (y.max()-y.min())/2.0])
