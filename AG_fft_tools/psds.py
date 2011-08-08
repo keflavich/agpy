@@ -42,18 +42,31 @@ def PSD2(image, image2=None, oned=False, return_index=True, wavenumber=False,
         wavnum_scale=False, twopi_scale=False, view=False, **kwargs):
     """
     Two-dimensional Power Spectral Density
+    image2 - can specify a second image if you want to see the cross-power-spectrum instead of the 
+        power spectrum.
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
            freq,zz = PSD2(image); plot(freq,zz) is a power spectrum
     return_index - if true, the first return item will be the indexes
     wavenumber - if one dimensional and return_index set, will return a normalized wavenumber instead
-    real - Only compute the real part of the PSD
-    complex - Only compute the complex part of the PSD
+    fft_pad - Add zeros to the edge of the image before FFTing for a speed
+        boost?  (the edge padding will be removed afterwards)
+    real - Only compute the real part of the PSD (Default is absolute value)
+    imag - Only compute the complex part of the PSD (Default is absolute value)
     hanning - Multiply the image to be PSD'd by a 2D Hanning window before performing the FTs.  
         Reduces edge effects.  This idea courtesy Paul Ricchiazzia (May 1993), author of the
         IDL astrolib psd.pro
     wavnum_scale - multiply the FFT^2 by the wavenumber when computing the PSD?
     twopi_scale - multiply the FFT^2 by 2pi?
     view - Plot the PSD (in logspace)?
+    azbins - Number of azimuthal (angular) bins to include.  Default is 1, or
+        all 360 degrees.  If azbins>1, the data will be split into [azbins]
+        equally sized pie pieces.  Azbins can also be a numpy array.  See
+        AG_image_tools.azimuthalAverageBins for details
+        
+    
+    radial - An option to return the *azimuthal* power spectrum (i.e., the spectral power as a function 
+        of angle).  Not commonly used.
+    radbins - number of radial bins (you can compute the azimuthal power spectrum in different annuli)
     """
     
     # prevent modification of input image (i.e., the next two lines of active code)
