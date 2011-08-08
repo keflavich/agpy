@@ -1,4 +1,9 @@
 import numpy
+try:
+    import matplotlib.pyplot as pyplot
+    pyplotOK = True
+except ImportError:
+    pyplotOK = False
 from correlate2d import correlate2d
 from AG_image_tools.radialprofile import azimuthalAverageBins,radialAverageBins
 
@@ -24,12 +29,19 @@ def hanning2d(M, N):
     else:
         return numpy.outer(numpy.hanning(M),numpy.hanning(N))
 
-def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
+def power_spectrum(*args,**kwargs):
+    """
+    Thin wrapper of PSD2.  Returns the 1D power spectrum in stead of the 2D Power Spectral Density
+    """
+    kwargs['oned']=True
+    return PSD2(*args,**kwargs)
+
+def PSD2(image, image2=None, oned=False, return_index=True, wavenumber=False,
         fft_pad=False, return_stddev=False, real=False, imag=False,
         binsize=1.0, radbins=1, azbins=1, radial=False, hanning=False, 
         wavnum_scale=False, twopi_scale=False, view=False, **kwargs):
     """
-    Two-dimensional PSD
+    Two-dimensional Power Spectral Density
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
            freq,zz = PSD2(image); plot(freq,zz) is a power spectrum
     return_index - if true, the first return item will be the indexes
@@ -103,10 +115,10 @@ def PSD2(image, image2=None, oned=True, return_index=True, wavenumber=False,
             zzstd = azimuthalAverageBins(psd2,azbins=azbins,stddev=True,interpnan=True, binsize=binsize, **kwargs)
             return_vals.append(zzstd)
         
-        if view:
-            loglog(freq,zz)
-            xlabel("Spatial Frequency")
-            ylabel("Spectral Power")
+        if view and pyplotOK:
+            pyplot.loglog(freq,zz)
+            pyplot.xlabel("Spatial Frequency")
+            pyplot.ylabel("Spectral Power")
 
         return return_vals
 
