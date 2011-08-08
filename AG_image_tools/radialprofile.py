@@ -2,7 +2,7 @@ import numpy as np
 
 def azimuthalAverage(image, center=None, stddev=False, returnradii=False, return_nr=False, 
         binsize=0.5, weights=None, steps=False, interpnan=False, left=None, right=None,
-        mask=None, profile=False ):
+        mask=None ):
     """
     Calculate the azimuthally averaged radial profile.
 

@@ -41,7 +41,9 @@ def PSD2(image, image2=None, oned=False, return_index=True, wavenumber=False,
         binsize=1.0, radbins=1, azbins=1, radial=False, hanning=False, 
         wavnum_scale=False, twopi_scale=False, view=False, **kwargs):
     """
-    Two-dimensional Power Spectral Density
+    Two-dimensional Power Spectral Density.
+    NAN values are treated as zero.
+
     image2 - can specify a second image if you want to see the cross-power-spectrum instead of the 
         power spectrum.
     oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)
@@ -72,6 +74,7 @@ def PSD2(image, image2=None, oned=False, return_index=True, wavenumber=False,
     # prevent modification of input image (i.e., the next two lines of active code)
     image = image.copy()
 
+    # remove NANs (but not inf's)
     image[image!=image] = 0
 
     if hanning:
