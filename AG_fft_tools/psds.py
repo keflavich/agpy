@@ -1,6 +1,6 @@
 import numpy
 from correlate2d import correlate2d
-from radialprofile import azimuthalAverageBins,radialAverageBins
+from AG_image_tools.radialprofile import azimuthalAverageBins,radialAverageBins
 
 try:
     #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"

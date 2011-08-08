@@ -17,13 +17,8 @@ from posang import posang
 #import densitymap
 #import downsample as downsample_mod
 from downsample import downsample,downsample_cube
-#import correlate2d as correlate2d_mod
-from correlate2d import correlate2d
-from psds import PSD2
-#import convolve as convolve_mod
-from convolve import convolve,smooth
+
 #from asinh_norm import AsinhNorm
-from radialprofile import azimuthalAverage,azimuthalAverageBins,radialAverage,radialAverageBins
 #import showspec # imports matplotlib = BAD
 from contributed import parallel_map
 from timer import print_timing
@@ -32,6 +27,11 @@ from region_photometry_files import region_photometry_files
 from PCA_tools import efuncs,pca_subtract,unpca_subtract,smooth_waterfall
 import constants
 
+import AG_fft_tools
+from AG_fft_tools import *
+
+import AG_image_tools
+from AG_image_tools import *
 
 # import all of the functions but not the modules...
 __all__ = ['readcol', 'gaussfitter', 'kdist', 'reg_gal2cel', 'posang',
