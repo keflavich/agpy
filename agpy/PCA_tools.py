@@ -19,7 +19,7 @@ def efuncs(arr, return_others=False):
   else:
       return efuncarr
 
-def PCA_linear_fit(data1, data2):
+def PCA_linear_fit(data1, data2, print_results=False):
     """
     Use principal component analysis to determine the best linear fit to the data.
     data1 - x array
@@ -35,6 +35,10 @@ def PCA_linear_fit(data1, data2):
 
     m = evects[1,0] / evects[0,0]
     b = data2.mean() - m*data1.mean()
+
+    if print_results:
+        print "Best fit y = %g x + %g" % (m,b)
+        print "The fit accounts for %0.3g%% of the variance." % (evals[0]/evals.sum()*100.)
 
     return m,b
 
