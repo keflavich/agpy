@@ -19,6 +19,26 @@ def efuncs(arr, return_others=False):
   else:
       return efuncarr
 
+def PCA_linear_fit(data1, data2):
+    """
+    Use principal component analysis to determine the best linear fit to the data.
+    data1 - x array
+    data2 - y array
+
+    returns m,b in the equation y = m x + b
+    """
+    
+    arr = numpy.array([data1-data1.mean(),data2-data2.mean()])
+
+    covmat = numpy.dot(arr,arr.T)
+    evals,evects = numpy.linalg.eig(covmat)
+
+    m = evects[1,0] / evects[0,0]
+    b = data2.mean() - m*data1.mean()
+
+    return m,b
+
+
 def smooth_waterfall(arr,fwhm=4.0,unsharp=False):
     """
     Smooth a waterfall plot.

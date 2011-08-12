@@ -25,3 +25,6 @@ pi = 3.1415926535897932384626433832795028841971693993751058209749445923078164062
 #        r_Uni ~ 10 Gpc (just to be round...) ~ 10^10 * 3*10^18 = 3*10^28 cm
 #        r_Uni/r_H ~ 10^37
 #        Close enough.
+
+import numpy as np
+FWHM = np.sqrt(8*np.log(2))
