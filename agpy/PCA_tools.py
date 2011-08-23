@@ -19,26 +19,89 @@ def efuncs(arr, return_others=False):
   else:
       return efuncarr
 
-def PCA_linear_fit(data1, data2, print_results=False):
+def PCA_linear_fit(data1, data2, print_results=False, ignore_nans=True):
     """
     Use principal component analysis to determine the best linear fit to the data.
     data1 - x array
     data2 - y array
 
     returns m,b in the equation y = m x + b
+
+    print tells you some information about what fraction of the variance is accounted for
+
+    ignore_nans will remove NAN values from BOTH arrays before computing
+
+    Although this works well for the tests below, it fails horrifically on some
+    rather well-behaved data sets.  I don't understand why this is, but that's
+    why I wrote the total_least_squares SVD code below.
     """
+
+    if ignore_nans:
+        badvals = numpy.isnan(data1) + numpy.isnan(data2)
+        if badvals.sum():
+            data1 = data1[True-badvals]
+            data2 = data2[True-badvals]
     
     arr = numpy.array([data1-data1.mean(),data2-data2.mean()])
 
     covmat = numpy.dot(arr,arr.T)
     evals,evects = numpy.linalg.eig(covmat)
 
+    max_ind = evals.argmax()
+    if max_ind:
+        evects = evects[::-1,::-1]
+
     m = evects[1,0] / evects[0,0]
     b = data2.mean() - m*data1.mean()
 
+    varfrac = evals[max_ind]/evals.sum()*100.
+    if varfrac < 50:
+        raise ValueError("ERROR: PCA Linear Fit accounts for less than half the variance; this is impossible by definition.")
+
     if print_results:
-        print "Best fit y = %g x + %g" % (m,b)
-        print "The fit accounts for %0.3g%% of the variance." % (evals[0]/evals.sum()*100.)
+        print "PCA Best fit y = %g x + %g" % (m,b)
+        print "The fit accounts for %0.3g%% of the variance." % (varfrac)
+
+    return m,b
+
+def total_least_squares(data1, data2, print_results=False, ignore_nans=True):
+    """
+    Use Singular Value Decomposition to determine the Total Least Squares linear fit to the data.
+    (e.g. http://en.wikipedia.org/wiki/Total_least_squares)
+    data1 - x array
+    data2 - y array
+
+    returns m,b in the equation y = m x + b
+
+    print tells you some information about what fraction of the variance is accounted for
+
+    ignore_nans will remove NAN values from BOTH arrays before computing
+
+    """
+
+    if ignore_nans:
+        badvals = numpy.isnan(data1) + numpy.isnan(data2)
+        if badvals.sum():
+            data1 = data1[True-badvals]
+            data2 = data2[True-badvals]
+    
+    arr = numpy.array([data1-data1.mean(),data2-data2.mean()]).T
+
+    u,s,v = numpy.linalg.svd(arr)
+
+    # v should be sorted.  
+    # this solution should be equivalent to v[1,0] / -v[1,1]
+    # but I'm using this: http://stackoverflow.com/questions/5879986/pseudo-inverse-of-sparse-matrix-in-python
+    m = v[-1,:-1]/-v[-1,-1]
+    b = data2.mean() - m*data1.mean()
+
+    varfrac = s[0]/s.sum()*100
+    if varfrac < 50:
+        raise ValueError("ERROR: SVD/TLS Linear Fit accounts for less than half the variance; this is impossible by definition.")
+
+    if print_results:
+        print "TLS Best fit y = %g x + %g" % (m,b)
+        print "The fit accounts for %0.3g%% of the variance." % (varfrac)
 
     return m,b
 
@@ -89,3 +152,33 @@ def unpca_subtract(arr,ncomps):
   efuncarr[:,ncomps:] = 0
   return numpy.inner(efuncarr,evects)
 
+if __name__ == "__main__":
+
+    from pylab import *
+
+    xvals = numpy.linspace(0,100,100)
+    yvals = numpy.linspace(0,100,100)
+    print "First test: m=1, b=0.  Polyfit: ",polyfit(xvals,yvals,1)
+    m,b = PCA_linear_fit(xvals,yvals,print_results=True)
+    m,b = total_least_squares(xvals,yvals,print_results=True)
+
+    print "Second test: m=-1, b=0. Polyfit: ",polyfit(xvals,yvals*-1,1)
+    m,b = PCA_linear_fit(xvals,yvals*-1,print_results=True)
+    m,b = total_least_squares(xvals,yvals*-1,print_results=True)
+
+    print "Third test: m=1, b=1. Polyfit: ",polyfit(xvals,yvals+1,1)
+    m,b = PCA_linear_fit(xvals,yvals+1,print_results=True)
+    m,b = total_least_squares(xvals,yvals+1,print_results=True)
+
+    print "Fourth test: m~1, b~0. Polyfit: ",polyfit(xvals,yvals+random(100),1)
+    m,b = PCA_linear_fit(xvals,yvals+random(100),print_results=True)
+    m,b = total_least_squares(xvals,yvals+random(100),print_results=True)
+
+    print "Fourth test: m~~1, b~~0. Polyfit: ",polyfit(xvals,yvals+random(100)*50,1)
+    m,b = PCA_linear_fit(xvals,yvals+random(100)*50,print_results=True)
+    m,b = total_least_squares(xvals,yvals+random(100)*50,print_results=True)
+
+    xr,yr = random(100),random(100)
+    print "Fifth test: no linear fit. Polyfit: ",polyfit(xr,yr,1)
+    m,b = PCA_linear_fit(xr,yr,print_results=True)
+    m,b = total_least_squares(xr,yr,print_results=True)
