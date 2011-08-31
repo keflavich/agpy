@@ -322,11 +322,13 @@ class Flagger:
         self.flags.shape    = self.datashape
 
         if self.needed_once_struct is not None:
+            print "Loading 'raw' and 'dc_bolos' from needed_once_struct"
             #self.raw         = lazydata('raw', 'needed_once_struct') #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
             #self.dc_bolos    = lazydata('dc_bolos', 'needed_once_struct') #self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
             setattr(self.__class__, 'raw', lazydata('raw', 'needed_once_struct')) #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
             setattr(self.__class__, 'dc_bolos', lazydata('dc_bolos', 'needed_once_struct')) #self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
         elif self.bgps.dtype.fields.has_key('raw'):
+            print "Loading 'raw' and 'dc_bolos' from bgps"
             #self.raw         = lazydata('raw') # self.bgps['raw'][0][self.whscan,:].astype('float')
             #self.dc_bolos    = lazydata('dcbolos') # self.bgps['dc_bolos'][0][self.whscan,:].astype('float')
             setattr(self.__class__, 'raw', lazydata('raw')) #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
@@ -350,7 +352,7 @@ class Flagger:
         #except ValueError:
         #    self.mapped_astrosignal = copy.copy(self.astrosignal)
 
-        datums=['astrosignal','atmosphere','raw','ac_bolos','atmo_one','dc_bolos','noise','scalearr','weight','mapped_astrosignal']
+        datums=['astrosignal','atmosphere','ac_bolos','atmo_one','noise','scalearr','weight','mapped_astrosignal']
         for d in datums:
             setattr(self.__class__, d, lazydata(d))
             #self.__dict__[d] = lazydata(d)
@@ -363,7 +365,7 @@ class Flagger:
             #    except TypeError:
             #        self.__dict__[d].mask = (self.flags > 0)
         #import pdb; pdb.set_trace()
-        self.weight_by_bolo = self.weight.mean(axis=0)
+        self.weight_by_bolo = self.weight.mean(axis=0).mean(axis=0)
         if hasattr(self.bgps,'mapped_astrosignal'):
             setattr(self.__class__, 'mapped_astrosignal', lazydata('mapped_astrosignal'))
         else:
@@ -403,6 +405,8 @@ class Flagger:
         self._initialize_vars(**kwargs)
 
         self.tsplot_dict = {'astrosignal': lambda: self.astrosignal if self.astrosignal.sum() != 0 else 0,
+        'dc_bolos': lambda: self.dc_bolos*self.scalearr,
+        'dc_bolos_noscale': lambda: self.dc_bolos,
         'dcbolos': lambda: self.dc_bolos*self.scalearr,
         'dcbolos_noscale': lambda: self.dc_bolos,
         'acbolos_noscale': lambda: self.ac_bolos,
@@ -1520,10 +1524,27 @@ class Flagger:
         self.histfig = figure(fignum)
         if clear: self.histfig.clear()
 
-        hist(self.scale_coeffs,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs')
-        hist(self.weight_by_bolo,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Weights')
+        hist(self.scale_coeffs,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
+        hist(self.weight_by_bolo,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Weights',color='r',linewidth=2)
         
         if dolegend: legend(loc=loc)
+
+    def unmask_timestream(self, timestream='data'):
+        """
+        Remove masks for timestream
+        """
+        if timestream == 'data':
+            if hasattr(self.data,'mask'):
+                self.data.mask[:] = False
+        elif self.tsplot_dict.has_key(timestream):
+            data = self.lookup(timestream)
+            if hasattr(data,'mask'):
+                data.mask[:] = False
+
+    def unmask_all(self):
+        for key in self.tscache:
+            if hasattr(self.tscache[key],'mask'):
+                self.tscache[key].mask[:] = False
 
     def doPCA(self,clear=True,timestream='data', fignum=7, plotitem='evects', **kwargs):
 
@@ -1692,6 +1713,7 @@ if __name__ == "__main__":
 
           if options.timestreams:
               figure(6)
+              title("ac_bolos scaled")
               clf()
               for ii in range(f.nbolos):
                   f.timestream_whole(ii,timestream='acbolos',clear=False,fignum=6)
@@ -1699,6 +1721,7 @@ if __name__ == "__main__":
 
               figure(5)
               clf()
+              title("ac_bolos unscaled")
               for ii in range(f.nbolos):
                   f.timestream_whole(ii,timestream='acbolos_noscale',clear=False,fignum=5)
               savefig('%s_acbolos_noscale.png' % prefix)

@@ -28,3 +28,16 @@ def grid_radex(radexfilename,outfile,flow,fhigh):
 
     grid.close()
     radexfile.close()
+
+if __name__ == "__main__":
+    import sys
+    import optparse
+
+    parser=optparse.OptionParser()
+    parser.add_option('--flow',help="Lower frequency cutoff to include.  Default 4.829 GHz",default=4.829)
+    parser.add_option('--fhigh',help="Higher frequency cutoff to include.  Default 14.488 GHz",default=14.488)
+
+    options,args = parser.parse_args()
+
+    print "grid_radex(%s,%s,%s,%s)" % (args[0],args[1], options.flow, options.fhigh)
+    grid_radex(args[0], args[1], options.flow, options.fhigh)

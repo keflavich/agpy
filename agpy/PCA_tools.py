@@ -61,17 +61,21 @@ def PCA_linear_fit(data1, data2, print_results=False, ignore_nans=True):
     if print_results:
         print "PCA Best fit y = %g x + %g" % (m,b)
         print "The fit accounts for %0.3g%% of the variance." % (varfrac)
+        print "Chi^2 = %g, N = %i" % (((data2-(data1*m+b))**2).sum(),data1.shape[0]-2)
 
     return m,b
 
-def total_least_squares(data1, data2, print_results=False, ignore_nans=True):
+def total_least_squares(data1, data2, print_results=False, ignore_nans=True, intercept=True):
     """
     Use Singular Value Decomposition to determine the Total Least Squares linear fit to the data.
     (e.g. http://en.wikipedia.org/wiki/Total_least_squares)
     data1 - x array
     data2 - y array
 
-    returns m,b in the equation y = m x + b
+    if intercept:
+        returns m,b in the equation y = m x + b
+    else:
+        returns m
 
     print tells you some information about what fraction of the variance is accounted for
 
@@ -85,7 +89,13 @@ def total_least_squares(data1, data2, print_results=False, ignore_nans=True):
             data1 = data1[True-badvals]
             data2 = data2[True-badvals]
     
-    arr = numpy.array([data1-data1.mean(),data2-data2.mean()]).T
+    if intercept:
+        dm1 = data1.mean()
+        dm2 = data2.mean()
+    else:
+        dm1,dm2 = 0,0
+
+    arr = numpy.array([data1-dm1,data2-dm2]).T
 
     u,s,v = numpy.linalg.svd(arr)
 
@@ -93,17 +103,24 @@ def total_least_squares(data1, data2, print_results=False, ignore_nans=True):
     # this solution should be equivalent to v[1,0] / -v[1,1]
     # but I'm using this: http://stackoverflow.com/questions/5879986/pseudo-inverse-of-sparse-matrix-in-python
     m = v[-1,:-1]/-v[-1,-1]
-    b = data2.mean() - m*data1.mean()
 
     varfrac = s[0]/s.sum()*100
     if varfrac < 50:
         raise ValueError("ERROR: SVD/TLS Linear Fit accounts for less than half the variance; this is impossible by definition.")
 
-    if print_results:
-        print "TLS Best fit y = %g x + %g" % (m,b)
-        print "The fit accounts for %0.3g%% of the variance." % (varfrac)
-
-    return m,b
+    if intercept:
+        b = data2.mean() - m*data1.mean()
+        if print_results:
+            print "TLS Best fit y = %g x + %g" % (m,b)
+            print "The fit accounts for %0.3g%% of the variance." % (varfrac)
+            print "Chi^2 = %g, N = %i" % (((data2-(data1*m+b))**2).sum(),data1.shape[0]-2)
+        return m,b
+    else:
+        if print_results:
+            print "TLS Best fit y = %g x" % (m)
+            print "The fit accounts for %0.3g%% of the variance." % (varfrac)
+            print "Chi^2 = %g, N = %i" % (((data2-(data1*m))**2).sum(),data1.shape[0]-1)
+        return m
 
 
 def smooth_waterfall(arr,fwhm=4.0,unsharp=False):

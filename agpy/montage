@@ -98,7 +98,7 @@ then
 
     if [ $debug == 1 ] 
     then
-      cmd="python -m pdb -c "
+      cmd="ipython -pdb -c "
     else
       cmd="python -c "
     fi

@@ -164,6 +164,7 @@ class plfit:
         if n < 50 and not finite and not silent:
             print '(PLFIT) Warning: finite-size bias may be present. n=%i' % n
         ks = max(abs( numpy.arange(n)/float(n) - (1-(xmin/z)**(alpha-1)) ))
+        # Parallels Eqn 3.5 in Clauset et al 2009, but zeta(alpha, xmin) = (alpha-1)/xmin.  Really is Eqn B3 in paper.
         L = n*log((alpha-1)/xmin) - alpha*sum(log(z/xmin))
         #requires another map... Larr = arange(len(unique(x))) * log((av-1)/unique(x)) - av*sum
         self._likelihood = L
@@ -401,7 +402,20 @@ class plfit:
             self.lognormal_dist = scipy.stats.lognorm(*fitpars)
             self.lognormal_ksD,self.lognormal_ksP = scipy.stats.kstest(self.data,self.lognormal_dist.cdf)
             self.lognormal_likelihood = scipy.stats.lognorm.nnlf(fitpars,self.data)
-            self.power_lognorm_likelihood = 2*(self._likelihood + self.lognormal_likelihood)
+
+            # Is this the right likelihood ratio?
+            # Definition of L from eqn. B3 of Clauset et al 2009:
+            # L = log(p(x|alpha))
+            # _nnlf from scipy.stats.distributions:
+            # -sum(log(self._pdf(x, *args)),axis=0)
+            # Assuming the pdf and p(x|alpha) are both non-inverted, it looks
+            # like the _nnlf and L have opposite signs, which would explain the
+            # likelihood ratio I've used here:
+            self.power_lognorm_likelihood = (self._likelihood + self.lognormal_likelihood)
+            # a previous version had 2*(above).  I don't know why; it seems
+            # likely that it was a typo or carryover from an incorrectly
+            # translated formula
+            
             if doprint: 
                 print "Lognormal KS D: %g  p(D): %g" % (self.lognormal_ksD,self.lognormal_ksP),
                 print "  Likelihood Ratio (<0 implies power law better than lognormal): %g" % self.power_lognorm_likelihood
