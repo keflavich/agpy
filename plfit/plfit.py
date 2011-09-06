@@ -23,8 +23,16 @@ MyPL.plotpdf(log=True)
 import numpy 
 import time
 import pylab
-usefortran=False
-cyok=False
+try:
+    import fplfit
+    fortranOK = True
+except:
+    fortranOK = False
+try:
+    import cplfit
+    cyOK = True
+except:
+    cyOK = False
 
 import numpy.random as npr
 from numpy import log,log10,sum,argmin,argmax,exp,min,max
@@ -90,7 +98,7 @@ class plfit:
         return kstest
     
 
-    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran,usecy=False,
+    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=False,usecy=False,
             xmin=None, verbose=False):
         """
         A Python implementation of the Matlab code http://www.santafe.edu/~aaronc/powerlaws/plfit.m
@@ -112,16 +120,17 @@ class plfit:
         z = numpy.sort(x)
         t = time.time()
         xmins,argxmins = numpy.unique(z,return_index=True)#[:-1]
+        self._nunique = len(xmins)
         t = time.time()
         if xmin is None:
-            if usefortran:
+            if usefortran and fortranOK:
                 dat,av = fplfit.plfit(z,int(nosmall))
                 goodvals=dat>0
                 sigma = ((av-1)/numpy.sqrt(len(z)-numpy.arange(len(z))))[argxmins]
                 dat = dat[goodvals]
                 av = av[goodvals]
                 if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
-            elif usecy and cyok:
+            elif usecy and cyOK:
                 dat,av = cplfit.plfit_loop(z,nosmall=nosmall,zunique=xmins,argunique=argxmins)
                 goodvals=dat>0
                 sigma = (av-1)/numpy.sqrt(len(z)-argxmins)
@@ -139,6 +148,7 @@ class plfit:
                     nmax = argmin(goodvals)
                     if nmax > 0:
                         dat = dat[:nmax]
+                        xmins = xmins[:nmax]
                         av = av[:nmax]
                     else:
                         print "Not enough data left after flagging - using all positive data."
@@ -185,7 +195,7 @@ class plfit:
             print "n(>xmin): %i" % n,
             if verbose: print "\nThe derived power-law alpha (p(x)~x^-alpha) with MLE-derived error, ",
             print "alpha: %g +/- %g  " % (alpha,self._alphaerr), 
-            if verbose: print "\nThe log of the Likelihood (the minimized parameter), ",
+            if verbose: print "\nThe log of the Likelihood (the maximized parameter), ",
             print "Log-Likelihood: %g  " % L,
             if verbose: print "\nThe KS-test statistic between the best-fit power-law and the data, ",
             print "ks: %g" % (ks),
@@ -196,6 +206,25 @@ class plfit:
                 print
 
         return xmin,alpha
+
+    def xminvsks(self, **kwargs):
+        """
+        Plot alpha versus the ks value for derived alpha.  This plot can be used
+        as a diagnostic of whether you have derived the 'best' fit: if there are 
+        multiple local minima, your data set may be well suited to a broken 
+        powerlaw or a different function.
+        """
+        
+        pylab.plot(self._xmin_kstest,self._xmins,'.')
+        pylab.plot(self._ks,self._xmin,'s')
+        #pylab.errorbar([self._ks],self._alpha,yerr=self._alphaerr,fmt='+')
+
+        ax=pylab.gca()
+        ax.set_xlabel("KS statistic")
+        ax.set_ylabel("min(x)")
+        pylab.draw()
+
+        return ax
 
     def alphavsks(self,autozoom=True,**kwargs):
         """
@@ -328,7 +357,7 @@ class plfit:
         pylab.xlabel("Real Value")
         pylab.ylabel("Power-Law Model Value")
 
-    def test_pl(self,niter=1e3,**kwargs):
+    def test_pl(self,niter=1e3, print_timing=False, **kwargs):
         """
         Monte-Carlo test to determine whether distribution is consistent with a power law
 
@@ -362,6 +391,7 @@ class plfit:
         nrandtail = ntot - nrandnot         # and the rest will be sampled from the powerlaw
 
         ksv = []
+        if print_timing: deltat = []
         for i in xrange(niter):
             # first, randomly sample from power law
             # with caveat!  
@@ -370,9 +400,13 @@ class plfit:
             randarr = npr.rand(nrandtail)
             fakepl = randarr**(1/(1-alpha)) * xmin 
             fakedata = numpy.concatenate([fakenonpl,fakepl])
+            if print_timing: t0 = time.time()
             # second, fit to powerlaw
             TEST = plfit(fakedata,quiet=True,silent=True,nosmall=True,**kwargs)
             ksv.append(TEST._ks)
+            if print_timing: 
+                deltat.append( time.time() - t0 )
+                print "Iteration %i: %g seconds" % (i, deltat[-1])
         
         ksv = numpy.array(ksv)
         p = (ksv>self._ks).sum() / float(niter)
@@ -380,6 +414,7 @@ class plfit:
         self._ks_rand = ksv
 
         print "p(%i) = %0.3f" % (niter,p)
+        if print_timing: print "Iteration timing: %g +/- %g" % (numpy.mean(deltat),numpy.std(deltat))
 
         return p,ksv
 
