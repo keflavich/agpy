@@ -25,7 +25,7 @@ frequency_dict = {
         'THz':1e12,
         }
 
-def blackbody(nu,temperature,units='cgs',frequency_units='Hz', normalize=max):
+def blackbody(nu,temperature, scale=1.0, units='cgs',frequency_units='Hz', normalize=max):
     # load constants in desired units
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
 
@@ -35,9 +35,9 @@ def blackbody(nu,temperature,units='cgs',frequency_units='Hz', normalize=max):
     I = 2*h*nu**3 / c**2 * (exp(h*nu/(k*temperature)) - 1)**-1
 
     if normalize:
-        return I/normalize(I)
+        return I/normalize(I) * scale
     else:
-        return I
+        return I * scale
 
 wavelength_dict = {'meters':1.0,'m':1.0,
         'centimeters':1e-2,'cm':1e-2,
@@ -48,7 +48,7 @@ wavelength_dict = {'meters':1.0,'m':1.0,
         'angstroms':1e-10,'A':1e-10,'Angstroms':1e-10,
         }
 
-def blackbody_wavelength(lam,temperature,units='cgs',wavelength_units='Angstroms', normalize=max):
+def blackbody_wavelength(lam,temperature, scale=1.0, units='cgs',wavelength_units='Angstroms', normalize=max):
     # load constants in desired units
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
 
@@ -58,11 +58,11 @@ def blackbody_wavelength(lam,temperature,units='cgs',wavelength_units='Angstroms
     I = 2*h*c**2 / lam**5 * (exp(h*c/(k*temperature*lam)) - 1)**-1
 
     if normalize:
-        return I/normalize(I)
+        return I/normalize(I) * scale
     else:
-        return I
+        return I * scale
 
-def modified_blackbody(nu,temperature,beta=1.75, muh2=2.8, units='cgs',frequency_units='Hz',
+def modified_blackbody(nu,temperature,beta=1.75, scale=1.0, muh2=2.8, units='cgs',frequency_units='Hz',
         kappa0=4.0, nu0=505e9, N=1e22, normalize=max):
     """
     Snu =  2hnu^3 c^-2  (e^(hnu/kT) - 1)^-1  (1 - e^(-tau_nu) )
@@ -83,11 +83,11 @@ def modified_blackbody(nu,temperature,beta=1.75, muh2=2.8, units='cgs',frequency
     I = blackbody(nu,temperature,units=units,frequency_units=frequency_units)*modification
 
     if normalize:
-        return I/normalize(I)
+        return I/normalize(I) * scale
     else:
-        return I
+        return I * scale
 
-def modified_blackbody_wavelength(lam,temperature,beta=1.75, muh2=2.8,
+def modified_blackbody_wavelength(lam,temperature,beta=1.75, scale=1.0, muh2=2.8,
         units='cgs', wavelength_units='Angstroms', kappa0=4.0, nu0=5.93648e-2,
         N=1e22, normalize=max):
     """
@@ -101,14 +101,40 @@ def modified_blackbody_wavelength(lam,temperature,beta=1.75, muh2=2.8,
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
     mh = unitdict[units]['mh']
 
+    nu = c/(lam*wavelength_dict[wavelength_units])
     kappanu = kappa0 * (nu/nu0)**beta
     tau  = muh2 * mh * kappanu * N
 
     modification = (1.0 - exp(-1.0 * tau))
 
-    I = blackbody(nu,temperature,units=units,frequency_units=frequency_units)*modification
+    I = blackbody(nu,temperature,units=units,frequency_units='Hz')*modification
 
     if normalize:
-        return I/normalize(I)
+        return I/normalize(I) * scale
     else:
-        return I
+        return I * scale
+
+
+try:
+    import mpfit
+
+    def fit_blackbody(xdata, flux, guesses=(0,0), err=None, blackbody_function=blackbody, quiet=True, **kwargs):
+        """
+        guesses = Temperature, Arbitrary Scale
+        OR Temperature, Beta, Arbitrary Scale
+        """
+
+        def mpfitfun(x,y,err):
+            if err is None:
+                def f(p,fjac=None): return [0,(y-blackbody_function(x, *p, **kwargs))]
+            else:
+                def f(p,fjac=None): return [0,(y-blackbody_function(x, *p, **kwargs))/err]
+            return f
+
+        err = err if err is not None else flux*0.0 + 1.0
+
+        mp = mpfit.mpfit(mpfitfun(xdata,flux,err), guesses, quiet=quiet)
+
+        return mp
+except:
+    pass
