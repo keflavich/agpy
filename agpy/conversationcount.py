@@ -32,9 +32,28 @@ if __name__ == "__main__":
     xlabel("log Number of messages")
     ylabel("Number of users")
 
+    NN = array(countdict.keys())
+    print "Top 10 most messages: \n"+"\n".join("%s: %i" % (a,b) for a,b in zip(NN[argsort(N)[-10:]],sort(N)[-10:]))
+
     figure(2)
     C = array(countdict.values())
     hist(log10(C[C>0]))
     xlabel("log Number of conversations")
     ylabel("Number of users")
-    
+
+    CN = array(countdict.keys())
+    print "Top 10 most conversations \n"+"\n".join("%s: %i" % (a,b) for a,b in zip(CN[argsort(C)[-10:]],sort(C)[-10:]))
+
+    try:
+        import plfit
+        pn = plfit.plfit(N[N>0])
+        figure(3)
+        pn.plotcdf()
+
+        pc = plfit.plfit(C[C>0])
+        figure(4)
+        pc.plotcdf()
+
+    except ImportError:
+        # if you haven't installed the plfit code from agpy
+        pass
