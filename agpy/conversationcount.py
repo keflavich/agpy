@@ -44,6 +44,14 @@ if __name__ == "__main__":
     CN = array(countdict.keys())
     print "Top 10 most conversations \n"+"\n".join("%s: %i" % (a,b) for a,b in zip(CN[argsort(C)[-10:]],sort(C)[-10:]))
 
+    figure(5) # idea courtesy Jordan Mirocha
+    loglog(C,N,'ko')
+    xlabel("Number of conversations")
+    ylabel("Number of messages exchanged")
+    for ii in unique(concatenate([argsort(C)[-11:],argsort(N)[-11:]])):
+        text(C[ii],N[ii],CN[ii].split('@')[0])
+    title("Adium conversation history")
+
     try:
         import plfit
         pn = plfit.plfit(N[N>0])
