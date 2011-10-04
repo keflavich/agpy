@@ -135,7 +135,7 @@ def twodgaussian(inpars, circle=False, rotate=True, vheight=True, shape=None):
     else:
         return rotgauss
 
-def gaussfit(data,err=None,params=[],autoderiv=True,return_all=False,circle=False,
+def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=False,
         fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
         limitedmax=[False,False,False,False,False,False,True],
         usemoment=numpy.array([],dtype='bool'),
