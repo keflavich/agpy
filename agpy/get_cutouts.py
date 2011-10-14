@@ -15,7 +15,11 @@ def findimages(xc,yc,searchpath,coordsys='celestial'):
     imlist = glob.glob(searchpath+"/*.fits")
     matchlist = []
     for fn in imlist:
-        head = agpy.cubes.flatten_header( pyfits.getheader(fn) )
+        try: 
+            head = pyfits.getheader(fn)
+        except: # generic exception; there are lots of ways file reading could fail but I don't care
+            continue
+        head = agpy.cubes.flatten_header( head )
         if coords_in_image(xc,yc,head,coordsys=coordsys):
             matchlist.append(fn)
 
