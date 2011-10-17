@@ -341,16 +341,19 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
     except:
         pass
     # cd is default, cdelt is backup
-    if len(ap) == 5:
+    if len(ap) > 3:
         try:
             width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention
             height = ap[3] / conv / abs(wcs.wcs.cd[0,0])
         except:
             width  = ap[2] / conv / abs(wcs.wcs.cdelt[0])  # first is width, second is height in DS9 PA convention
             height = ap[3] / conv / abs(wcs.wcs.cdelt[0])
-        PA = ap[4] 
         apold = copy.copy(ap)
-        ap = [x,y,width,height,PA]
+        if len(ap) == 5:
+            PA = ap[4] 
+            ap = [x,y,width,height,PA]
+        else:
+            ap = [x,y,width,height]
     elif len(ap) == 3:
         try:
             width  = ap[2] / conv / abs(wcs.wcs.cd[0,0])  # first is width, second is height in DS9 PA convention

@@ -6,7 +6,7 @@ import pyfits
 import pywcs
 import coords
 import os
-import agpy.cubes
+import agpy.cubes,agpy.grep,agpy.cutout
 
 def findimages(xc,yc,searchpath,coordsys='celestial'):
     """
@@ -29,7 +29,10 @@ def coords_in_image(xc,yc,header,coordsys='celestial'):
     """
     Determine whether the coordinates are within the boundaries of the image
     """
-    wcs = pywcs.WCS(header)
+    try:
+        wcs = pywcs.WCS(header)
+    except: # if the header isn't WCS compatible, we don't want it
+        return False
 
     if coordsys=='celestial' and wcs.wcs.lngtyp=='GLON':
         xc,yc = coords.Position((xc,yc),system=coordsys).galactic()
@@ -55,9 +58,41 @@ def find_all_images(xc,yc,dirlist, flatten=False, **kwargs):
     else:
         return imlist
 
-def get_cutouts(xcoord,ycoord,coordsys='galactic'):
+def get_cutouts(xcoord,ycoord,xwidth,ywidth, coordsys='galactic',
+        ignore_imagetypes=('_area','power','angle','weight','residual','smooth','model','mask','noise','label'),
+        flist='find', savedir=None, clobber=True):
+    """
+    Create cutouts from all possible images in the searched directories.
+    """
 
-    pass
+    if flist == 'find':
+        # Get list
+        flist = find_all_images(xcoord, ycoord, dirs, coordsys=coordsys)
+    elif type(flist) not in (tuple,list):
+        raise TypeError("flist must be a list (or tuple) of filenames")
+
+    # filter out image types I don't want
+    for ign in ignore_imagetypes:
+        flist = agpy.grep.grepv(ign, flist)
+
+    # make all the cutouts
+    cutouts = []
+    for fn in flist:
+        try:
+            co = agpy.cutout.cutout(fn, xcoord, ycoord, xwidth, ywidth, units='wcs', coordsys=coordsys)
+        except agpy.cutout.DimensionError:
+            header = pyfits.getheader(fn)
+            wcs = pywcs.WCS( agpy.cubes.flatten_header(header) )
+            xc,yc,xw,yw = agpy.cubes.aper_world2pix((xcoord,ycoord,xwidth,ywidth),wcs,coordsys=coordsys,wunit='degree')
+            co = agpy.cubes.subcube( pyfits.getdata(fn), xcoord, xwidth, ycoord, ywidth, header=header, return_HDU=True, widthunits='pixels' )
+        except Exception as ex:
+            print "%s failed: " % fn, ex
+            flist.remove(fn)
+        cutouts.append(co)
+        if savedir is not None:
+            co.writeto("%s/%s" % (savedir, os.path.split(fn)[1].replace(".fits","_cutout.fits")),clobber=clobber)
+
+    return cutouts
 
 def find_directories(rootdir):
     """

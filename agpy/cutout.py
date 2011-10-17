@@ -4,6 +4,7 @@ Generate a cutout image from a .fits file
 import pyfits
 import numpy
 import pywcs
+import coords
 try:
     import montage
     import os
@@ -11,7 +12,11 @@ try:
 except ImportError:
     CanUseMontage=False
 
-def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True,useMontage=False):
+class DimensionError(ValueError):
+    pass
+
+def cutout(file, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
+        clobber=True, useMontage=False, coordsys='celestial'):
     """
     Inputs:
         file  - .fits filename or pyfits HDUList (must be 2D)
@@ -32,11 +37,18 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True,useMo
     head = file[0].header.copy()
 
     if head['NAXIS'] > 2:
-        raise Exception("Too many (%i) dimensions!" % head['NAXIS'])
+        raise DimensionError("Too many (%i) dimensions!" % head['NAXIS'])
     cd1 = head.get('CDELT1') if head.get('CDELT1') else head.get('CD1_1')
     cd2 = head.get('CDELT2') if head.get('CDELT2') else head.get('CD2_2')
     if cd1 is None or cd2 is None:
         raise Exception("Missing CD or CDELT keywords in header")
+    wcs = pywcs.WCS(head)
+
+    if units == 'wcs':
+        if coordsys=='celestial' and wcs.wcs.lngtyp=='GLON':
+            xc,yc = coords.Position((xc,yc),system=coordsys).galactic()
+        elif coordsys=='galactic' and wcs.wcs.lngtyp=='RA':
+            xc,yc = coords.Position((xc,yc),system=coordsys).j2000()
 
     if useMontage and CanUseMontage:
         head['CRVAL1'] = xc
@@ -47,6 +59,7 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True,useMo
             head['NAXIS1'] = int(xw*2)
             head['NAXIS2'] = int(yw*2)
         elif units == 'wcs':
+            
             cdelt = numpy.sqrt(cd1**2+cd2**2)
             head['CRPIX1'] = xw   / cdelt
             head['CRPIX2'] = yw   / cdelt
@@ -57,7 +70,6 @@ def cutout(file,xc,yc,xw=25,yw=25,units='pixels',outfile=None,clobber=True,useMo
         newfile = montage.wrappers.reproject_hdu(file[0],header='temp_montage.hdr',exact_size=True)
         os.remove('temp_montage.hdr')
     else:
-        wcs = pywcs.WCS(head)
 
         xx,yy = wcs.wcs_sky2pix(xc,yc,0)
 

@@ -33,3 +33,8 @@ def grep(string,list):
 # grep('ze',list)
 # First one returns: ['zenith']
 # Second one returns: ['normalize','size','nonzero','zenith']
+
+def grepv(string,list):
+    """ grep -v - return elements that do NOT contain the string """
+    expr = re.compile(string)
+    return [elem for elem in list if not expr.search(elem)]
