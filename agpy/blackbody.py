@@ -62,8 +62,9 @@ def blackbody_wavelength(lam,temperature, scale=1.0, units='cgs',wavelength_unit
     else:
         return I * scale
 
-def modified_blackbody(nu,temperature,beta=1.75, scale=1.0, muh2=2.8, units='cgs',frequency_units='Hz',
-        kappa0=4.0, nu0=505e9, N=1e22, normalize=max):
+def modified_blackbody(nu,temperature,beta=1.75, logscale=1.0, logN=22,
+        muh2=2.8, units='cgs',frequency_units='Hz', kappa0=4.0, nu0=505e9,
+        normalize=max):
     """
     Snu =  2hnu^3 c^-2  (e^(hnu/kT) - 1)^-1  (1 - e^(-tau_nu) )
     Kappa0 and Nu0 are set as per http://arxiv.org/abs/1101.4654 which uses OH94 values.
@@ -76,20 +77,20 @@ def modified_blackbody(nu,temperature,beta=1.75, scale=1.0, muh2=2.8, units='cgs
     mh = unitdict[units]['mh']
 
     kappanu = kappa0 * (nu/nu0)**beta
-    tau  = muh2 * mh * kappanu * N
+    tau  = muh2 * mh * kappanu * 10**logN
 
     modification = (1.0 - exp(-1.0 * tau))
 
-    I = blackbody(nu,temperature,units=units,frequency_units=frequency_units)*modification
+    I = blackbody(nu,temperature,units=units,frequency_units=frequency_units,normalize=normalize)*modification
 
     if normalize:
-        return I/normalize(I) * scale
+        return I/normalize(I) * 10**logscale
     else:
-        return I * scale
+        return I * 10**logscale
 
-def modified_blackbody_wavelength(lam,temperature,beta=1.75, scale=1.0, muh2=2.8,
-        units='cgs', wavelength_units='Angstroms', kappa0=4.0, nu0=5.93648e-2,
-        N=1e22, normalize=max):
+def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
+        logN=22, muh2=2.8, units='cgs', wavelength_units='Angstroms',
+        kappa0=4.0, nu0=5.93648e-2, normalize=max):
     """
     Snu =  2hnu^3 c^-2  (e^(hnu/kT) - 1)^-1  (1 - e^(-tau_nu) )
     Kappa0 and Nu0 are set as per http://arxiv.org/abs/1101.4654 which uses OH94 values.
@@ -103,16 +104,16 @@ def modified_blackbody_wavelength(lam,temperature,beta=1.75, scale=1.0, muh2=2.8
 
     nu = c/(lam*wavelength_dict[wavelength_units])
     kappanu = kappa0 * (nu/nu0)**beta
-    tau  = muh2 * mh * kappanu * N
+    tau  = muh2 * mh * kappanu * 10**logN
 
     modification = (1.0 - exp(-1.0 * tau))
 
-    I = blackbody(nu,temperature,units=units,frequency_units='Hz')*modification
+    I = blackbody(nu,temperature,units=units,frequency_units='Hz',normalize=normalize)*modification
 
     if normalize:
-        return I/normalize(I) * scale
+        return I/normalize(I) * 10**logscale
     else:
-        return I * scale
+        return I * 10**logscale
 
 
 try:
@@ -126,9 +127,9 @@ try:
 
         def mpfitfun(x,y,err):
             if err is None:
-                def f(p,fjac=None): return [0,(y-blackbody_function(x, *p, **kwargs))]
+                def f(p,fjac=None): return [0,(y-blackbody_function(x, *p, normalize=False, **kwargs))]
             else:
-                def f(p,fjac=None): return [0,(y-blackbody_function(x, *p, **kwargs))/err]
+                def f(p,fjac=None): return [0,(y-blackbody_function(x, *p, normalize=False, **kwargs))/err]
             return f
 
         err = err if err is not None else flux*0.0 + 1.0
