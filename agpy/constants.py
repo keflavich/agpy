@@ -15,6 +15,7 @@ h2toCO = 1e4                  # X_CO = CO abundance
 kmstocms  = 1e5               # conversion from km/s to cm/s
 au = 1.496e13                 # 1 astronomical unit in cm
 pc = 3.086e18                 # 1 parsec in cm
+kpc = pc * 1e3
 muh=1.4                       # Mass conversion factor for H 
 muh2=2.8                      # Mass conversion factor for H2 (see Kauffman 2009)
 yr = year = 86400*365.        # 1 year in seconds
