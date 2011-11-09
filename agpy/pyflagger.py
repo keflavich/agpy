@@ -22,6 +22,7 @@ import subprocess
 import copy
 import idlsave
 import gaussfitter
+import mpfit
 from PCA_tools import *
 from guppy import hpy
 heapy = hpy()
@@ -45,6 +46,9 @@ class lazydata(object):
         self.reshape = reshape
         self.flag = flag
 
+    def __getattr__(self,attribute):
+        return getattr(self,attribute)
+
     def __get__(self, obj, type=None):
         t0 = time.time()
         if obj.__dict__.has_key(self.varname):
@@ -54,8 +58,8 @@ class lazydata(object):
             return obj.__dict__[self.varname]
         else:
             print "Computing %s " % self.varname
-            obj.__dict__[self.varname] = obj.__dict__[self.structname][self.varname][0][obj.whscan,:].astype('float')
             if self.flag:
+                obj.__dict__[self.varname] = obj.__dict__[self.structname][self.varname][0][obj.whscan,:].astype('float')
                 obj.__dict__[self.varname][obj.whempty,:] = NaN
                 obj.__dict__[self.varname].shape = obj.datashape
                 obj.__dict__[self.varname] = nantomask(obj.__dict__[self.varname])
@@ -63,9 +67,13 @@ class lazydata(object):
                     obj.__dict__[self.varname].mask[obj.flags > 0] = True
                 except TypeError:
                     obj.__dict__[self.varname].mask = (obj.flags > 0)
+            else:
+                # flagging is extra work, skip it but still do the reshaping aspects
+                obj.__dict__[self.varname] = obj.__dict__[self.structname][self.varname][0][obj.whscan,:].astype('float')
+                obj.__dict__[self.varname].shape = obj.datashape
 
-            if self.reshape is not None:
-                obj.__dict__[self.varname] = reshape( obj.mapstr[self.varname][0][obj.whscan,:] , obj.datashape )
+            # not used if self.reshape is not None:
+            # not used     obj.__dict__[self.varname] = reshape( obj.mapstr[self.varname][0][obj.whscan,:] , obj.datashape )
             print "Finished computing %s in %0.3g seconds" % (self.varname,time.time()-t0)
             return obj.__dict__[self.varname]
 
@@ -259,7 +267,7 @@ class Flagger:
         self.showmap(vmax=vmax)
         self.dcon()
     
-    def _loadsav(self,savfile,**kwargs):
+    def _loadsav(self, savfile, flag=True, **kwargs):
         memtot = heapy.heap().size / 1024.0**3
         print "Beginning IDLsave file read. %0.3g GB used" % memtot
         t0 = time.time()
@@ -325,14 +333,14 @@ class Flagger:
             print "Loading 'raw' and 'dc_bolos' from needed_once_struct"
             #self.raw         = lazydata('raw', 'needed_once_struct') #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
             #self.dc_bolos    = lazydata('dc_bolos', 'needed_once_struct') #self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
-            setattr(self.__class__, 'raw', lazydata('raw', 'needed_once_struct')) #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
-            setattr(self.__class__, 'dc_bolos', lazydata('dc_bolos', 'needed_once_struct')) #self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
+            setattr(self.__class__, 'raw', lazydata('raw', 'needed_once_struct',flag=flag)) #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
+            setattr(self.__class__, 'dc_bolos', lazydata('dc_bolos', 'needed_once_struct',flag=flag)) #self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
         elif self.bgps.dtype.fields.has_key('raw'):
             print "Loading 'raw' and 'dc_bolos' from bgps"
             #self.raw         = lazydata('raw') # self.bgps['raw'][0][self.whscan,:].astype('float')
             #self.dc_bolos    = lazydata('dcbolos') # self.bgps['dc_bolos'][0][self.whscan,:].astype('float')
-            setattr(self.__class__, 'raw', lazydata('raw')) #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
-            setattr(self.__class__, 'dc_bolos', lazydata('dc_bolos')) #self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
+            setattr(self.__class__, 'raw', lazydata('raw',flag=flag)) #self.needed_once_struct['raw'][0][self.whscan,:].astype('float')
+            setattr(self.__class__, 'dc_bolos', lazydata('dc_bolos',flag=flag)) #self.needed_once_struct['dc_bolos'][0][self.whscan,:].astype('float')
         #self.astrosignal    = self.bgps['astrosignal'][0][self.whscan,:].astype('float')
         #self.atmosphere     = self.bgps['atmosphere'][0][self.whscan,:].astype('float')
         #self.ac_bolos       = self.bgps['ac_bolos'][0][self.whscan,:].astype('float')
@@ -354,7 +362,7 @@ class Flagger:
 
         datums=['astrosignal','atmosphere','ac_bolos','atmo_one','noise','scalearr','weight','mapped_astrosignal']
         for d in datums:
-            setattr(self.__class__, d, lazydata(d))
+            setattr(self.__class__, d, lazydata(d,flag=flag))
             #self.__dict__[d] = lazydata(d)
             #if self.__dict__.has_key(d):
             #    self.__dict__[d][self.whempty,:] = NaN
@@ -367,9 +375,9 @@ class Flagger:
         #import pdb; pdb.set_trace()
         self.weight_by_bolo = self.weight.mean(axis=0).mean(axis=0)
         if hasattr(self.bgps,'mapped_astrosignal'):
-            setattr(self.__class__, 'mapped_astrosignal', lazydata('mapped_astrosignal'))
+            setattr(self.__class__, 'mapped_astrosignal', lazydata('mapped_astrosignal',flag=flag))
         else:
-            setattr(self.__class__, 'mapped_astrosignal', lazydata('astrosignal'))
+            setattr(self.__class__, 'mapped_astrosignal', lazydata('astrosignal',flag=flag))
 
         if list(self.ac_bolos.shape) != self.datashape:
             import pdb; pdb.set_trace()
@@ -1122,6 +1130,8 @@ class Flagger:
                 self.plotscan(self.scannum-1)
             else:
                 print "At first scan, can't go further back"
+        elif event.key == 'e': 
+            self.expsub()
         elif event.key == 'P': # PCA
             self.plotscan(self.scannum,data=efuncs(self.plane),flag=False,logscale=True)
             self.PCAflag = True
@@ -1229,6 +1239,11 @@ class Flagger:
                     self.weight[ii,jj,kk],
                     self.scalearr[ii,jj,kk])
 
+    def expsub(self):
+        for ii in xrange(self.nbolos):
+            self.plane[:,ii] = expsub_line(self.plane[:,ii])
+        self.plotscan(self.scannum, data=self.plane, flag=False)
+
     def hist_all_points(self,x,y,clear=True,timestream='mapped_timestream'):
         mappoint = y * self.map.shape[1] + x
         self.timepoints =  nonzero(self.tstomap == mappoint)
@@ -1244,10 +1259,10 @@ class Flagger:
         datapts = TS[self.tstomap==mappoint]
         self.plotfig=figure(4)
         self.plotfig.clear()
-        OK  = datapts == datapts
+        OK  = asarray(datapts == datapts)
         if hasattr(datapts,'mask'):
             OK *= (datapts.mask == False)
-        n,bins,patches = hist(datapts[OK],histtype='step',color='k',linewidth=2)
+        n,bins,patches = hist(asarray(datapts[OK]),histtype='step',color='k',linewidth=2)
         vlines(wtavg,0,max(n),color='k',linestyles=':',label="Weighted: %0.4g" % wtavg)
         vlines(wtavg,0,max(n),color='k',linestyles=':',label="Std: %0.4g" % Hstd)
         vlines(uwtavg,0,max(n),color='b',linestyles='-.',label="Unweighted: %0.4g" % uwtavg)
@@ -1506,6 +1521,9 @@ class Flagger:
 #      import pdb; pdb.set_trace()
         ncfile.close()
 
+    def redraw(self):
+        self.plotscan(self.scannum)
+
     def _refresh(self):
         if self.flagfig is not None:
             self.flagfig.canvas.draw()
@@ -1546,6 +1564,10 @@ class Flagger:
             if hasattr(self.tscache[key],'mask'):
                 self.tscache[key].mask[:] = False
 
+    def clearflags(self):
+        self.flags[:] = False
+        self.unmask_all()
+
     def doPCA(self,clear=True,timestream='data', fignum=7, plotitem='evects', **kwargs):
 
         if timestream == 'data':
@@ -1560,8 +1582,14 @@ class Flagger:
       
         plotitem_dict = {'evects':self.evects,'efuncarr':self.efuncarr,'covmat':self.covmat,'evals':self.evals}
         plottype_dict = {'evects':imshow,'efuncarr':imshow,'covmat':imshow,'evals':plot}
+        plotkwargs_dict = {'evects':{},'efuncarr':{'aspect':float(self.efuncarr.shape[1])/self.efuncarr.shape[0]},'covmat':imshow,'evals':plot}
+        xlabel_dict = {'evects':'Eigenfunction','efuncarr':'Eigenfunction','covmat':'Bolometer','evals':'Eigenfunction'}
+        ylabel_dict = {'evects':'Bolometer','efuncarr':'Time','covmat':'Bolometer','evals':'Correlation Coefficient'}
 
-        plottype_dict[plotitem](plotitem_dict[plotitem], label=plotitem, **kwargs)
+        plottype_dict[plotitem](plotitem_dict[plotitem], label=plotitem, **dict(plotkwargs_dict[plotitem].items(), kwargs.items()))
+        xlabel(xlabel_dict[plotitem])
+        ylabel(ylabel_dict[plotitem])
+        colorbar()
 
     def compute_map(self,ts=None,tsname=None,weights=None,showmap=True,**kwargs):
         t0 = time.time()
@@ -1669,6 +1697,25 @@ def itermedian(ts,scale=0.8,niter=5):
           mts = mts - numpy.median(mts,axis=1)[:,newaxis,:]*scale
       return mts
 
+def boloexp(xax,height,amp,fjac=None): 
+    # set time constant of exponential:
+    tc=10.4 #in seconds
+    expterm = exp(-xax/(tc*50.))	#data taken at 50 Hz
+    model = amp * expterm + height
+    return model
+
+def boloexp_resids(xax,data):
+    def f(p,fjac=None):
+        model = boloexp(xax,p[0],p[1])
+        return [0,(data-model)]
+    return f
+
+def expsub_line(ts, sampleinterval=0.04, quiet=True, **kwargs):
+    xax = arange(ts.shape[0]) * sampleinterval/0.02
+    mp = mpfit.mpfit(boloexp_resids(xax,ts),[0,median(ts)],quiet=quiet,**kwargs)
+    model = boloexp(xax,*mp.params)
+    return ts-model
+
 if __name__ == "__main__":
 
       #from pylab import *
@@ -1684,6 +1731,7 @@ if __name__ == "__main__":
       #parser.add_option("--debug","-d",help="Debug in ipython mode?",action='store_true',default=False)
       parser.add_option("--no_interactive","-n",help="Turn off ipython (interactive) mode",action='store_false',dest="interactive")
       parser.add_option("--close","-c",help="Close after plotting?  Useful if interactive=False",action='store_true',default=False)
+      parser.add_option("--noflag",help="Disable flagging?",action='store_true',default=False)
       parser.set_usage("%prog savename.sav [options]")
       parser.set_description(
       """
@@ -1692,10 +1740,7 @@ if __name__ == "__main__":
 
       options,args = parser.parse_args()
 
-      if options.interactive:
-          from IPython.Shell import IPShellEmbed
-          ipshell = IPShellEmbed([])
-
+      flag = not options.noflag
           
       plotnum = options.plotscan
 
@@ -1704,7 +1749,7 @@ if __name__ == "__main__":
           prefix = filename.replace("_preiter.sav","").replace("_postiter.sav","").replace("_save_iter0.sav","")
 
           try:
-              f=Flagger(filename)
+              f=Flagger(filename, flag=flag)
           except:
               pdb.post_mortem()
           if options.interactive: exec("f%i = f" % (ii) )
@@ -1731,5 +1776,13 @@ if __name__ == "__main__":
           else:
               flist.append(f)
 
+
       if options.interactive:
-          ipshell() # this call anywhere in your program will start IPython
+          try:
+              from IPython.Shell import IPShellEmbed
+              ipshell = IPShellEmbed([])
+              ipshell() # this call anywhere in your program will start IPython
+          except ImportError:
+              from IPython import embed
+              embed()
+

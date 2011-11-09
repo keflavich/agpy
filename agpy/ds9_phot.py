@@ -1,4 +1,5 @@
-#!/Library/Frameworks/Python.framework/Versions/Current/bin/python
+#!/usr/bin/env python -W ignore::DeprecationWarning
+#!/Library/Frameworks/Python.framework/Versions/2.6/bin/python
 import pyregion
 import pyfits
 import pywcs
@@ -8,7 +9,11 @@ import sys
 
 def ds9_photometry(xpapoint):
     D = ds9.ds9(xpapoint)
-    reg = pyregion.parse(D.get("regions selected -format ds9 -system wcs -sky fk5 -skyformat sexagesimal"))
+    try:
+        reg = pyregion.parse(D.get("regions selected -format ds9 -system wcs -sky fk5 -skyformat sexagesimal"))
+    except Exception as ex:
+        print ex
+        raise ex
     pf = D.get_pyfits()
     mask = reg.get_mask(pf[0])
     arr = pf[0].data
