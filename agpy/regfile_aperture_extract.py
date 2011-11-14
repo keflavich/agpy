@@ -4,19 +4,21 @@ import numpy as np
 import pywcs
 from agpy.region_positions import *
 
-def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=hdu, PPBEAM=1.0):
+def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None, PPBEAM=1.0):
     """
     Extract fluxes from a region-defined aperture with inner and outer circular apertures
     specififed
 
     MUST BE IN GALACTIC COORDINATES
     """
+    if hdu is None:
+        raise ValueError("hdu keyword is required")
 
     data = hdu.data
     header = hdu.header
     wcs = pywcs.WCS(header)
-    glonmax = wcs.wcs_pix2sky(0,0)[0]
-    glonmin = wcs.wcs_pix2sky(data.shape[1],0)[1]
+    glonmax = wcs.wcs_pix2sky(0,0,0)[0]
+    glonmin = wcs.wcs_pix2sky(data.shape[1],0,0)[1]
 
     reglist = pyregion.open(regfile)
 
