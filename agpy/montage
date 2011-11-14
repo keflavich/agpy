@@ -98,9 +98,9 @@ then
 
     if [ $debug == 1 ] 
     then
-      cmd="ipython -pdb -c "
+      cmd="/usr/bin/env ipython -pdb -c "
     else
-      cmd="python -c "
+      cmd="/usr/bin/env python -c "
     fi
 
     dir=`pwd`

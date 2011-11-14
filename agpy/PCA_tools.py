@@ -128,6 +128,8 @@ def smooth_waterfall(arr,fwhm=4.0,unsharp=False):
     Smooth a waterfall plot.
 
     If unsharp set, remove the smoothed component
+
+    Input array should have dimensions [timelen, nbolos]
     """
 
     timelen,nbolos = arr.shape

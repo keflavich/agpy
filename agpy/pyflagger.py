@@ -1398,7 +1398,7 @@ class Flagger:
       self.y1 = event.ydata
 
     def powerspec(self):
-        self.powerspectra = real(fft(self.plane,axis=0) * conj(fft(self.plane,axis=0)))
+        self.powerspectra = real(fft(masktozero(self.plane),axis=0) * conj(fft(masktozero(self.plane),axis=0)))
         self.plotscan(self.scannum,data=self.powerspectra,flag=False,logscale=True)
         ylabel('Frequency')
         self.powerspec_plotted = True
