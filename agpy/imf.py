@@ -38,7 +38,13 @@ def schechter(m,A=1,beta=2,m0=100):
     """
     A Schechter function with arbitrary defaults
     """
-    return A*m**-beta * exp(-m/m0)
+    return A*m**-beta * np.exp(-m/m0)
+
+#def schechter_inv(m): 
+#    """
+#    Return p(m)
+#    """
+#    return scipy.interpolate.interp1d(shfun,arange(.1,20,.01),bounds_error=False,fill_value=20.)
 
 def integrate(fn=kroupa, bins=np.logspace(-2,2,500)):
     xax = (bins[:-1]+bins[1:])/2.
