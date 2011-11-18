@@ -171,6 +171,7 @@ class Flagger:
       j - plot whole timestream for selected bolo
       a - create a footprint movie between two selected points
       M,m - flag highest, lowest point in map
+      e - expsub current plane
  
     Map Key Commands:
       c - toggle current scan
@@ -671,7 +672,7 @@ class Flagger:
                 self.gfits[:,1,2],self.gfits[:,1,3],fmt=None,capsize=3)
         return self.gfits
 
-    def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False,smooth=True):
+    def footmovie(self,y1,y2,movie=False,moviedir='scanmovie/',logscale=False,dosmooth=True):
         y1 = numpy.round(y1)
         y2 = numpy.round(y2)
         print "Making footprint movie from %i to %i" % (y1,y2)
@@ -689,7 +690,7 @@ class Flagger:
         vals = numpy.reshape( plotdata[self.scannum,y1:y2,:], [abs(y2-y1),plotdata.shape[2]] )
         flags = numpy.reshape( allflags[self.scannum,y1:y2,:], [abs(y2-y1),plotdata.shape[2]] )
         flagvals = vals*(flags==0)
-        mapcube = array([ gridmap(x[ii,:],y[ii,:],flagvals[ii,:],downsample_factor=2,xsize=72,ysize=72,smooth=smooth)
+        mapcube = array([ gridmap(x[ii,:],y[ii,:],flagvals[ii,:],downsample_factor=2,xsize=72,ysize=72,dosmooth=dosmooth)
             for ii in xrange(y2-y1) ])
         mapcube[mapcube!=mapcube] = 0
 
@@ -1241,7 +1242,9 @@ class Flagger:
 
     def expsub(self):
         for ii in xrange(self.nbolos):
-            self.plane[:,ii] = expsub_line(self.plane[:,ii])
+            if hasattr(self.plane,'mask'):
+                if self.plane.mask[:,ii].sum() < self.plane.shape[0] - 2:
+                    self.plane[:,ii] = expsub_line(self.plane[:,ii])
         self.plotscan(self.scannum, data=self.plane, flag=False)
 
     def hist_all_points(self,x,y,clear=True,timestream='mapped_timestream'):
@@ -1650,7 +1653,9 @@ def downsample(myarr,factor):
           for j in xrange(factor)]).mean(axis=0)
       return dsarr 
 
-def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,smooth=True,xsize=None,ysize=None):
+from agpy import smooth
+
+def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,dosmooth=True,xsize=None,ysize=None):
       nx = xrange = numpy.ceil(numpy.max(x)-numpy.min(x))+3
       ny = yrange = numpy.ceil(numpy.max(y)-numpy.min(y))+3
       xax = x-min(x)
@@ -1662,12 +1667,13 @@ def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,smooth=True,xsize=None,ysize
       map[numpy.round(yax),numpy.round(xax)] += v
       map[map!=map] = 0
 
-      if smooth:
-          xax,yax = numpy.indices(map.shape)
-          kernel = gaussfitter.twodgaussian([1,nx/2,ny/2,smoothpix],circle=1,rotate=0,vheight=0)(xax,yax)
-          kernelfft = numpy.fft.fft2(kernel)
-          imfft = numpy.fft.fft2(map)
-          dm = numpy.fft.fftshift(numpy.fft.ifft2(kernelfft*imfft).real)
+      if dosmooth:
+          dm = smooth(map,kernelwidth=smoothpix)
+          #xax,yax = numpy.indices(map.shape)
+          #kernel = gaussfitter.twodgaussian([1,nx/2,ny/2,smoothpix],circle=1,rotate=0,vheight=0)(xax,yax)
+          #kernelfft = numpy.fft.fft2(kernel)
+          #imfft = numpy.fft.fft2(map)
+          #dm = numpy.fft.fftshift(numpy.fft.ifft2(kernelfft*imfft).real)
       else:
           dm = map
 

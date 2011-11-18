@@ -4,7 +4,7 @@ import numpy as np
 import pywcs
 from agpy.region_positions import *
 
-def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None, PPBEAM=1.0):
+def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None, PPBEAM=1.0, debug=False, print_nulls=False):
     """
     Extract fluxes from a region-defined aperture with inner and outer circular apertures
     specififed
@@ -29,11 +29,17 @@ def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None, PPBEAM=
 
     for reg in reglist:
         glon,glat = position_region(reg).galactic()
-        if glat > glonmin and glon < glonmax:
+        if not((glon > glonmin) and (glon < glonmax)):
             # these are the limits of the survey
+            if print_nulls:
+                print >>outf,"%16s" % sourcename,"".join("%16s" % f 
+                        for f in ['-','-','-','-','-','-','-','-','-'])
             continue
         xc,yc = wcs.wcs_sky2pix(glon,glat,0)
-        if xc < 0 or xc > bgpsdata.shape[1] or yc < 0 or yc > bgpsdata.shape[0]:
+        if xc < 0 or xc > data.shape[1] or yc < 0 or yc > data.shape[0]:
+            if print_nulls:
+                print >>outf,"%16s" % sourcename,"".join("%16s" % f 
+                        for f in ['-','-','-','-','-','-','-','-','-'])
             continue
         regL = pyregion.ShapeList()
         reg.name = 'circle'

@@ -12,6 +12,7 @@ if __name__ == "__main__":
     parser.add_option("--verbose","-v",help="Be loud? Default True",default=1)
     parser.add_option("--silence_gs",help="Silence Ghostscript?  Default True",default=True)
     parser.add_option("--resolution",help="Resolution (pixels per inch) of png.  Default 300",default=300)
+    parser.add_option("--noepscrop",help="No EPS crop?  Default False",default=False,action='store_true')
 
     options,args = parser.parse_args()
 
@@ -23,7 +24,10 @@ if __name__ == "__main__":
 
     for filename in args:
 
-        command = "gs -dBATCH -sDEVICE=png16m -r%i -dEPSCrop -dNOPAUSE" % (options.resolution)
+        if options.noepscrop: epscrop=""
+        else: epscrop = "-dEPSCrop"
+
+        command = "gs -dBATCH -sDEVICE=png16m -r%i %s -dNOPAUSE" % (options.resolution,epscrop)
 
         if options.multipage:
             outfile = re.sub("\.e?ps","_%d.png",filename)
