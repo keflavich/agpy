@@ -1,4 +1,4 @@
-import cplfit
+#import cplfit
 import plfit
 import time
 from numpy.random import rand,seed
@@ -11,6 +11,8 @@ X[:100] = X[100:200]
 t1=time.time(); p3=plfit.plfit(X,usefortran=False,usecy=True); print time.time()-t1
 t1=time.time(); p1=plfit.plfit(X); print time.time()-t1
 t1=time.time(); p3=plfit.plfit(X,usefortran=False); print time.time()-t1
+
+t4=time.time(); p4=plfit.plfit_py(X); print time.time()-t4
 
 
 

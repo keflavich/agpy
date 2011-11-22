@@ -108,7 +108,6 @@ class plfit:
         xmins = sorted(set(z))
         argxmins = [z.index(i) for i in xmins]
         self._nunique = len(xmins)
-        t = time.time()
         if xmin is None:
             av  = map(self.alpha_(z),xmins)
             dat = map(self.kstest_(z),xmins)
@@ -214,7 +213,8 @@ def pl_inv(P,xm,a):
     x = (1-P)**(1/(1-a)) * xm
     return x
 
-def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000,invcdf=plexp_inv):
+def test_fitter(xmin=1.0, alpha=2.5, niter=500, npts=1000, invcdf=plexp_inv,
+        quiet=True, silent=True):
     """
     Tests the power-law fitter 
 
@@ -249,7 +249,7 @@ def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000,invcdf=plexp_inv):
     for i in xrange(niter):
         randarr = [random.random() for k in xrange(npts)]
         fakedata = [invcdf(r,xmin,alpha) for r in randarr]
-        TEST = plfit(fakedata,quiet=True,silent=True,nosmall=True)
+        TEST = plfit(fakedata,quiet=quiet,silent=silent,nosmall=True)
         alphaf_v[i] = TEST._alpha
         ksv[i] = TEST._ks
         nxarr[i] = TEST._ngtx
