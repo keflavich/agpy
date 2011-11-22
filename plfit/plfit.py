@@ -152,7 +152,10 @@ class plfit:
                         av = av[:nmax]
                     else:
                         print "Not enough data left after flagging - using all positive data."
-                if not quiet: print "PYTHON plfit executed in %f seconds" % (time.time()-t)
+                if not quiet: 
+                    print "PYTHON plfit executed in %f seconds" % (time.time()-t)
+                    if usefortran: print "fortran fplfit did not load"
+                    if usecy: print "cython cplfit did not load"
             self._av = av
             self._xmin_kstest = dat
             self._sigma = sigma

@@ -4,6 +4,10 @@
 # OLD from numpy.distutils.core import setup
 # OLD from numpy.distutils.core import Extension
 from distutils.core import setup,Extension
+#from scipy_distutils.core import Extension as scipyExtension
+#from scipy_distutils.core import setup as scipysetup
+from numpy.distutils.core import Extension as numpyExtension
+from numpy.distutils.core import setup as numpysetup
 #from numpy.distutils.core import build_ext
 from numpy.distutils.command import build_src
 import Cython
@@ -35,7 +39,7 @@ ext_cplfit = Extension(
 		include_dirs = dirs, 
 		extra_compile_args=['-O3'])
 
-ext_fplfit = Extension(name="fplfit",
+ext_fplfit = numpyExtension(name="fplfit",
                     sources=["fplfit.f"])
 
 if __name__=="__main__":
@@ -55,6 +59,11 @@ if __name__=="__main__":
         ext_modules = [ ext_cplfit ],
         cmdclass = {'build_ext': build_ext}
     )
+
+    numpysetup(name = 'fplfit',
+          ext_modules = [ext_fplfit]
+          )
+
 
 print "I can't get numpy.distutils to compile the fortran.  To do it yourself, run some variant of:"
 print 'f2py -c fplfit.f -m fplfit'
