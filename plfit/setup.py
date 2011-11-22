@@ -1,8 +1,15 @@
 #from distutils.core import setup
 #from distutils.extension import Extension
-from numpy.distutils.core import setup
-from numpy.distutils.core import Extension
+# removed following lines as per http://www.mail-archive.com/numpy-discussion@scipy.org/msg19932.html
+# OLD from numpy.distutils.core import setup
+# OLD from numpy.distutils.core import Extension
+from distutils.core import setup,Extension
 #from numpy.distutils.core import build_ext
+from numpy.distutils.command import build_src
+import Cython
+import Cython.Compiler.Main
+build_src.Pyrex = Cython
+build_src.have_pyrex = True
 from Cython.Distutils import build_ext
 import Cython
 import numpy
@@ -28,8 +35,8 @@ ext_cplfit = Extension(
 		include_dirs = dirs, 
 		extra_compile_args=['-O3'])
 
-#ext_fplfit = Extension(name="fplfit",
-#                    sources=["fplfit.f"])
+ext_fplfit = Extension(name="fplfit",
+                    sources=["fplfit.f"])
 
 if __name__=="__main__":
     setup(
@@ -43,7 +50,7 @@ if __name__=="__main__":
         license = "MIT",
         platforms = ["Linux","MacOS X"],
         packages = ['plfit'],
-        package_dir={'plfit':'lib'},
+        package_dir={'plfit':'.'},
         install_requires = ["numpy","cython"],
         ext_modules = [ ext_cplfit ],
         cmdclass = {'build_ext': build_ext}
@@ -51,6 +58,7 @@ if __name__=="__main__":
 
 print "I can't get numpy.distutils to compile the fortran.  To do it yourself, run some variant of:"
 print 'f2py -c fplfit.f -m fplfit'
+# keep an eye on this: http://stackoverflow.com/questions/7932028/setup-py-for-packages-that-depend-on-both-cython-and-f2py
 
 # try:
 #     os.system('f2py -c fplfit.f -m fplfit')
