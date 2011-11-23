@@ -15,8 +15,8 @@ except ImportError:
 class DimensionError(ValueError):
     pass
 
-def cutout(file, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
-        clobber=True, useMontage=False, coordsys='celestial'):
+def cutout(filename, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
+        clobber=True, useMontage=False, coordsys='celestial', verbose=False):
     """
     Inputs:
         file  - .fits filename or pyfits HDUList (must be 2D)
@@ -26,10 +26,11 @@ def cutout(file, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
         outfile - optional output file
     """
 
-    if isinstance(file,str):
-        file = pyfits.open(file)
+    if isinstance(filename,str):
+        file = pyfits.open(filename)
         opened=True
-    elif isinstance(file,pyfits.HDUList):
+    elif isinstance(filename,pyfits.HDUList):
+        file = filename
         opened=False
     else:
         raise Exception("cutout: Input file is wrong type (string or HDUList are acceptable).")
@@ -97,6 +98,7 @@ def cutout(file, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
 
         img = file[0].data[ymin:ymax,xmin:xmax]
         newfile = pyfits.PrimaryHDU(data=img,header=head)
+        if verbose: print "Cut image %s with dims %s to %s.  xrange: %f:%f, yrange: %f:%f" % (filename, file[0].data.shape,img.shape,xmin,xmax,ymin,ymax)
 
     if isinstance(outfile,str):
         newfile.writeto(outfile,clobber=clobber)
