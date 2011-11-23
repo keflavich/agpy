@@ -1,132 +1,69 @@
-#!/bin/bash
+#!/usr/bin/env python
+import optparse
+import os,shutil
+import glob
+import tempfile
+tempfile.tempdir = '/Volumes/disk4/var/tmp'
+import sys
+#print sys.path
+#sys.path.remove('')
+sys.path.remove(os.path.split(__file__)[0])
+import montage
 
-# Wrapper to mosaic a *subset* of images in the current directory
-#
-# Usage:
-# mGetHdr template_fitsfile.fit mosaic.hdr
-# montage outfile=l089_reference_montage.fits 0*_indiv13pca*_map01.fits combine=median &
-#
-# Keyword parameters:
-#   combine - 'median', 'average', or 'sum'
-#   header  - Filename of fits file from which to create mosaic.hdr
-#   outfile - Output fits filename
-#
 
-#export PATH=$PATH:/usr/local/bin/montage
+if __name__ == "__main__":
 
-origdir=`pwd`
+    parser=optparse.OptionParser()
 
-debug=0
-copy="F"
+    parser.add_option("--header",default='mosaic.hdr',help="Name of the .hdr file or a fits file from which to extract a header.  Defaults to mosaic.hdr")
+    parser.add_option("--get-header","-g",default=False,action='store_true',help="Get the header of the first input file?  Overrides --header.  Default False")
+    parser.add_option("--combine",default='median',help="How to combine the images.  Options are mean, median, count.  Default median")
+    parser.add_option("--exact","--exact_size","--exact-size","-X",default=True,action='store_true',help="Use exact_size=True?  Default True")
+    parser.add_option("--outfile","--out","-o",default=None,help="Output file name")
+    parser.add_option("--copy",default=False,action='store_true',help="Copy files instead of linking")
 
-if [ $# -eq 0 ]
-then
-    echo montage wrapper
-    echo Usage:
-    echo mGetHdr template_fitsfile.fit mosaic.hdr
-    echo montage outfile=l089_reference_montage.fits 0\*_indiv13pca\*_map01.fits combine='median' \&
-    echo
-    echo Keyword parameters:
-    echo "  combine - 'median', 'average', or 'sum'  (note that this has to be \"combine='median'\")"
-    echo "  exact_size - True or False"
-    echo "  header  - Filename of fits file from which to create mosaic.hdr (or the .hdr file)"
-    echo "             (if header is not specified, assumed to be mosaic.hdr in pwd)"
-    echo "  outfile - Output fits filename"
-    echo "  copy    - copy files instead of hardlinking"
-    exit
-else
-    for ii in $*
-    do
-        if [ ${ii%=*} == 'header' ]
-        then
-            hdrfile=${ii#*=}
-            if [ ${hdrfile#*.} == 'hdr' ]
-            then
-              headerfile=$hdrfile
-            elif [ ${hdrfile#*.} == 'fits' ]
-            then
-              /usr/local/bin/montage/mGetHdr $hdrfile mosaic.hdr
-              headerfile=mosaic.hdr
-            else
-              echo "ERROR: $ii is not a valid header setting"
-              headerfile="does_not_exist_I_hope.noooo"
-            fi
-        elif [ ${ii} == '-copy' ]
-        then
-            copy="T"
-        elif [ ${ii%=*} == 'outfile' ]
-        then
-            outfile=${ii#*=}
-        elif [ `echo $ii | grep =` ] 
-        then
-            params="$params,${ii%=*}=${ii#*=}"
-        # note that you can say "header=blah.fits" because it is checked for earlier
-        elif [ $ii == "debug" ] 
-        then
-            debug=1
-        elif [ `echo $ii | grep ".fits"` ] 
-        then
-            files=( ${files[@]} $ii )
-        fi
-    done
-fi
-echo FILES: ${files[@]} 
-echo NFILES: ${#files} 
-echo Extra Parameters: $params
-if [ ${#files} -gt 0 ] 
-then
-    echo "Creating temporary directory and hard-linking (not sym-linking) all files into it"
+    parser.set_usage("%prog outfile=filename.fits *.fits combine=median")
+    parser.set_description(
+    """
+    Wrapper to mosaic a *subset* of images in the current directory
+                                                                                           
+    Usage:
+    mGetHdr template_fitsfile.fit mosaic.hdr
+    montage outfile=l089_reference_montage.fits 0*_indiv13pca*_map01.fits combine=median &
+                                                                                           
+    Keyword parameters:
+      combine - 'median', 'average', or 'sum'
+      header  - Filename of fits file from which to create mosaic.hdr
+      outfile - Output fits filename
+    """)
+
+    options,args = parser.parse_args()
+
+    if options.outfile is None:
+        raise ValueError("Must specify outfile name")
+
+    filelist = []
+    for a in args:
+        filelist += glob.glob(a)
+        
+    print filelist
+
+    print "Creating temporary directory and hard-linking (not sym-linking) all files into it"
     #echo "Creating temporary directory and sym-linking all files into it"
-    mkdir tmp
-    if [ $copy == "T" ] 
-    then 
-        cp ${files[@]} tmp/
-        cp $headerfile tmp/
-    else
-        #echo ln ${files[@]} tmp/
-        ln ${files[@]} tmp/
-        #echo ln $headerfile tmp/
-        ln $headerfile tmp/
-    fi
-    cd tmp/
-    #ls -lh
-fi
+    os.mkdir('tmp/')
+    if options.copy:
+        for fn in filelist:
+            shutil.copy(fn,'tmp/%s' % fn)
+        shutil.copy(options.header,'tmp/%s' % options.header)
+    else:
+        for fn in filelist:
+            os.link(fn,'tmp/%s' % fn)
+        os.link(options.header,'tmp/%s' % options.header)
 
-if [ -f $headerfile ] 
-then 
-    echo "$headerfile exists, continuing"
+    olddir = os.getcwd()
+    os.chdir('tmp/')
+    dir = os.getcwd()
+    montage.wrappers.mosaic(dir,'%s/mosaic' % dir,header='%s/%s' % (dir,options.header), exact_size=options.exact, combine=options.combine)
 
-    if [ $debug == 1 ] 
-    then
-      cmd="/usr/bin/env ipython -pdb -c "
-    else
-      cmd="/usr/bin/env python -c "
-    fi
-
-    montagecmd="import tempfile; tempfile.tempdir='/Volumes/disk4/var/tmp'; import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
-    dir=`pwd`
-    echo $cmd $montagecmd
-    $cmd $montagecmd 
-    if [ $? != 0 ]
-    then
-      echo "There was a python error!"
-    fi
-
-    cd $origdir
-    if [ -d tmp ]
-    then
-        if [ $outfile ]
-        then
-            mv tmp/mosaic/mosaic.fits $outfile
-        else
-            mv tmp/mosaic mosaic
-        fi
-        rm -r tmp
-    fi
-
-else
-    echo "$headerfile does not exist.  Quitting."
-    cd $origdir
-fi
-
-exit
+    if os.path.exists('tmp/mosaic/mosaic.fits'):
+        shutil.move('tmp/mosaic/mosaic.fits',options.outfile)

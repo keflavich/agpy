@@ -7,8 +7,10 @@ import pywcs
 import coords
 import os
 import agpy.cubes,agpy.grep,agpy.cutout
+import timer
 
-def findimages(xc,yc,searchpath,coordsys='celestial'):
+@timer.print_timing
+def findimages(xc,yc,searchpath,coordsys='celestial',verbose=False):
     """
     Given a single coordinate pair, searches for images that contain the coordinate
     """
@@ -22,9 +24,12 @@ def findimages(xc,yc,searchpath,coordsys='celestial'):
         head = agpy.cubes.flatten_header( head )
         if coords_in_image(xc,yc,head,coordsys=coordsys):
             matchlist.append(fn)
+            if verbose:
+                print "Matched %s" % fn
 
     return matchlist
 
+#@timer.print_timing # this gets called too many times
 def coords_in_image(xc,yc,header,coordsys='celestial'):
     """
     Determine whether the coordinates are within the boundaries of the image
@@ -34,12 +39,15 @@ def coords_in_image(xc,yc,header,coordsys='celestial'):
     except: # if the header isn't WCS compatible, we don't want it
         return False
 
-    if coordsys=='celestial' and wcs.wcs.lngtyp=='GLON':
-        xc,yc = coords.Position((xc,yc),system=coordsys).galactic()
-    elif coordsys=='galactic' and wcs.wcs.lngtyp=='RA':
-        xc,yc = coords.Position((xc,yc),system=coordsys).j2000()
+    try:
+        if coordsys=='celestial' and wcs.wcs.lngtyp=='GLON':
+            xc,yc = coords.Position((xc,yc),system=coordsys).galactic()
+        elif coordsys=='galactic' and wcs.wcs.lngtyp=='RA':
+            xc,yc = coords.Position((xc,yc),system=coordsys).j2000()
 
-    xp,yp = wcs.wcs_sky2pix(xc,yc,0)
+        xp,yp = wcs.wcs_sky2pix(xc,yc,0)
+    except:
+        return False
 
     if xp > wcs.naxis1 or xp < 0:
         return False
@@ -48,6 +56,7 @@ def coords_in_image(xc,yc,header,coordsys='celestial'):
     else:
         return True
 
+@timer.print_timing
 def find_all_images(xc,yc,dirlist, flatten=False, **kwargs):
     """
     Given a list of directories, search all the directories for overlap with the coordinate
@@ -58,16 +67,17 @@ def find_all_images(xc,yc,dirlist, flatten=False, **kwargs):
     else:
         return imlist
 
+@timer.print_timing
 def get_cutouts(xcoord,ycoord,xwidth,ywidth, coordsys='galactic',
         ignore_imagetypes=('_area','power','angle','weight','residual','smooth','model','mask','noise','label'),
-        flist='find', savedir=None, clobber=True):
+        flist='find', savedir=None, clobber=True, **kwargs):
     """
     Create cutouts from all possible images in the searched directories.
     """
 
     if flist == 'find':
         # Get list
-        flist = find_all_images(xcoord, ycoord, dirs, coordsys=coordsys)
+        flist = find_all_images(xcoord, ycoord, dirs, coordsys=coordsys, **kwargs)
     elif type(flist) not in (tuple,list):
         raise TypeError("flist must be a list (or tuple) of filenames")
 
@@ -94,6 +104,7 @@ def get_cutouts(xcoord,ycoord,xwidth,ywidth, coordsys='galactic',
 
     return cutouts
 
+@timer.print_timing
 def find_directories(rootdir):
     """
     Find directories containing FITS files
