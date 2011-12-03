@@ -77,16 +77,17 @@ def modified_blackbody(nu,temperature,beta=1.75, logscale=1.0, logN=22,
     mh = unitdict[units]['mh']
 
     kappanu = kappa0 * (nu/nu0)**beta
-    tau  = muh2 * mh * kappanu * 10**logN
+    # numpy apparently can't multiply floats and longs
+    tau  = muh2 * mh * kappanu * 10.0**logN
 
     modification = (1.0 - exp(-1.0 * tau))
 
     I = blackbody(nu,temperature,units=units,frequency_units=frequency_units,normalize=normalize)*modification
 
     if normalize:
-        return I/normalize([I]) * 10**logscale
+        return I/normalize([I]) * 10.**logscale
     else:
-        return I * 10**logscale
+        return I * 10.**logscale
 
 def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
         logN=22, muh2=2.8, units='cgs', wavelength_units='Angstroms',
@@ -104,7 +105,7 @@ def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
 
     nu = c/(lam*wavelength_dict[wavelength_units])
     kappanu = kappa0 * (nu/nu0)**beta
-    tau  = muh2 * mh * kappanu * 10**logN
+    tau  = muh2 * mh * kappanu * 10.**logN
 
     modification = (1.0 - exp(-1.0 * tau))
 

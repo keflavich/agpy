@@ -37,7 +37,7 @@ def power_spectrum(*args,**kwargs):
     return PSD2(*args,**kwargs)
 
 def PSD2(image, image2=None, oned=False, 
-        fft_pad=False, return_stddev=False, real=False, imag=False,
+        fft_pad=False, real=False, imag=False,
         binsize=1.0, radbins=1, azbins=1, radial=False, hanning=False, 
         wavnum_scale=False, twopi_scale=False, **kwargs):
     """
@@ -111,7 +111,7 @@ def PSD2(image, image2=None, oned=False,
     # else...
     return psd2
 
-def pspec(psd2, return_index=True, wavenumber=False, azbins=1, binsize=1.0, view=False, **kwargs):
+def pspec(psd2, return_index=True, wavenumber=False, return_stddev=False, azbins=1, binsize=1.0, view=False, **kwargs):
     """
     Create a Power Spectrum (radial profile of a PSD) from a Power Spectral Density image
 

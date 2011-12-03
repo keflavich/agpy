@@ -78,7 +78,8 @@ def find_all_images(xc,yc,dirlist, flatten=False, **kwargs):
 @timer.print_timing
 def get_cutouts(xcoord,ycoord,xwidth,ywidth, coordsys='galactic',
         ignore_imagetypes=('_area','power','angle','weight','residual','smooth','model','mask','noise','label','nhits','covg','std','rms'),
-        flist='find', savedir=None, clobber=True, verbose=False, **kwargs):
+        flist='find', savedir=None, clobber=True, verbose=False, 
+        **kwargs):
     """
     Create cutouts from all possible images in the searched directories.
     """
@@ -149,6 +150,7 @@ standard_dirs = [
         '/Volumes/disk2/data/bally_CO/',
         '/Volumes/disk2/data/bgps/releases/IPAC/',
         '/Volumes/disk2/data/bgps/releases/v2.0/',
+        '/Volumes/disk2/data/bgps/releases/v2.0/August2011/',
         '/Volumes/disk2/data/c2d/',
         '/Volumes/disk2/data/cara/csfiles/',
         '/Volumes/disk2/data/cara/glimpsev3/',

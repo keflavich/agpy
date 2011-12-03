@@ -7,7 +7,9 @@ tempfile.tempdir = '/Volumes/disk4/var/tmp'
 import sys
 #print sys.path
 #sys.path.remove('')
-sys.path.remove(os.path.split(__file__)[0])
+mypath = os.path.split(__file__)[0]
+if mypath in sys.path:
+    sys.path.remove(mypath)
 import montage
 
 
@@ -63,7 +65,10 @@ if __name__ == "__main__":
     olddir = os.getcwd()
     os.chdir('tmp/')
     dir = os.getcwd()
+    print "Beginning montage operations: montage.wrappers.mosaic(%s,'%s/mosaic',header='%s/%s', exact_size=%s, combine=%s)" % (dir,dir,dir,options.header,options.exact,options.combine)
     montage.wrappers.mosaic(dir,'%s/mosaic' % dir,header='%s/%s' % (dir,options.header), exact_size=options.exact, combine=options.combine)
 
     if os.path.exists('tmp/mosaic/mosaic.fits'):
         shutil.move('tmp/mosaic/mosaic.fits',options.outfile)
+    else:
+        print "FAILURE: Did not find tmp/mosaic/mosaic.fits!"

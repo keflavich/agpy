@@ -310,6 +310,8 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
 
     if len(wcs.wcs.cdelt) != 2:
         raise Exception("WCS header is not strictly 2-dimensional.  Look for 3D keywords.")
+    if '' in wcs.wcs.ctype:
+        raise Exception("WCS header has no CTYPE.")
     pos = coords.Position((ap[0],ap[1]),system=coordsys)
     if wcs.wcs.ctype[0][:2] == 'RA':
         ra,dec = pos.j2000()
@@ -317,6 +319,8 @@ def aper_world2pix(ap,wcs,coordsys='galactic',wunit='arcsec'):
     elif wcs.wcs.ctype[0][:4] == 'GLON':
         ra,dec = pos.galactic()
         corrfactor=1
+    else:
+        raise Exception("WCS CTYPE has no match.")
     # workaround for a broken wcs.wcs_sky2pix
     try:
         radif = (wcs.wcs.crval[0]-ra)*dtor
