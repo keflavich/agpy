@@ -35,7 +35,10 @@ def blackbody(nu,temperature, scale=1.0, units='cgs',frequency_units='Hz', norma
     I = 2*h*nu**3 / c**2 * (exp(h*nu/(k*temperature)) - 1)**-1
 
     if normalize:
-        return I/normalize([I]) * scale
+        if len(I) > 1:
+            return I/normalize(I) * scale
+        else:
+            return I * scale
     else:
         return I * scale
 
@@ -58,7 +61,10 @@ def blackbody_wavelength(lam,temperature, scale=1.0, units='cgs',wavelength_unit
     I = 2*h*c**2 / lam**5 * (exp(h*c/(k*temperature*lam)) - 1)**-1
 
     if normalize:
-        return I/normalize([I]) * scale
+        if len(I) > 1:
+            return I/normalize(I) * scale
+        else:
+            return I * scale
     else:
         return I * scale
 
@@ -85,7 +91,10 @@ def modified_blackbody(nu,temperature,beta=1.75, logscale=1.0, logN=22,
     I = blackbody(nu,temperature,units=units,frequency_units=frequency_units,normalize=normalize)*modification
 
     if normalize:
-        return I/normalize([I]) * 10.**logscale
+        if len(I) > 1:
+            return I/normalize(I) * 10.**logscale
+        else:
+            return I * 10.**logscale
     else:
         return I * 10.**logscale
 
@@ -112,7 +121,10 @@ def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
     I = blackbody(nu,temperature,units=units,frequency_units='Hz',normalize=normalize)*modification
 
     if normalize:
-        return I/normalize([I]) * 10**logscale
+        if len(I) > 1:
+            return I/normalize(I) * 10.**logscale
+        else:
+            return I * 10.**logscale
     else:
         return I * 10**logscale
 
