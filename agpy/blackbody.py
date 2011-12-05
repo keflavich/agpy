@@ -98,6 +98,21 @@ def modified_blackbody(nu,temperature,beta=1.75, logscale=1.0, logN=22,
     else:
         return I * 10.**logscale
 
+def greybody(nu, temperature, beta, A=1.0, nu0=3000.0e9):
+    h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
+    mh = unitdict[units]['mh']
+
+    modification = (1. - exp(-(nu/nu0)**beta))
+    I = blackbody(nu,temperature,units=units,frequency_units=frequency_units,normalize=normalize)*modification
+
+    if normalize:
+        if len(I) > 1:
+            return I/normalize(I) * 10.**logscale
+        else:
+            return I * 10.**logscale
+    else:
+        return I * 10.**logscale
+
 def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
         logN=22, muh2=2.8, units='cgs', wavelength_units='Angstroms',
         kappa0=4.0, nu0=5.93648e-2, normalize=max):
