@@ -10,11 +10,13 @@ unitdict = {
         'cgs':{ 'h':6.626068e-27,
             'k':1.3806503e-16,
             'c':2.99792458e10,
-            'mh':1.67262158e-24 * 1.00794},
+            'mh':1.67262158e-24 * 1.00794,
+            'length':'cm'},
         'mks':{ 'h':6.626068e-34,
             'k':1.3806503e-23,
             'c':2.99792458e8,
-            'mh':1.67262158e-27 * 1.00794}
+            'mh':1.67262158e-27 * 1.00794,
+            'length':'m'}
         }
 
 frequency_dict = {
@@ -34,7 +36,7 @@ def blackbody(nu,temperature, scale=1.0, units='cgs',frequency_units='Hz', norma
 
     I = 2*h*nu**3 / c**2 * (exp(h*nu/(k*temperature)) - 1)**-1
 
-    if normalize:
+    if normalize and hasattr(I,'__len__'):
         if len(I) > 1:
             return I/normalize(I) * scale
         else:
@@ -60,7 +62,7 @@ def blackbody_wavelength(lam,temperature, scale=1.0, units='cgs',wavelength_unit
 
     I = 2*h*c**2 / lam**5 * (exp(h*c/(k*temperature*lam)) - 1)**-1
 
-    if normalize:
+    if normalize and hasattr(I,'__len__'):
         if len(I) > 1:
             return I/normalize(I) * scale
         else:
@@ -68,7 +70,7 @@ def blackbody_wavelength(lam,temperature, scale=1.0, units='cgs',wavelength_unit
     else:
         return I * scale
 
-def modified_blackbody(nu,temperature,beta=1.75, logscale=1.0, logN=22,
+def modified_blackbody(nu,temperature,beta=1.75, logscale=0.0, logN=22,
         muh2=2.8, units='cgs',frequency_units='Hz', kappa0=4.0, nu0=505e9,
         normalize=max):
     """
@@ -90,7 +92,7 @@ def modified_blackbody(nu,temperature,beta=1.75, logscale=1.0, logN=22,
 
     I = blackbody(nu,temperature,units=units,frequency_units=frequency_units,normalize=normalize)*modification
 
-    if normalize:
+    if normalize and hasattr(I,'__len__'):
         if len(I) > 1:
             return I/normalize(I) * 10.**logscale
         else:
@@ -98,14 +100,16 @@ def modified_blackbody(nu,temperature,beta=1.75, logscale=1.0, logN=22,
     else:
         return I * 10.**logscale
 
-def greybody(nu, temperature, beta, A=1.0, nu0=3000.0e9):
+def greybody(nu, temperature, beta, A=1.0, logscale=0.0,
+        units='cgs', frequency_units='Hz', 
+        kappa0=4.0, nu0=3000e9, normalize=max):
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
     mh = unitdict[units]['mh']
 
     modification = (1. - exp(-(nu/nu0)**beta))
     I = blackbody(nu,temperature,units=units,frequency_units=frequency_units,normalize=normalize)*modification
 
-    if normalize:
+    if normalize and hasattr(I,'__len__'):
         if len(I) > 1:
             return I/normalize(I) * 10.**logscale
         else:
@@ -113,9 +117,9 @@ def greybody(nu, temperature, beta, A=1.0, nu0=3000.0e9):
     else:
         return I * 10.**logscale
 
-def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
+def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=0.0,
         logN=22, muh2=2.8, units='cgs', wavelength_units='Angstroms',
-        kappa0=4.0, nu0=5.93648e-2, normalize=max):
+        kappa0=4.0, nu0=3000e9, normalize=max):
     """
     Snu =  2hnu^3 c^-2  (e^(hnu/kT) - 1)^-1  (1 - e^(-tau_nu) )
     Kappa0 and Nu0 are set as per http://arxiv.org/abs/1101.4654 which uses OH94 values.
@@ -127,7 +131,7 @@ def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
     mh = unitdict[units]['mh']
 
-    nu = c/(lam*wavelength_dict[wavelength_units])
+    nu = c/(lam*wavelength_dict[wavelength_units]/wavelength_dict[unitdict[units]['length']])
     kappanu = kappa0 * (nu/nu0)**beta
     tau  = muh2 * mh * kappanu * 10.**logN
 
@@ -135,7 +139,7 @@ def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=1.0,
 
     I = blackbody(nu,temperature,units=units,frequency_units='Hz',normalize=normalize)*modification
 
-    if normalize:
+    if normalize and hasattr(I,'__len__'):
         if len(I) > 1:
             return I/normalize(I) * 10.**logscale
         else:
