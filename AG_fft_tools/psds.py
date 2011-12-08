@@ -79,6 +79,12 @@ def PSD2(image, image2=None, oned=False,
 
     if image2 is None:
         image2 = image
+    else:
+        image2 = image2.copy()
+        image2[image2!=image2] = 0
+        if hanning:
+            image2 = hanning2d(*image2.shape) * image2
+
     if real:
         psd2 = numpy.real( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
     elif imag:
