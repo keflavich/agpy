@@ -24,6 +24,7 @@ import idlsave
 import gaussfitter
 import mpfit
 from PCA_tools import *
+from AG_image_tools.drizzle import drizzle
 from guppy import hpy
 heapy = hpy()
 
@@ -1603,27 +1604,8 @@ class Flagger:
                 ts = self.mapped_timestream
         if weights is None: weights = self.weight
         elif not isinstance(weights,numpy.ndarray): weights = numpy.ones(ts.shape)*weights
-        newmap = numpy.zeros(self.map.shape)
-        wm = numpy.zeros(self.map.shape)
-        #xind,yind = self.tstomap % wm.shape[1],self.tstomap / wm.shape[1]
-        #newmap[yind,xind] += ts*weights*(True-self.flags)
-        #wm[yind,xind] += weights*(True-self.flags)
-        #self.map = newmap / wm
-        # drizzling algorithm...
-        #tspoints = numpy.unique(self.tstomap)
-        #counts,indices = numpy.histogram(self.tstomap)
-        ts_to_index = masktozero((ts*weights*(True-self.flags)).ravel())
-        weights_to_index = masktozero((weights*(True-self.flags)).ravel())
-        #tsdata   = numpy.array(
-        #        [ts_to_index[ii==self.tstomap].sum() / weights_to_index[ii==self.tstomap].sum()
-        #            for ii in tspoints])
-        # Apparently this is faster than the above....
-        for jj,ii in enumerate(self.tstomap.flat):
-            newmap[ii / wm.shape[1], ii % wm.shape[1]] += ts_to_index[jj]
-            wm[ii / wm.shape[1], ii % wm.shape[1]] += weights_to_index[jj]
-        #xind,yind = tspoints % wm.shape[1],tspoints / wm.shape[1]
-        #newmap[yind,xind] = tsdata
-        self.map = newmap/wm
+
+        self.map = drizzle(self.tstomap,ts,weights*(True-self.flags),self.map.shape)
         print "Computing map took %f seconds" % (time.time() - t0)
         if showmap: self.showmap(**kwargs)
 
