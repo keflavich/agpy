@@ -6,7 +6,7 @@ from numpy import sqrt, abs, pi, cos, sin, max, ones, array
 
 def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
         kinematic=True,regular=False,rrgal=False,verbose=False,
-        inverse=False,silent=False):
+        inverse=False,silent=False, returnvtan=False):
     """
      NAME:
        KINDIST 
@@ -33,6 +33,8 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
                    star forming regions.
         INVERSE -- If set, pass DISTANCE instead of velocity, and output is
                    velocity
+        returnvtan - if set, return the tanent velocity and ignore the input
+                    velocity
      OUTPUTS:
        DIST -- the kinematic distance in units of R0 (defaults to pc).
     
@@ -78,6 +80,8 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
     vTEMP = (1/sin(l*dtor) - v0/(v0-vs)) * ((v0-vs)*sin(l*dtor)*cos(b*dtor))
     vhelioTEMP = vTEMP - ((bigu*cos(l*dtor)+bigv*sin(l*dtor))*cos(b*dtor)+bigw*sin(b*dtor))
     vtan = vhelioTEMP+solarmotion_mag*cos(theta/206265.)
+    if returnvtan:
+        return vtan
 
     # This is r/r0
     null = (v0/(v0-vs)+v/((v0-vs)*sin(l*dtor)*cos(b*dtor)))**(-1)
