@@ -513,6 +513,24 @@ class Flagger:
           self.ngoodbolos = self.bolo_indices.shape[0]
           self.flags = reshape(ft[:,self.bolo_indices],[self.nscans,self.scanlen,self.ngoodbolos])
 
+    def make_noisemaps(self):
+        """
+        Test a variety of noisemap computations
+        """
+        t0=time.time()
+        self.residualmap = self.mapstr['RESIDMAP'][0]
+        self.weightmap = self.mapstr['WT_MAP'][0]
+        self.nhitsmap = self.mapstr['NHITSMAP'][0]
+        self.residsquaremap = drizzle(self.tstomap,self.noise**2,self.map.shape,self.weight*(True-self.flags))
+        self.weightsquaremap = drizzle(self.tstomap,self.weight**2,self.map.shape,1.0)
+        self.varscalemap = self.weightmap / (self.weightmap**2 - self.weightsquaremap)
+        self.varscalemap[abs(self.weightmap**2 - self.weightsquaremap) < self.weightsquaremap/1e6] = 0
+        self.rmssamplemean = (self.varscalemap * self.residsquaremap)**0.5
+        self.rootresidsquaremap = self.residsquaremap**0.5
+        for arrname in ("residualmap", "weightmap", "nhitsmap", "residsquaremap", "weightsquaremap", "varscalemap", "rmssamplemean", "rootresidsquaremap",):
+            self.__dict__[arrname] = nantomask(self.__dict__[arrname])
+            print "%20s mu=%8.2g std=%8.2g" % (arrname,self.__dict__[arrname].mean(),self.__dict__[arrname].std())
+        print "Took %0.1f seconds to compute noisemaps" % (time.time()-t0)
 
     def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0,axlims=None):
       self.mapfig=figure(fignum); clf(); 
@@ -1605,7 +1623,7 @@ class Flagger:
         if weights is None: weights = self.weight
         elif not isinstance(weights,numpy.ndarray): weights = numpy.ones(ts.shape)*weights
 
-        self.map = drizzle(self.tstomap,ts,weights*(True-self.flags),self.map.shape)
+        self.map = drizzle(self.tstomap,ts,self.map.shape,weights*(True-self.flags))
         print "Computing map took %f seconds" % (time.time() - t0)
         if showmap: self.showmap(**kwargs)
 

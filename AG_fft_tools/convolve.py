@@ -42,6 +42,10 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         neighbors is 1.0)
     """
 
+    # mask catching
+    if hasattr(img,'mask'):
+        img = np.array(img)
+
     # NAN catching
     nanmaskimg = img!=img
     img[nanmaskimg] = 0
