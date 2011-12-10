@@ -1,15 +1,29 @@
 import numpy as np
 
-try:
-    #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
-    import scipy
-    import scipy.fftpack
-    fft2 = scipy.fftpack.fft2
-    ifft2 = scipy.fftpack.ifft2
-    from scipy.special import j1
+try: 
+    import fftw3
+    def fft2(array):
+        outarray = array.copy()
+        fft_forward = fftw3.Plan(array,outarray, direction='forward', flags=['measure'])
+        fft_forward()
+        return outarray
+    def ifft2(array):
+        outarray = array.copy()
+        fft_backward = fftw3.Plan(array,outarray, direction='backward', flags=['measure'])
+        fft_backward()
+        return outarray
 except ImportError:
-    fft2 = np.fft.fft2
-    ifft2 = np.fft.ifft2
+    try:
+        #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
+        import scipy
+        import scipy.fftpack
+        fft2 = scipy.fftpack.fft2
+        ifft2 = scipy.fftpack.ifft2
+        from scipy.special import j1
+
+    except ImportError:
+        fft2 = np.fft.fft2
+        ifft2 = np.fft.ifft2
 
 def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         fft_pad=True, psf_pad=False, ignore_nan=False, quiet=False,
@@ -44,7 +58,9 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
 
     # mask catching
     if hasattr(img,'mask'):
+        mask = img.mask
         img = np.array(img)
+        img[mask] = np.nan
 
     # NAN catching
     nanmaskimg = img!=img

@@ -1,37 +1,47 @@
 from pylab import *
 from agpy import correlate2d,psds,convolve
+import line_profiler
 
-xx,yy = indices([2**7*1.5,2**7*1.5])
-rr1 = sqrt((xx-2**7)**2+(yy-2**7)**2)
-rr2 = sqrt((xx-2**6*1.5)**2+(yy-2**6*1.5)**2)
+LP = line_profiler.LineProfiler()
+
+exponent = 9
+
+xx,yy = indices([2**exponent*1.5,2**exponent*1.5])
+rr1 = sqrt((xx-2**exponent)**2+(yy-2**exponent)**2)
+rr2 = sqrt((xx-2**(exponent-1)*1.5)**2+(yy-2**(exponent-1)*1.5)**2)
 
 ee1 = exp(-rr1**2/2.0**4)
 ee2 = exp(-rr2**2/2.0**4)
 
-acorr1pc = correlate2d(ee1,ee1,pad=True)
-acorr1nc = correlate2d(ee1,ee1,pad=False)
-acorr2pc = correlate2d(ee2,ee2,pad=True)
-acorr2nc = correlate2d(ee2,ee2,pad=False)
+acorr1pc = correlate2d(ee1,ee1,fft_pad=True)
+acorr1nc = correlate2d(ee1,ee1,fft_pad=False)
+acorr2pc = correlate2d(ee2,ee2,fft_pad=True)
+acorr2nc = correlate2d(ee2,ee2,fft_pad=False)
 
-acorr1pn = correlate2d(ee1,ee1,pad=True,crop=False)
-acorr1nn = correlate2d(ee1,ee1,pad=False,crop=False)
-acorr2pn = correlate2d(ee2,ee2,pad=True,crop=False)
-acorr2nn = correlate2d(ee2,ee2,pad=False,crop=False)
+acorr1pn = correlate2d(ee1,ee1,fft_pad=True,crop=False)
+acorr1nn = correlate2d(ee1,ee1,fft_pad=False,crop=False)
+acorr2pn = correlate2d(ee2,ee2,fft_pad=True,crop=False)
+acorr2nn = correlate2d(ee2,ee2,fft_pad=False,crop=False)
 
-aconv1n = convolve(ee1,ee1,pad=False)
-aconv2n = convolve(ee2,ee2,pad=False)
-aconv1p = convolve(ee1,ee1,pad=True)
-aconv2p = convolve(ee2,ee2,pad=True)
+LP.add_function(convolve)
+aconv1n = LP.runcall(convolve,ee1,ee1,fft_pad=False)
+aconv2n = LP.runcall(convolve,ee2,ee2,fft_pad=False)
+print "STATS FOR fft_pad=False"
+LP.print_stats()
+aconv1p = LP.runcall(convolve,ee1,ee1,fft_pad=True)
+aconv2p = LP.runcall(convolve,ee2,ee2,fft_pad=True)
+print "STATS FOR fft_pad=True"
+LP.print_stats()
 
-xcorr1pc = correlate2d(ee1,ee2,pad=True)
-xcorr1nc = correlate2d(ee1,ee2,pad=False)
-xcorr2pc = correlate2d(ee2,ee1,pad=True)
-xcorr2nc = correlate2d(ee2,ee1,pad=False)
+xcorr1pc = correlate2d(ee1,ee2,fft_pad=True)
+xcorr1nc = correlate2d(ee1,ee2,fft_pad=False)
+xcorr2pc = correlate2d(ee2,ee1,fft_pad=True)
+xcorr2nc = correlate2d(ee2,ee1,fft_pad=False)
 
-xcorr1pn = correlate2d(ee1,ee2,pad=True,crop=False)
-xcorr1nn = correlate2d(ee1,ee2,pad=False,crop=False)
-xcorr2pn = correlate2d(ee2,ee1,pad=True,crop=False)
-xcorr2nn = correlate2d(ee2,ee1,pad=False,crop=False)
+xcorr1pn = correlate2d(ee1,ee2,fft_pad=True,crop=False)
+xcorr1nn = correlate2d(ee1,ee2,fft_pad=False,crop=False)
+xcorr2pn = correlate2d(ee2,ee1,fft_pad=True,crop=False)
+xcorr2nn = correlate2d(ee2,ee1,fft_pad=False,crop=False)
 
 figure(1)
 clf()

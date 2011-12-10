@@ -527,6 +527,8 @@ class Flagger:
         self.varscalemap[abs(self.weightmap**2 - self.weightsquaremap) < self.weightsquaremap/1e6] = 0
         self.rmssamplemean = (self.varscalemap * self.residsquaremap)**0.5
         self.rootresidsquaremap = self.residsquaremap**0.5
+        self.smoothresid = smooth(self.residualmap,10/2.35,ignore_nan=True)
+        self.smoothnoisemap = numpy.sqrt( smooth((self.residualmap-self.smoothresid)**2,10/2.35,ignore_nan=True) )
         for arrname in ("residualmap", "weightmap", "nhitsmap", "residsquaremap", "weightsquaremap", "varscalemap", "rmssamplemean", "rootresidsquaremap",):
             self.__dict__[arrname] = nantomask(self.__dict__[arrname])
             print "%20s mu=%8.2g std=%8.2g" % (arrname,self.__dict__[arrname].mean(),self.__dict__[arrname].std())
