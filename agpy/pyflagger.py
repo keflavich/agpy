@@ -513,7 +513,7 @@ class Flagger:
           self.ngoodbolos = self.bolo_indices.shape[0]
           self.flags = reshape(ft[:,self.bolo_indices],[self.nscans,self.scanlen,self.ngoodbolos])
 
-    def make_noisemaps(self):
+    def make_noisemaps(self,save=False):
         """
         Test a variety of noisemap computations
         """
@@ -533,6 +533,13 @@ class Flagger:
             self.__dict__[arrname] = nantomask(self.__dict__[arrname])
             print "%20s mu=%8.2g std=%8.2g" % (arrname,self.__dict__[arrname].mean(),self.__dict__[arrname].std())
         print "Took %0.1f seconds to compute noisemaps" % (time.time()-t0)
+
+    def save_noisemaps(self,clobber=True):
+        prefix = self.filename.replace("_postiter.sav","")
+        F = pyfits.open(prefix+"_map00.fits")
+        for arrname in ( "residsquaremap", "weightsquaremap", "varscalemap", "rmssamplemean", "rootresidsquaremap",):
+            F[0].data = self.__dict__[arrname]
+            F.writeto(prefix+"_"+arrname+".fits",clobber=clobber)
 
     def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0,axlims=None):
       self.mapfig=figure(fignum); clf(); 
