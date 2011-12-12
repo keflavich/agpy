@@ -97,7 +97,7 @@ def airy(inpars, circle=True, rotate=False, vheight=True, shape=None, fwhm=False
     else:
         return rotairy
 
-def psffit(data,err=None,params=[],autoderiv=1,return_all=0,circle=1,
+def psffit(data,err=None,params=[],autoderiv=True,return_all=False,circle=True,
         fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
         limitedmax=[False,False,False,False,False,False,True],
         usemoment=numpy.array([],dtype='bool'),
@@ -106,6 +106,7 @@ def psffit(data,err=None,params=[],autoderiv=1,return_all=0,circle=1,
         returnfitimage=False,
         psffunction=airy, 
         extra_pars=None,
+        return_parinfo=False,
         **kwargs):
     """
     PSF fitter with the ability to fit a variety of different forms of
@@ -200,7 +201,7 @@ def psffit(data,err=None,params=[],autoderiv=1,return_all=0,circle=1,
         for P in extra_pars:
             parinfo.append(P)
 
-    if autoderiv == 0:
+    if autoderiv is False:
         # the analytic derivative, while not terribly difficult, is less
         # efficient and useful.  I only bothered putting it here because I was
         # instructed to do so for a class project - please ask if you would
@@ -214,9 +215,11 @@ def psffit(data,err=None,params=[],autoderiv=1,return_all=0,circle=1,
 
     if returnmp:
         returns = (mp)
-    elif return_all == 0:
+    elif return_parinfo:
+        returns = (parinfo)
+    elif return_all is False:
         returns = mp.params
-    elif return_all == 1:
+    elif return_all:
         returns = mp.params,mp.perror
     if returnfitimage:
         fitimage = psffunction(mp.params,circle,rotate,vheight)(*numpy.indices(data.shape))
