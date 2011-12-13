@@ -18,6 +18,7 @@ try:
 except ImportError:
     fft2 = np.fft.fft2
     ifft2 = np.fft.ifft2
+    has_fftw = False
     # I performed some fft speed tests and found that scipy is slower than numpy
     # http://code.google.com/p/agpy/source/browse/trunk/tests/test_ffts.py
     # try:
@@ -64,13 +65,14 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     nthreads - if fftw3 is installed, can specify the number of threads to
         allow FFTs to use.  Probably only helpful for large arrays
     """
-
+    
     # replace fft2 if has_fftw so that nthreads can be passed
     if has_fftw:
         def fft2(*args, **kwargs):
-            fftw2(*args, **kwargs, nthreads=nthreads)
+            return fftw2(*args, nthreads=nthreads, **kwargs)
+
         def ifft2(*args, **kwargs):
-            ifftw2(*args, **kwargs, nthreads=nthreads)
+            return ifftw2(*args, nthreads=nthreads, **kwargs)
 
 
     # mask catching
