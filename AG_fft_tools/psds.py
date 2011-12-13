@@ -7,16 +7,6 @@ except ImportError:
 from correlate2d import correlate2d
 from AG_image_tools.radialprofile import azimuthalAverageBins,radialAverageBins
 
-try:
-    #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
-    import scipy
-    import scipy.fftpack
-    fft2 = scipy.fftpack.fft2
-    ifft2 = scipy.fftpack.ifft2
-except ImportError:
-    fft2 = numpy.fft.fft2
-    ifft2 = numpy.fft.ifft2
-
 def hanning2d(M, N):
     """
     A 2D hanning window, as per IDL's hanning function.  See numpy.hanning for the 1d description

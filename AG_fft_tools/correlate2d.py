@@ -1,17 +1,6 @@
 import numpy
 import convolve
 
-try:
-    #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
-    import scipy
-    import scipy.fftpack
-    fft2 = scipy.fftpack.fft2
-    ifft2 = scipy.fftpack.ifft2
-except ImportError:
-    fft2 = numpy.fft.fft2
-    ifft2 = numpy.fft.ifft2
-
-
 def correlate2d(im1,im2,**kwargs):
     """
     Cross-correlation of two images of arbitrary size.  Returns an image

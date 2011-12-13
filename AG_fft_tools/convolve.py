@@ -2,13 +2,14 @@ import numpy as np
 
 try: 
     import fftw3
-    def fft2(array,nthreads=1):
+    has_fftw = True
+    def fftw2(array,nthreads=1):
         array = array.astype('complex')
         outarray = array.copy()
         fft_forward = fftw3.Plan(array,outarray, direction='forward', flags=['estimate'],nthreads=nthreads)
         fft_forward()
         return outarray
-    def ifft2(array):
+    def ifftw2(array,nthreads=1):
         array = array.astype('complex')
         outarray = array.copy()
         fft_backward = fftw3.Plan(array,outarray, direction='backward', flags=['estimate'],nthreads=nthreads)
@@ -31,7 +32,8 @@ except ImportError:
 
 def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         fft_pad=True, psf_pad=False, ignore_nan=False, quiet=False,
-        ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False):
+        ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False,
+        nthreads=1):
     """
     Convolve an image with a kernel.  Returns something the size of an image.
     Assumes image & kernel are centered
@@ -58,7 +60,18 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     min_wt - If ignoring nans/zeros, force all grid points with a weight less
         than this value to NAN (the weight of a grid point with *no* ignored
         neighbors is 1.0)
+
+    nthreads - if fftw3 is installed, can specify the number of threads to
+        allow FFTs to use.  Probably only helpful for large arrays
     """
+
+    # replace fft2 if has_fftw so that nthreads can be passed
+    if has_fftw:
+        def fft2(*args, **kwargs):
+            fftw2(*args, **kwargs, nthreads=nthreads)
+        def ifft2(*args, **kwargs):
+            ifftw2(*args, **kwargs, nthreads=nthreads)
+
 
     # mask catching
     if hasattr(img,'mask'):
