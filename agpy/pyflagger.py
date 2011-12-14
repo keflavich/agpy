@@ -443,10 +443,10 @@ class Flagger:
         'mapped_timestream': lambda: self.mapped_timestream,
         'itermedian': lambda: itermedian(self.ac_bolos * self.scalearr),
         'zeromedian': lambda: self.atmo_one,
-        'PCA_acb':     lambda: reshape(efuncs(reshape(self.ac_bolos,self.tsshape)),self.datashape),
-        'PCA_astro':   lambda: reshape(efuncs(reshape(self.astrosignal,self.tsshape)),self.datashape),
-        'PCA_noise':   lambda: reshape(efuncs(reshape(self.noise,self.tsshape)),self.datashape),
-        'PCA_default': lambda: reshape(efuncs(reshape(self.atmo_one - self.atmosphere + self.astrosignal,self.tsshape)),self.datashape),
+        'PCA_acb':     lambda: reshape(efuncs(reshape(self.ac_bolos,self.tsshape)),self.datashape) / f.nbolos**0.5,
+        'PCA_astro':   lambda: reshape(efuncs(reshape(self.astrosignal,self.tsshape)),self.datashape) / f.nbolos**0.5,
+        'PCA_noise':   lambda: reshape(efuncs(reshape(self.noise,self.tsshape)),self.datashape) / f.nbolos**0.5,
+        'PCA_default': lambda: reshape(efuncs(reshape(self.atmo_one - self.atmosphere + self.astrosignal,self.tsshape)),self.datashape) / f.nbolos**0.5,
         }
 
         self.tscache = {}
@@ -543,14 +543,15 @@ class Flagger:
 
     def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0,axlims=None):
       self.mapfig=figure(fignum); clf(); 
+      OK = self.map == self.map
       if vmax is None:
-          vmax = self.map.mean()+7*self.map.std()
+          vmax = self.map[OK].mean()+7*self.map[OK].std()
       elif vmax=='max':
-          vmax = self.map.max()
+          vmax = self.map[OK].max()
       if vmin is None:
-          vmin = self.map.mean()-2*self.map.std()
+          vmin = self.map[OK].mean()-2*self.map[OK].std()
       elif vmin=='min':
-          vmin = self.map.min()
+          vmin = self.map[OK].min()
       self.mapim = pylab.imshow(self.map,
               vmin=vmin,vmax=vmax,
               interpolation='nearest',
@@ -596,7 +597,6 @@ class Flagger:
       self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
       self.mapconnections.append(self.MtoT)
       self.mapconnections.append(self.MtoTkey)
-
 
     def footprint(self,tsx,tsy,scatter=False):
       mappoints = asarray(self.tstomap[self.scannum,tsy,:])
@@ -1002,13 +1002,13 @@ class Flagger:
                 arr = self.flags[self.scannum,0:h,x]
                 arr[arr>0] -= 1
 
-    def plot_column(self,tsx,clear=True,timestream='data', **kwargs):
-        self.bolofig=figure(4)
+    def plot_column(self,tsx,clear=True,timestream='data', color='k', fignum=7, **kwargs):
+        self.bolofig=figure(fignum)
         if clear: self.bolofig.clf()
         if self.powerspec_plotted:
             xlen = self.plane.shape[0]
             pylab.plot(fftfreq(xlen,d=self.sample_interval)[:xlen/2],self.plane[:xlen/2,numpy.round(tsx)],
-                    linewidth=0.5,color='k')
+                    linewidth=0.5,color=color)
             xlabel("Frequency (Hz)")
             ylabel("Power (Jy$^2$)")
             title("Bolo %i" % round(tsx))
@@ -1018,14 +1018,14 @@ class Flagger:
             ylabel("Flux (Jy)")
             if timestream == 'data':
                 pylab.plot(self.plane[:,numpy.round(tsx)],
-                        linewidth=0.5,color='k',**kwargs)
+                        linewidth=0.5,color=color,**kwargs)
             elif timestream in self.tsplot_dict.keys():
-                plane = self.lookup([timestream])[self.scannum,:,:]
+                plane = self.lookup(timestream)[self.scannum,:,:]
                 pylab.plot(plane[:,numpy.round(tsx)],
-                        linewidth=0.5,color='k',**kwargs)
+                        linewidth=0.5,color=color,**kwargs)
 
-    def plot_line(self,tsy,clear=True):
-        self.bolofig=figure(4)
+    def plot_line(self,tsy,clear=True,fignum=7):
+        self.bolofig=figure(fignum)
         if clear: self.bolofig.clf()
         if self.PCAflag:
             pylab.plot(self.efuncarr[numpy.round(tsy),:])
@@ -1294,11 +1294,13 @@ class Flagger:
         if hasattr(datapts,'mask'):
             OK *= (datapts.mask == False)
         n,bins,patches = hist(asarray(datapts[OK]),histtype='step',color='k',linewidth=2)
-        vlines(wtavg,0,max(n),color='k',linestyles=':',label="Weighted: %0.4g" % wtavg)
-        vlines(wtavg,0,max(n),color='k',linestyles=':',label="Std: %0.4g" % Hstd)
+        vlines(wtavg,0,max(n),color='k',linestyles=':',label="Weighted: %0.4g $\\pm$ %0.4g" % (wtavg,Hstd))
+        #vlines(wtavg,0,max(n),color='k',linestyles=':',label="Std: %0.4g" % Hstd)
+        fill_betweenx([0,max(n)],[wtavg-Hstd]*2,[wtavg+Hstd]*2,color='k',alpha=0.1,label="Std: %0.4g" % Hstd)
         vlines(uwtavg,0,max(n),color='b',linestyles='-.',label="Unweighted: %0.4g" % uwtavg)
-        vlines(medavg,0,max(n),color='g',linestyles='--',label="Median: %0.4g" % medavg)
-        vlines(medavg,0,max(n),color='g',linestyles='--',label="MAD: %0.4g" % Hmad)
+        vlines(medavg,0,max(n),color='g',linestyles='--',label="Median: %0.4g $\\pm$ %0.4g" % (medavg,Hmad))
+        fill_betweenx([0,max(n)],[medavg-Hmad]*2,[medavg+Hmad]*2,color='g',alpha=0.1,label="MAD: %0.4g" % Hmad)
+        vlines(self.model[y,x],0,max(n),color='purple',linestyles='--',label="Model: %0.4g" % Hmad)
         Ctemp = matplotlib.collections.CircleCollection([0],facecolors='k',edgecolors='k')
         Ctemp.set_label('Map Value: %0.4g' % (self.map[y,x]))
         self.plotfig.axes[0].add_collection(Ctemp)
@@ -1434,7 +1436,7 @@ class Flagger:
         ylabel('Frequency')
         self.powerspec_plotted = True
 
-    def powerspec_whole(self,bolonum=0,recompute=False,timestream='data',clear=True,fignum=4,logx=False,logy=True):
+    def powerspec_whole(self,bolonum=0,recompute=False,timestream='data',clear=True,fignum=4,logx=False,logy=True,color='k'):
         if self.powerspectra_whole is None or recompute:
             if timestream == 'data':
                 wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
@@ -1458,29 +1460,68 @@ class Flagger:
             plotcmd = plot
         plotcmd(fftfreq(datashape,d=self.sample_interval)[0:datashape/2],
                 self.powerspectra_whole[0:datashape/2,bolonum],
-                linewidth=0.5,color='k')
+                linewidth=0.5,color=color)
         xlabel("Frequency (Hz)")
 
-    def broken_powerfit(self,bolonum=0,plbreak=2,doplot=True,logx=True,replotspec=True,defaultplot=False,**kwargs):
+    def broken_powerfit(self, bolonum=0, plbreak=2, doplot=True, logx=True,
+            replotspec=True, defaultplot=False, p0in=None, p1in=None, p2in=None, **kwargs):
         if replotspec or (self.powerspectra_whole is None):
             self.powerspec_whole(bolonum=bolonum,logx=True,**kwargs)
         datashape = self.powerspectra_whole.shape[0]
         xfreq = fftfreq(datashape,d=self.sample_interval)[1:datashape/2]
         powerspectra_half = self.powerspectra_whole[1:datashape/2,bolonum]
-        p1 = polyfit(log10(xfreq[xfreq<plbreak]),log10(powerspectra_half[xfreq<plbreak]),1)
+        p0 = polyfit(log10(xfreq[(xfreq<0.02)]),log10(powerspectra_half[(xfreq<0.02)]),1)
+        p1 = polyfit(log10(xfreq[(xfreq<plbreak)*(xfreq>0.02)]),log10(powerspectra_half[(xfreq<plbreak)*(xfreq>0.02)]),1)
         p2 = polyfit(log10(xfreq[xfreq>=plbreak]),log10(powerspectra_half[xfreq>=plbreak]),1)
         # renormalize so that the high-frequency matches the low
         p2nought = p2[1]
         p2[1] = log10(10**p1[1]*(plbreak**(p1[0]-p2[0])))
+        def f(x,p):
+            return 10**(p[1])*x**(p[0])
+        if None not in (p1in,p2in,p0in):
+            plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0in),color='r')
+            plot(xfreq[xfreq<plbreak],f(xfreq[xfreq<plbreak],p1in),color='r')
+            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2in),color='r')
+        if doplot: 
+            P = plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0))[0]
+            plot(xfreq[xfreq<plbreak],f(xfreq[xfreq<plbreak],p1),color=P.get_color())
+            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2),color=P.get_color())
+        print "Best powerlaw fit: P = 10^%0.3f freq^%0.3f   { freq < %0.2f" % (p1[1],p1[0],plbreak)
+        print "                       10^%0.3f freq^%0.3f   { freq >= %0.2f" % (p2[1],p2[0],plbreak)
+        print "                       10^%0.3f freq^%0.3f   { freq < %0.2f" % (p0[1],p0[0],0.02)
+        print "Reminder: the high-frequency end is forced to meet the low-freqency.  Scale was originally 10^%0.3f" % (p2nought)
+        noise_scale = (self.powerspectra_whole[1:datashape/2,0]/f(xfreq,p2)*(xfreq>=2.5))[(9>xfreq)*(xfreq>=2.5)].std()
+        print "The Gaussian stddev should be %f and the mean should be 1" % (noise_scale)
+        return p0,p1,p2,noise_scale
+
+    def broken_expfit(self,bolonum=0,plbreak=2.5,doplot=True,logx=False,replotspec=True,defaultplot=False,**kwargs):
+        """
+        Fit two exponentials (one most likely flat) to the power spectrum
+        Ignore frequencies < 0.02 Hz, as these are filtered out by the AC sampler
+        """
+        if replotspec or (self.powerspectra_whole is None):
+            self.powerspec_whole(bolonum=bolonum,logx=logx,**kwargs)
+        datashape = self.powerspectra_whole.shape[0]
+        xfreq = fftfreq(datashape,d=self.sample_interval)[1:datashape/2]
+        powerspectra_half = self.powerspectra_whole[1:datashape/2,bolonum]
+        p1 = polyfit((xfreq[(xfreq<plbreak)*(xfreq>0.02)]),log10(powerspectra_half[(xfreq<plbreak)*(xfreq>0.02)]),1)
+        p2 = polyfit((xfreq[xfreq>=plbreak]),log10(powerspectra_half[xfreq>=plbreak]),1)
+        # renormalize so that the high-frequency matches the low
+        #p2nought = p2[1]
+        #p2[1] = log10(10**p1[1]*(10**(p1[0]*plbreak-p2[0])))
+        def f(x,p):
+            return 10**(p[0]*x + p[1])
         if defaultplot:
             plot(xfreq[xfreq<plbreak],10**4*(xfreq[xfreq<plbreak])**(-2.0),color='r')
             plot(xfreq[xfreq>=plbreak],2.5e3*(xfreq[xfreq>=plbreak])**(0.0),color='r')
         if doplot: 
-            P = plot(xfreq[xfreq<plbreak],10**p1[1]*(xfreq[xfreq<plbreak])**p1[0])[0]
-            plot(xfreq[xfreq>=plbreak],10**p2[1]*(xfreq[xfreq>=plbreak])**p2[0],color=P.get_color())
-        print "Best powerlaw fit: P = 10^%0.3f freq^%0.3f   { freq < %0.2f" % (p1[1],p1[0],plbreak)
-        print "                       10^%0.3f freq^%0.3f   { freq >= %0.2f" % (p2[1],p2[0],plbreak)
-        print "Reminder: the high-frequency end is forced to meet the low-freqency.  Scale was originally 10^%0.3f" % (p2nought)
+            P = plot(xfreq[xfreq<plbreak],f(xfreq[xfreq<plbreak],p1))[0]
+            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2),color=P.get_color())
+        print "Best powerlaw fit: P = 10^(%0.3f nu +%0.3f)   { freq < %0.2f" % (p1[0],p1[1],plbreak)
+        print "                       10^(%0.3f nu +%0.3f)   { freq >= %0.2f" % (p2[0],p2[1],plbreak)
+        noise_scale = (self.powerspectra_whole[1:datashape/2,0]/f(xfreq,p2)*(xfreq>=2.5))[(9>xfreq)*(xfreq>=2.5)].std()
+        print "Therefore the Gaussian stddev should be %f and the mean should be 1" % (noise_scale)
+        return p1,p2,noise_scale
 
     def timestream_whole(self,bolonum=0,clear=True,timestream='data',fignum=4, **kwargs):
         if timestream == 'data':
@@ -1573,7 +1614,7 @@ class Flagger:
         self.histfig = figure(fignum)
         if clear: self.histfig.clear()
 
-        hist(self.scale_coeffs,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
+        hist(self.scale_coeffs.ravel(),histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
         hist(self.weight_by_bolo,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Weights',color='r',linewidth=2)
         
         if dolegend: legend(loc=loc)
@@ -1597,6 +1638,13 @@ class Flagger:
 
     def clearflags(self):
         self.flags[:] = False
+
+        datums=['astrosignal','atmosphere','ac_bolos','atmo_one','noise','scalearr','weight','mapped_astrosignal']
+        for d in datums:
+            if self.__dict__.has_key(d):
+                del self.__dict__[d]
+            setattr(self.__class__, d, lazydata(d,flag=False))
+
         self.unmask_all()
 
     def doPCA(self,clear=True,timestream='data', fignum=7, plotitem='evects', **kwargs):
@@ -1623,6 +1671,9 @@ class Flagger:
         colorbar()
 
     def compute_map(self,ts=None,tsname=None,weights=None,showmap=True,**kwargs):
+        """
+        Create a map from the data and potentially show it
+        """
         t0 = time.time()
         if ts is None: 
             if tsname in self.tsplot_dict.keys():
@@ -1706,10 +1757,10 @@ def _hdr_string_list_to_cardlist(strlist):
       while None in cardlist: cardlist.remove(None)
       return pyfits.CardList(cardlist)
 
-def itermedian(ts,scale=0.8,niter=5):
+def itermedian(ts,scale=0.8,niter=5,axis=2):
       mts = ts.copy()
       for i in xrange(niter):
-          mts = mts - numpy.median(mts,axis=1)[:,newaxis,:]*scale
+          mts = mts - numpy.median(mts,axis=2)[:,:,newaxis]*scale
       return mts
 
 def boloexp(xax,height,amp,fjac=None): 
@@ -1747,6 +1798,8 @@ if __name__ == "__main__":
       parser.add_option("--no_interactive","-n",help="Turn off ipython (interactive) mode",action='store_false',dest="interactive")
       parser.add_option("--close","-c",help="Close after plotting?  Useful if interactive=False",action='store_true',default=False)
       parser.add_option("--noflag",help="Disable flagging?",action='store_true',default=False)
+      parser.add_option("--compute_expfit",help="Do exponential fits to the powerspectra for all bolometers?",action='store_true',default=False)
+      parser.add_option("--compute_powerfit",help="Do power-law fits to the powerspectra for all bolometers?",action='store_true',default=False)
       parser.set_usage("%prog savename.sav [options]")
       parser.set_description(
       """
@@ -1785,6 +1838,41 @@ if __name__ == "__main__":
               for ii in range(f.nbolos):
                   f.timestream_whole(ii,timestream='acbolos_noscale',clear=False,fignum=5)
               savefig('%s_acbolos_noscale.png' % prefix)
+
+          if options.compute_powerfit:
+              ppars0 = zeros([2,f.nbolos])
+              ppars1 = zeros([2,f.nbolos])
+              ppars2 = zeros([2,f.nbolos])
+              gstd = zeros(f.nbolos)
+              for ii in range(f.nbolos):
+                  try:
+                      ppars0[:,ii],ppars1[:,ii], ppars2[:,ii], gstd[ii] = f.broken_powerfit(ii,timestream='ac_bolos')
+                  except ValueError:
+                      print "Bolo %i is probably flagged out." % ii
+              print "Median(gstd) = %f" % median(gstd)
+              print "Median(ppars0[0,:]) = %f" % median(ppars0[0,:])
+              print "Median(ppars0[1,:]) = %f" % median(ppars0[1,:])
+              print "Median(ppars1[0,:]) = %f" % median(ppars1[0,:])
+              print "Median(ppars1[1,:]) = %f" % median(ppars1[1,:])
+              print "Median(ppars2[0,:]) = %f" % median(ppars2[0,:])
+              print "Median(ppars2[1,:]) = %f" % median(ppars2[1,:])
+              print "WARNING! This likely only applies to astrosignal, NOT ac_bolos!"
+
+          if options.compute_expfit:
+              ppars1 = zeros([2,f.nbolos])
+              ppars2 = zeros([2,f.nbolos])
+              gstd = zeros(f.nbolos)
+              for ii in range(f.nbolos):
+                  try:
+                      ppars1[:,ii], ppars2[:,ii], gstd[ii] = f.broken_expfit(ii,timestream='ac_bolos')
+                  except ValueError:
+                      print "Bolo %i is probably flagged out." % ii
+              print "Median(gstd) = %f" % median(gstd)
+              print "Median(ppars1[0,:]) = %f" % median(ppars1[0,:])
+              print "Median(ppars1[1,:]) = %f" % median(ppars1[1,:])
+              print "Median(ppars2[0,:]) = %f" % median(ppars2[0,:])
+              print "Median(ppars2[1,:]) = %f" % median(ppars2[1,:])
+              print "WARNING! This likely only applies to astrosignal, NOT ac_bolos!"
 
           if options.close or not options.interactive:
               f.close()
