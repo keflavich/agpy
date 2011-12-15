@@ -5,6 +5,20 @@ import scipy
 from numpy import pi
 from mpfit import mpfit
 
+def _airy_func(rr, amplitude=1.0, width=1.0):
+    """
+    For a simple radially symmetric airy function, returns the value at a given
+    (normalized) radius
+    """
+    return amplitude * (2.0 * scipy.special.j1(rr/width) / (rr/width))**2
+
+def _gaussian_func(rr, amplitude=1.0, sigma=1.0):
+    """
+    For a simple radially symmetric Gaussian function, returns the value at a given
+    (normalized) radius
+    """
+    return amplitude * numpy.exp(-(rr**2) / (2.0 * sigma**2) )
+
 def airy(inpars, circle=True, rotate=False, vheight=True, shape=None, fwhm=False):
     """Returns a 2d Airy *function* of the form:
         x' = numpy.cos(rota) * x - numpy.sin(rota) * y
