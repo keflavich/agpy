@@ -1,4 +1,5 @@
 import numpy as np
+import types
 
 try: 
     import fftw3
@@ -34,7 +35,7 @@ except ImportError:
 def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         fft_pad=True, psf_pad=False, ignore_nan=False, quiet=False,
         ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False,
-        nthreads=1):
+        normalize_kernel=np.sum, debug=False, nthreads=1):
     """
     Convolve an image with a kernel.  Returns something the size of an image.
     Assumes image & kernel are centered
@@ -61,6 +62,7 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     min_wt - If ignoring nans/zeros, force all grid points with a weight less
         than this value to NAN (the weight of a grid point with *no* ignored
         neighbors is 1.0)
+    normalize_kernel - if specified, function to divide kernel by to normalize it
 
     nthreads - if fftw3 is installed, can specify the number of threads to
         allow FFTs to use.  Probably only helpful for large arrays
@@ -93,7 +95,10 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     elif force_ignore_zeros_off:
         ignore_zeros=False
 
-    # DEBUG print "Status: ignore_zeros=",ignore_zeros," force_ignore_zeros_off=",force_ignore_zeros_off," psf_pad=",psf_pad," fft_pad=",fft_pad
+    if normalize_kernel: # try this.  If a function is not passed, the code will just crash... I think type checking would be better but PEPs say otherwise...
+        kernel /= normalize_kernel(kernel)
+
+    if debug: print "Status: ignore_zeros=",ignore_zeros," force_ignore_zeros_off=",force_ignore_zeros_off," psf_pad=",psf_pad," fft_pad=",fft_pad," normalize_kernel=",normalize_kernel
 
     imgshape = img.shape
     kernshape = kernel.shape
@@ -123,17 +128,19 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     imgfft = fft2(bigimg)
     kernfft = fft2(bigkernel)
     fftmult = imgfft*kernfft
+    if debug: print "Kernel sum: %g  Bigkernel sum: %g" % (kernel.sum(), bigkernel.sum())
     if ignore_nan or ignore_zeros:
         bigimwt = np.ones(newshape,dtype=np.complex128)
         if ignore_zeros: bigimwt[:] = 0.0
         bigimwt[imgquarter1x:imgquarter3x,imgquarter1y:imgquarter3y] = 1.0-nanmaskimg*ignore_nan
         wtfft = fft2(bigimwt)
-        wtfftmult = wtfft*kernfft
+        wtfftmult = wtfft*kernfft/kernel.sum()
         wtfftsm   = ifft2(wtfftmult)
         pixel_weight = np.fft.fftshift(wtfftsm).real
-    # DEBUG print "img shape:",imgshape," kern shape:",kernshape," newshape:",newshape,\
-    # DEBUG         " imgquarter1x,3x,1y,3y:",imgquarter1x,imgquarter3x,imgquarter1y,imgquarter3y, \
-    # DEBUG         " kernelquarter1x,3x,1y,3y:",kernelquarter1x,kernelquarter3x,kernelquarter1y,kernelquarter3y, 
+        if debug: print "Pixel weight: %g  bigimwt: %g wtfft sum: %g kernfft sum: %g wtfftsm sum: %g" % (pixel_weight.sum(), bigimwt.sum(), wtfft.sum(), kernfft.sum(), wtfftsm.sum())
+    if debug: print "img shape:",imgshape," kern shape:",kernshape," newshape:",newshape,\
+                    " imgquarter1x,3x,1y,3y:",imgquarter1x,imgquarter3x,imgquarter1y,imgquarter3y, \
+                    " kernelquarter1x,3x,1y,3y:",kernelquarter1x,kernelquarter3x,kernelquarter1y,kernelquarter3y  
 
     if return_fft: 
         if fftshift: # default on 
@@ -157,7 +164,7 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
 
 def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         silent=True, psf_pad=True, interp_nan=False, nwidths='max',
-        min_nwidths=6, return_kernel=False, **kwargs):
+        min_nwidths=6, return_kernel=False, normalize_kernel=np.sum, **kwargs):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
@@ -185,6 +192,9 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         min_nwidths = 6 - minimum number of gaussian widths to make the kernel
             (the kernel will be larger than the image if the image size is <
             min_widths*kernelsize)
+        normalize_kernel - Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
+            or the kernel peak (i.e. kernel.max() = 1) ?  Must be a *function* that can
+            operate on a numpy array
 
     Note that the kernel is forced to be even sized on each axis to assure no
     offset when smoothing.
@@ -208,19 +218,19 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
 
     if kerneltype == 'gaussian':
         kernel = np.exp(-(rr**2)/(2.*kernelwidth**2))
-        kernel /= kernel.sum() #/ (kernelwidth**2 * (2*np.pi))
+        kernel /= normalize_kernel(kernel) #/ (kernelwidth**2 * (2*np.pi))
 #        if kernelwidth != np.round(kernelwidth):
 #            print "Rounding kernel width to %i pixels" % np.round(kernelwidth)
 #            kernelwidth = np.round(kernelwidth)
 
-    if kerneltype == 'boxcar':
+    elif kerneltype == 'boxcar':
         if not silent: print "Using boxcar kernel size %i" % np.ceil(kernelwidth)
         kernel = np.ones([np.ceil(kernelwidth),np.ceil(kernelwidth)],dtype='float64') / kernelwidth**2
     elif kerneltype == 'tophat':
         kernel = np.zeros(shape,dtype='float64')
         kernel[rr<kernelwidth] = 1.0
         # normalize
-        kernel /= kernel.sum()
+        kernel /= normalize_kernel(kernel)
     elif kerneltype == 'brickwall':
         if not silent: print "Smoothing with a %i pixel airy function" % kernelwidth
         # airy function is first bessel(x) / x  [like the sinc]
@@ -229,7 +239,7 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         # fix NAN @ center
         kernel[rr==0] = 0.5
         # normalize - technically, this should work, but practically, flux is GAINED in some images.  
-        kernel /= kernel.sum()
+        kernel /= normalize_kernel(kernel)
     elif kerneltype == 'trapezoid':
         if trapslope:
             zz = rr.max()-(rr*trapslope)
@@ -239,6 +249,8 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         else:
             if not silent: print "trapezoid function requires a slope"
 
+    if not silent: print "Kernel of type %s normalized with %s has peak %g" % (kerneltype, normalize_kernel, kernel.max())
+
     bad = (image != image)
     temp = image.copy() # to preserve NaN values
     # convolve does this already temp[bad] = 0
@@ -247,7 +259,8 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     if not kwargs.has_key('ignore_zeros'): kwargs['ignore_zeros']=True
     if not kwargs.has_key('ignore_nan'): kwargs['ignore_nan']=interp_nan
 
-    temp = convolve(temp,kernel,psf_pad=psf_pad,**kwargs)
+    # No need to normalize - normalization is dealt with in this code
+    temp = convolve(temp,kernel,psf_pad=psf_pad, normalize_kernel=False, **kwargs)
     if interp_nan is False: temp[bad] = image[bad]
 
     if temp.shape != image.shape:

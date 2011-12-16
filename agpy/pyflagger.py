@@ -25,6 +25,7 @@ import gaussfitter
 import mpfit
 from PCA_tools import *
 from AG_image_tools.drizzle import drizzle
+from agpy import smooth
 from guppy import hpy
 heapy = hpy()
 
@@ -1712,8 +1713,6 @@ def downsample(myarr,factor):
           for i in xrange(factor)]
           for j in xrange(factor)]).mean(axis=0)
       return dsarr 
-
-from agpy import smooth
 
 def gridmap(x,y,v,downsample_factor=2,smoothpix=3.0,dosmooth=True,xsize=None,ysize=None):
       nx = xrange = numpy.ceil(numpy.max(x)-numpy.min(x))+3
