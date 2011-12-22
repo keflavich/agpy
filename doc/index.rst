@@ -25,10 +25,20 @@ This is a subheading
     :undoc-members:
 
 .. automodule:: agpy.PCA_tools
+    :members:
+    :undoc-members:
 .. automodule:: agpy.UCHIIfitter
+    :members:
+    :undoc-members:
 .. automodule:: agpy.__init__
+    :members:
+    :undoc-members:
 .. automodule:: agpy.asinh_norm
+    :members:
+    :undoc-members:
 .. automodule:: agpy.blackbody
+    :members:
+    :undoc-members:
 .. automodule:: agpy.collapse_gaussfit
 .. automodule:: agpy.collapseplot
 .. automodule:: agpy.constants

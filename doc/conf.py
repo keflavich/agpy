@@ -25,8 +25,10 @@ import sys, os
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',  'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.pngmath',  'sphinx.ext.ifconfig', 'sphinx.ext.viewcode']
+extensions = ['sphinx.ext.autodoc',   'sphinx.ext.todo', 'sphinx.ext.coverage',
+    'sphinx.ext.pngmath',  'sphinx.ext.ifconfig', 'sphinx.ext.viewcode']
 # 'sphinx.ext.intersphinx',
+# 'sphinx.ext.doctest',
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -92,12 +94,24 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'agogo'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #html_theme_options = {}
+html_theme_options = dict(
+    pagewidth = '960px',
+    documentwidth = '760px',
+    sidebarwidth = '200px',
+
+    headerbg="#666666",
+    headercolor1="#000000",
+    headercolor2="#000000",
+    headerlinkcolor="#FF9522",
+    linkcolor="#4a8f43",
+)
+
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
