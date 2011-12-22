@@ -1,6 +1,12 @@
-# gaussfitter.py
-# created by Adam Ginsburg (adam.ginsburg@colorado.edu or keflavich@gmail.com) 3/17/08)
-# latest version available at http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py
+"""
+===========
+gaussfitter
+===========
+.. codeauthor:: Adam Ginsburg <adam.g.ginsburg@gmail.com> 3/17/08
+
+Latest version available at <http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py>
+
+"""
 import numpy
 from numpy.ma import median
 from numpy import pi
@@ -14,10 +20,8 @@ to be fixed.  As far as I can tell, leastsq does not have that capability.
 
 The version of mpfit I use can be found here:
     http://code.google.com/p/agpy/source/browse/trunk/mpfit
-"""
 
-"""
-To do:
+.. todo::
     -turn into a class instead of a collection of objects
     -implement WCS-based gaussian fitting with correct coordinates
 """

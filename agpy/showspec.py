@@ -4,7 +4,7 @@ SPLAT and have functionality similar to GAIA, but with an emphasis on producing
 publication-quality plots (which, while splat may do, it does unreproducibly)
 
 
-TO DO:
+.. todo::
     -add spectrum arithmetic tools
         (as is, you can use numpy.interp with sp.vind and sp.spectrum pretty
         easily)
@@ -15,6 +15,8 @@ TO DO:
     -Equivalent Width measurement without gaussian fitting
         -probably should be part of the baseline code
     -write documentation other people can read
+
+12/21/2011 - ALL of the above to do is IS DONE!  It's now hosted at <http://pyspeckit.bitbucket.org>
 
 """
 
