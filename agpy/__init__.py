@@ -1,6 +1,6 @@
 """
 ====
-AGPY
+agpy
 ====
 
 The functions included below are the 'mature' codes from the agpy package.

@@ -3,93 +3,17 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-This is agpy
-============
-This is a subheading
---------------------
 
-.. automodule:: agpy
-    :members:
-    
-
-.. automodule:: agpy.gaussfitter
-    :members:
-    
-
-.. automodule:: AG_image_tools
-    :members:
-    
-
-.. automodule:: AG_fft_tools
-    :members:
-    
-
-.. automodule:: agpy.PCA_tools
-    :members:
-    
-.. automodule:: agpy.UCHIIfitter
-    :members:
-    
-.. automodule:: agpy.__init__
-    :members:
-    
-.. automodule:: agpy.asinh_norm
-    :members:
-    
-.. automodule:: agpy.blackbody
-    :members:
-    
-.. automodule:: agpy.collapse_gaussfit
-.. automodule:: agpy.collapseplot
-.. automodule:: agpy.constants
-.. automodule:: agpy.conversationcount
-.. automodule:: agpy.cubes
-.. automodule:: agpy.cutout
-.. automodule:: agpy.densitymap
-.. automodule:: agpy.downsample
-.. automodule:: agpy.ds9_phot
-.. automodule:: agpy.dust
-.. automodule:: agpy.gaussfitter
-.. automodule:: agpy.get_cutouts
-.. automodule:: agpy.grep
-.. automodule:: agpy.h2fit
-.. automodule:: agpy.hotwind
-.. automodule:: agpy.imf
-.. automodule:: agpy.kdist
-.. automodule:: agpy.lagrange_diff
-.. automodule:: agpy.luminosity
-.. automodule:: agpy.mad
-
-..
-    .. automodule:: agpy.mpfit_custom
-
-.. automodule:: agpy.posang
-.. automodule:: agpy.powerfit
-.. automodule:: agpy.psf_fitter
-.. automodule:: agpy.pstopng
-.. automodule:: agpy.pyflagger
-.. automodule:: agpy.query_splatalogue
-.. automodule:: agpy.ratosexagesimal
-.. automodule:: agpy.readcol
-.. automodule:: agpy.reg_gal2cel
-.. automodule:: agpy.regfile_aperture_extract
-.. automodule:: agpy.region_photometry
-.. automodule:: agpy.region_photometry_files
-.. automodule:: agpy.region_positions
-.. automodule:: agpy.regtoapo
-.. automodule:: agpy.regtocima
-.. automodule:: agpy.showspec
-.. automodule:: agpy.subim_gaussfit
-.. automodule:: agpy.timer
-
-
-Contents:
+AGPY Contents:
+==============
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-   gaussfit
-   uchii
+   agpy
+   image_tools
+   fft_tools
+   plfit
 
 
 Indices and tables

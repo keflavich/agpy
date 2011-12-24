@@ -1,3 +1,7 @@
+"""
+Power Spectra
+"""
+
 import numpy
 try:
     import matplotlib.pyplot as pyplot

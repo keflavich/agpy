@@ -183,7 +183,3 @@ class HIIregion:
     # Cara test data:
     # nu = array([1.4,5,8.33]); flux=array([4.7,9.2,9.1]); err=array([.52,.24,.07])
     # em,nutau,normfac,chi2 = UCHIIfitter.emtau(nu,flux,err)
-
-print locals()
-for key in pylab.__dict__.iterkeys():
-    locals().pop(key)
