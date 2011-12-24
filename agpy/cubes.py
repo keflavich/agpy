@@ -1,3 +1,13 @@
+"""
+=====
+Cubes
+=====
+
+Many tools for cube manipulation.
+
+See `pyspeckit <pyspeckit.bitbucket.org>`_ for a similar code better incorporated into a package
+
+"""
 from numpy import sqrt,repeat,indices,newaxis,pi,cos,sin,array,mean,sum,nansum
 from math import acos,atan2,tan
 import numpy

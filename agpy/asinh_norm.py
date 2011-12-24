@@ -1,3 +1,15 @@
+"""
+------------------------------
+Arcsinh Colorbar Normalization
+------------------------------
+
+For use with, e.g., imshow - 
+imshow(myimage, norm=AsinhNorm())
+
+Some of the ideas used are from `aplpy <aplpy.github.com>`_
+
+
+"""
 from matplotlib.colors import Normalize
 from matplotlib.cm import cbook
 from numpy import ma

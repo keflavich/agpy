@@ -1,3 +1,7 @@
+"""
+Just for fun, histogram up number of conversations & number of messages
+exchanged with each person on your buddy list.  Meant for adium logs.
+"""
 import glob
 import subprocess
 import os

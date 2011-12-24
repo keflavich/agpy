@@ -1,3 +1,15 @@
+"""
+=========
+PCA Tools
+=========
+
+A set of tools for PCA analysis, singular value decomposition,
+total least squares, and other linear fitting methods.
+
+Running this code independently tests the fitting functions with different
+types of random data.
+
+"""
 import numpy
 
   

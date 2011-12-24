@@ -1,5 +1,10 @@
 """
+=========
+Constants
+=========
+
 A simple list of important constants in CGS units
+
 """
 
 #constants
@@ -33,3 +38,4 @@ pi = 3.1415926535897932384626433832795028841971693993751058209749445923078164062
 
 import numpy as np
 FWHM = np.sqrt(8*np.log(2))
+HWHM = FWHM/2.

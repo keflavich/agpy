@@ -1,7 +1,12 @@
 """
-This is an init file.
+====
+AGPY
+====
 
 The functions included below are the 'mature' codes from the agpy package.
+
+.. moduleauthor:: Adam Ginsburg <adam.g.ginsburg@gmail.com>
+
 """
 ##from luminosity import luminosity
 #import readcol as readcol_mod

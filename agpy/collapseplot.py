@@ -1,3 +1,7 @@
+"""
+Integrate a cube over some velocities and plot it with aplpy.  Most of this
+functionality is subsumed by :mod:cubes
+"""
 try:
     import aplpy
 except ImportError:

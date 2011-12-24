@@ -1,5 +1,11 @@
 """
+============================
 Simple black-body calculator
+============================
+
+Includes both wavelength and frequency blackbody functions.  Has flexible
+units.  Also allows for a few varieties of modified blackbody.
+
 """
 try:
     from numpy import exp

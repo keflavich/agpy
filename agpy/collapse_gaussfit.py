@@ -1,3 +1,14 @@
+"""
+-----------------
+Collapse Gaussfit
+-----------------
+
+This was an early attempt to automate gaussian fitting over a data cube using
+(multiple) gaussian decomposition for each spectrum.   It's reasonably
+effective, but the uses are somewhat minimal.  I've tried shifting my
+cube-related work to `pyspeckit <pyspeckit.bitbucket.org>`_.
+
+"""
 try:
     import scipy
     from scipy import optimize,sqrt

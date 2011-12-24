@@ -1,4 +1,8 @@
 """
+======
+Cutout
+======
+
 Generate a cutout image from a .fits file
 """
 import pyfits
