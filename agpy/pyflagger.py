@@ -1,7 +1,8 @@
 #!python
 
 import math
-
+import warnings
+warnings.filterwarnings('ignore','masked')
 import pylab
 from pylab import *
 import matplotlib
@@ -130,13 +131,14 @@ class Flagger:
 
 
 
-    def __init__(self, filename, debug=False, **kwargs):
+    def __init__(self, filename, debug=False, npca=13, **kwargs):
         # Initialize plots first
         pylab.figure(0)
         pylab.figure(1,figsize=[16,12])
         pylab.figure(2,figsize=[16,12])
         self.filename = filename
         self.debug = debug
+        self.npca = npca
         if filename[-4:] == 'fits':
             self._loadfits(filename,**kwargs)
         elif filename[-3:] == 'sav':
@@ -426,7 +428,7 @@ class Flagger:
         'acbolos': lambda:self.ac_bolos*self.scalearr,
         'ac_bolos': lambda:self.ac_bolos*self.scalearr,
         'atmosphere': lambda:self.atmosphere,
-        'skysub_noscale': lambda:self.atmo_one - self.atmosphere, 
+        'skysub_noscale': lambda:self.atmo_one - self.atmosphere,
         'new_astro': lambda: self.atmo_one - self.atmosphere,
         'residual': lambda:self.atmo_one - self.atmosphere - self.noise,
         'skysub': lambda:self.atmo_one - self.atmosphere + self.astrosignal,
@@ -440,12 +442,25 @@ class Flagger:
         'raw': lambda: self.raw,
         'rawscaled': lambda: self.raw * self.scalearr,
         'noise': lambda: self.noise,
+        'newnoise': lambda: self.PCA_astro + self.astrosignal - self.astrosignal_from_model,
         'mapped_astrosignal': lambda: self.mapped_astrosignal,
         'mapped_timestream': lambda: self.mapped_timestream,
+        'astrosignal_from_map': lambda: self.default_map.flat[self.tstomap],
+        'astrosignal_from_model': lambda: self.model.flat[self.tstomap],
         'itermedian': lambda: itermedian(self.ac_bolos * self.scalearr),
         'zeromedian': lambda: self.atmo_one,
+        'atmo_one_itermedian': lambda: itermedian(self.atmo_one),
+        'expsub': lambda: exponent_sub(self.lookup('atmo_one_itermedian')),
+        'atmos_remainder': lambda: self.lookup('expsub'),
+        'expmodel': lambda: self.lookup('atmo_one_itermedian') - self.lookup('expsub'),
+        'first_sky': lambda: self.atmo_one - self.lookup('atmos_remainder'),
+        'astrosignal_premap': lambda: self.lookup('PCA_astro')+self.astrosignal,
+        'PCA_atmo':     lambda: reshape(unpca_subtract(numpy.nan_to_num(reshape(self.lookup('atmos_remainder'),self.tsshape)),self.npca),self.datashape),
+        'PCA_astro':     lambda: reshape(pca_subtract(numpy.nan_to_num(reshape(self.lookup('atmos_remainder'),self.tsshape)),self.npca),self.datashape),
+        'PCA_astrosignal':   lambda: reshape(efuncs(reshape(self.astrosignal,self.tsshape)),self.datashape) / f.nbolos**0.5,
         'PCA_acb':     lambda: reshape(efuncs(reshape(self.ac_bolos,self.tsshape)),self.datashape) / f.nbolos**0.5,
-        'PCA_astro':   lambda: reshape(efuncs(reshape(self.astrosignal,self.tsshape)),self.datashape) / f.nbolos**0.5,
+        'PCA_zeromedian': lambda: reshape(efuncs(reshape(self.atmo_one,self.tsshape)),self.datashape) / f.nbolos**0.5,
+        'PCA_itermedian': lambda: reshape(efuncs(reshape(self.lookup('itermedian'),self.tsshape)),self.datashape) / f.nbolos**0.5,
         'PCA_noise':   lambda: reshape(efuncs(reshape(self.noise,self.tsshape)),self.datashape) / f.nbolos**0.5,
         'PCA_default': lambda: reshape(efuncs(reshape(self.atmo_one - self.atmosphere + self.astrosignal,self.tsshape)),self.datashape) / f.nbolos**0.5,
         }
@@ -1137,6 +1152,7 @@ class Flagger:
         elif event.key == '.':
             if event.xdata == None:
                 return
+            self.find_all_points(clickX,clickY)
             self.tsarrow(clickX,clickY)
         elif event.key == "r":
             self.showmap()
@@ -1534,7 +1550,42 @@ class Flagger:
             raise KeyError("Timestream %s is not valid." % timestream)
         self.plotfig=figure(fignum)
         if clear: self.plotfig.clear()
-        plot(wholedata[:,bolonum],linewidth=0.5, label=str(bolonum), **kwargs)
+        if kwargs.has_key('label'):
+            label = kwargs.pop('label')
+        else:
+            label = str(bolonum)
+        plot(wholedata[:,bolonum],linewidth=0.5, label=label, **kwargs)
+
+
+    def ordered_timestreams(self,  ordertype='astro', clear=True,
+            colors=['black','purple','blue','cyan','green','orange','red','magenta',],
+            astro_order=['ac_bolos','atmo_one','atmo_one_itermedian','atmos_remainder','PCA_astro','astrosignal'],
+            atmo_order=['ac_bolos','atmo_one','expmodel','first_sky','PCA_atmo','PCA_astro','noise'],
+            dolegend=True, dosubplots=True, fignum=4,
+            **kwargs):
+        """
+        Plot the timestreams in the order they're produced during data reduction
+
+        *ordertype* - 'astro' or 'atmo'
+        """
+        if ordertype=='astro':
+            order = astro_order
+        elif ordertype=='atmo':
+            order = atmo_order
+
+        figure(fignum)
+        clf()
+
+        for ii,tsname in enumerate(order):
+            if dosubplots:
+                subplot(len(order),1,ii+1)
+                title(tsname)
+            self.timestream_whole(clear=False, timestream=tsname, label=tsname, color=colors[ii], fignum=fignum, **kwargs)
+
+        if dolegend and not dosubplots:
+            L=legend(loc='best')
+            L.draggable()
+        
     
     def write_ncdf(self):
         if not self.ncfile:
@@ -1780,6 +1831,21 @@ def expsub_line(ts, sampleinterval=0.04, quiet=True, **kwargs):
     mp = mpfit.mpfit(boloexp_resids(xax,ts),[0,median(ts)],quiet=quiet,**kwargs)
     model = boloexp(xax,*mp.params)
     return ts-model
+
+def exponent_sub(arr, **kwargs):
+    nscans,ntime,nbolos = arr.shape
+    subbedarr = np.zeros(arr.shape)
+    for ii in xrange(nbolos):
+        for jj in xrange(nscans):
+            if hasattr(arr,'mask'):
+                # make sure there's enough data to fit
+                if arr.mask[jj,:,ii].sum() < ntime - 2:
+                    subbedarr[jj,:,ii] = expsub_line(arr[jj,:,ii], **kwargs)
+            else:
+                subbedarr[jj,:,ii] = expsub_line(arr[jj,:,ii], **kwargs)
+
+    return subbedarr
+
 
 if __name__ == "__main__":
 

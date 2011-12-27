@@ -80,11 +80,11 @@ def PSD2(image, image2=None, oned=False,
             image2 = hanning2d(*image2.shape) * image2
 
     if real:
-        psd2 = numpy.real( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
+        psd2 = numpy.real( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad,normalize_kernel=False) ) 
     elif imag:
-        psd2 = numpy.imag( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
+        psd2 = numpy.imag( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad,normalize_kernel=False) ) 
     else: # default is absolute value
-        psd2 = numpy.abs( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad) ) 
+        psd2 = numpy.abs( correlate2d(image,image2,return_fft=True,fft_pad=fft_pad,normalize_kernel=False) ) 
     # normalization is approximately (numpy.abs(image).sum()*numpy.abs(image2).sum())
 
     if wavnum_scale:

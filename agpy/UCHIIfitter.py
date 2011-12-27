@@ -8,8 +8,8 @@ Fit a free-free spectrum to an SED.
 .. moduleauthor:: Adam Ginsburg <adam.g.ginsburg@gmail.com>
 
 """
-from pylab import *
 import pylab
+from pylab import *
 try:
     from scipy import optimize
 except ImportError:

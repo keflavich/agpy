@@ -96,7 +96,7 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         ignore_zeros=False
 
     if normalize_kernel: # try this.  If a function is not passed, the code will just crash... I think type checking would be better but PEPs say otherwise...
-        kernel /= normalize_kernel(kernel)
+        kernel = kernel / normalize_kernel(kernel)
 
     if debug: print "Status: ignore_zeros=",ignore_zeros," force_ignore_zeros_off=",force_ignore_zeros_off," psf_pad=",psf_pad," fft_pad=",fft_pad," normalize_kernel=",normalize_kernel
 

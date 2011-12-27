@@ -1,8 +1,8 @@
-import numpy as N
+import numpy.ma as ma
 #from scipy.stats import norm, median
 #from scipy.stats.stats import nanmedian,_nanmedian
  	
-def MAD(a, c=0.6745, axis=0):
+def MAD(a, c=0.6745, axis=None):
     """
     Median Absolute Deviation along given axis of an array:
 
@@ -13,24 +13,23 @@ def MAD(a, c=0.6745, axis=0):
 
     """
 
-    good = (a==a)
-    a = N.asarray(a, N.float64)
+    a = ma.masked_where(a!=a, a)
     if a.ndim == 1:
-        d = N.median(a[good])
-        m = N.median(N.fabs(a[good] - d) / c)
+        d = ma.median(a)
+        m = ma.median(ma.fabs(a - d) / c)
     else:
-        d = N.median(a[good], axis=axis)
+        d = ma.median(a, axis=axis)
         # I don't want the array to change so I have to copy it?
         if axis > 0:
-            aswp = swapaxes(a[good],0,axis)
+            aswp = ma.swapaxes(a,0,axis)
         else:
-            aswp = a[good]
-        m = N.median(N.fabs(aswp - d) / c, axis=0)
+            aswp = a
+        m = ma.median(ma.fabs(aswp - d) / c, axis=0)
 
     return m
 
-def nanmedian(arr):
+def nanmedian(arr, **kwargs):
     """
     Returns median ignoring NAN
     """
-    return N.median(arr[arr==arr])
+    return ma.median( ma.masked_where(arr!=arr, arr), **kwargs )

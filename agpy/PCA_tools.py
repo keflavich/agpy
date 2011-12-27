@@ -160,28 +160,37 @@ def smooth_waterfall(arr,fwhm=4.0,unsharp=False):
         return arrconv
 
 def pca_subtract(arr,ncomps):
-  try:
-      arr[arr.mask] = 0
-      arr.mask[:] = 0
-  except:
-      pass
-  covmat = numpy.dot(arr.T,arr)
-  evals,evects = numpy.linalg.eig(covmat)
-  efuncarr = numpy.dot(arr,evects)
-  efuncarr[:,0:ncomps] = 0
-  return numpy.inner(efuncarr,evects)
+    """
+    Compute the eigenfunctions and values of correlated data, then subtract off
+    the *ncomps* most correlated components, transform back to the original
+    space, and return that.
+    """
+    try:
+        arr[arr.mask] = 0
+        arr.mask[:] = 0
+    except:
+        pass
+    covmat = numpy.dot(arr.T,arr)
+    evals,evects = numpy.linalg.eig(covmat)
+    efuncarr = numpy.dot(arr,evects)
+    efuncarr[:,0:ncomps] = 0
+    return numpy.inner(efuncarr,evects)
 
 def unpca_subtract(arr,ncomps):
-  try:
-      arr[arr.mask] = 0
-      arr.mask[:] = 0
-  except:
-      pass
-  covmat = numpy.dot(arr.T,arr)
-  evals,evects = numpy.linalg.eig(covmat)
-  efuncarr = numpy.dot(arr,evects)
-  efuncarr[:,ncomps:] = 0
-  return numpy.inner(efuncarr,evects)
+    """
+    Like pca_subtract, except `keep` the *ncomps* most correlated components
+    and reject the others
+    """
+    try:
+        arr[arr.mask] = 0
+        arr.mask[:] = 0
+    except:
+        pass
+    covmat = numpy.dot(arr.T,arr)
+    evals,evects = numpy.linalg.eig(covmat)
+    efuncarr = numpy.dot(arr,evects)
+    efuncarr[:,ncomps:] = 0
+    return numpy.inner(efuncarr,evects)
 
 if __name__ == "__main__":
 
