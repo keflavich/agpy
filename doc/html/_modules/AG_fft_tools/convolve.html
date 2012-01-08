@@ -1,0 +1,382 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AG_fft_tools.convolve &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for AG_fft_tools.convolve</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">types</span>
+
+<span class="k">try</span><span class="p">:</span> 
+    <span class="kn">import</span> <span class="nn">fftw3</span>
+    <span class="n">has_fftw</span> <span class="o">=</span> <span class="bp">True</span>
+<div class="viewcode-block" id="fftw2"><a class="viewcode-back" href="../../fft_tools.html#AG_fft_tools.convolve.fftw2">[docs]</a>    <span class="k">def</span> <span class="nf">fftw2</span><span class="p">(</span><span class="n">array</span><span class="p">,</span><span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">array</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;complex&#39;</span><span class="p">)</span>
+        <span class="n">outarray</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">fft_forward</span> <span class="o">=</span> <span class="n">fftw3</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="n">array</span><span class="p">,</span><span class="n">outarray</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s">&#39;forward&#39;</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;estimate&#39;</span><span class="p">],</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="n">fft_forward</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">outarray</span></div>
+<div class="viewcode-block" id="ifftw2"><a class="viewcode-back" href="../../fft_tools.html#AG_fft_tools.convolve.ifftw2">[docs]</a>    <span class="k">def</span> <span class="nf">ifftw2</span><span class="p">(</span><span class="n">array</span><span class="p">,</span><span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">array</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;complex&#39;</span><span class="p">)</span>
+        <span class="n">outarray</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">fft_backward</span> <span class="o">=</span> <span class="n">fftw3</span><span class="o">.</span><span class="n">Plan</span><span class="p">(</span><span class="n">array</span><span class="p">,</span><span class="n">outarray</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s">&#39;backward&#39;</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;estimate&#39;</span><span class="p">],</span><span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">)</span>
+        <span class="n">fft_backward</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">outarray</span></div>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">fft2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span>
+    <span class="n">ifft2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft2</span>
+    <span class="n">has_fftw</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="c"># I performed some fft speed tests and found that scipy is slower than numpy</span>
+    <span class="c"># http://code.google.com/p/agpy/source/browse/trunk/tests/test_ffts.py</span>
+    <span class="c"># try:</span>
+    <span class="c">#     #print &quot;Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install&quot;</span>
+    <span class="c">#     import scipy</span>
+    <span class="c">#     import scipy.fftpack</span>
+    <span class="c">#     fft2 = scipy.fftpack.fft2</span>
+    <span class="c">#     ifft2 = scipy.fftpack.ifft2</span>
+    <span class="c">#     from scipy.special import j1</span>
+
+    <span class="c"># except ImportError:</span>
+
+<div class="viewcode-block" id="convolve"><a class="viewcode-back" href="../../fft_tools.html#AG_fft_tools.convolve.convolve">[docs]</a><span class="k">def</span> <span class="nf">convolve</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">crop</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">return_fft</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">fftshift</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">fft_pad</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">psf_pad</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">ignore_nan</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">ignore_zeros</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">min_wt</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">,</span> <span class="n">force_ignore_zeros_off</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">normalize_kernel</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convolve an image with a kernel.  Returns something the size of an image.</span>
+<span class="sd">    Assumes image &amp; kernel are centered</span>
+
+<span class="sd">    *NOTE* Order matters; the kernel should be second.</span>
+
+<span class="sd">    Options:</span>
+<span class="sd">    fft_pad - Default on.  Zero-pad image to the nearest 2^n</span>
+<span class="sd">    psf_pad - Default off.  Zero-pad image to be at least the sum of the image</span>
+<span class="sd">        sizes (in order to avoid edge-wrapping when smoothing)</span>
+<span class="sd">    crop - Default on.  Return an image of the size of the largest input image.</span>
+<span class="sd">        If the images are asymmetric in opposite directions, will return the</span>
+<span class="sd">        largest image in both directions.</span>
+<span class="sd">    return_fft - Return the FFT instead of the convolution.  Useful for making</span>
+<span class="sd">        PSDs.</span>
+<span class="sd">    fftshift - If return_fft on, will shift &amp; crop image to appropriate</span>
+<span class="sd">        dimensions</span>
+<span class="sd">    ignore_nan - attempts to re-weight assuming NAN values are meant to be</span>
+<span class="sd">        ignored, not treated as zero.  </span>
+<span class="sd">    ignore_zeros - Ignore the zero-pad-created zeros.  Desirable if you have</span>
+<span class="sd">        periodic boundaries on a non-2^n grid</span>
+<span class="sd">    force_ignore_zeros_off - You can choose to turn off the ignore-zeros when padding,</span>
+<span class="sd">        but this is only recommended for purely debug purposes</span>
+<span class="sd">    min_wt - If ignoring nans/zeros, force all grid points with a weight less</span>
+<span class="sd">        than this value to NAN (the weight of a grid point with *no* ignored</span>
+<span class="sd">        neighbors is 1.0)</span>
+<span class="sd">    normalize_kernel - if specified, function to divide kernel by to normalize it</span>
+
+<span class="sd">    nthreads - if fftw3 is installed, can specify the number of threads to</span>
+<span class="sd">        allow FFTs to use.  Probably only helpful for large arrays</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c"># replace fft2 if has_fftw so that nthreads can be passed</span>
+    <span class="k">if</span> <span class="n">has_fftw</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">fft2</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">fftw2</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">ifft2</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">ifftw2</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">nthreads</span><span class="o">=</span><span class="n">nthreads</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+    <span class="c"># mask catching</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="s">&#39;mask&#39;</span><span class="p">):</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">mask</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+        <span class="n">img</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="c"># NAN catching</span>
+    <span class="n">nanmaskimg</span> <span class="o">=</span> <span class="n">img</span><span class="o">!=</span><span class="n">img</span>
+    <span class="n">img</span><span class="p">[</span><span class="n">nanmaskimg</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">nanmaskimg</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">ignore_nan</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">quiet</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Warning: NOT ignoring nan values even though they are present (they are treated as 0)&quot;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">psf_pad</span> <span class="ow">or</span> <span class="n">fft_pad</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">ignore_zeros</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force_ignore_zeros_off</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">quiet</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Warning: when psf_pad or fft_pad are enabled, ignore_zeros is forced on&quot;</span>
+        <span class="n">ignore_zeros</span><span class="o">=</span><span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">force_ignore_zeros_off</span><span class="p">:</span>
+        <span class="n">ignore_zeros</span><span class="o">=</span><span class="bp">False</span>
+
+    <span class="k">if</span> <span class="n">normalize_kernel</span><span class="p">:</span> <span class="c"># try this.  If a function is not passed, the code will just crash... I think type checking would be better but PEPs say otherwise...</span>
+        <span class="n">kernel</span> <span class="o">/=</span> <span class="n">normalize_kernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">debug</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Status: ignore_zeros=&quot;</span><span class="p">,</span><span class="n">ignore_zeros</span><span class="p">,</span><span class="s">&quot; force_ignore_zeros_off=&quot;</span><span class="p">,</span><span class="n">force_ignore_zeros_off</span><span class="p">,</span><span class="s">&quot; psf_pad=&quot;</span><span class="p">,</span><span class="n">psf_pad</span><span class="p">,</span><span class="s">&quot; fft_pad=&quot;</span><span class="p">,</span><span class="n">fft_pad</span><span class="p">,</span><span class="s">&quot; normalize_kernel=&quot;</span><span class="p">,</span><span class="n">normalize_kernel</span>
+
+    <span class="n">imgshape</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">kernshape</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">shape</span>
+    <span class="c"># find ideal size (power of 2) for fft.  Can add shapes because they are tuples</span>
+    <span class="k">if</span> <span class="n">fft_pad</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">psf_pad</span><span class="p">:</span> 
+            <span class="c"># add the X dimensions and Y dimensions and then take the max (bigger)</span>
+            <span class="n">fsize</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">imgshape</span><span class="p">)</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">kernshape</span><span class="p">))))</span> 
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="c"># add the shape lists (max of a list of length 4) (smaller)</span>
+            <span class="n">fsize</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">imgshape</span><span class="o">+</span><span class="n">kernshape</span><span class="p">)))</span>
+        <span class="n">newshape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">fsize</span><span class="p">,</span><span class="n">fsize</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">psf_pad</span><span class="p">:</span>
+            <span class="n">newshape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">imgshape</span><span class="p">)</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">kernshape</span><span class="p">)</span> <span class="c"># just add the biggest dimensions</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">newshape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">imgshape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">kernshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]),</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">imgshape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">kernshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]])])</span> 
+    <span class="n">centerx</span><span class="p">,</span> <span class="n">centery</span> <span class="o">=</span> <span class="n">newshape</span><span class="o">/</span><span class="mf">2.</span>
+    <span class="n">imgquarter1x</span><span class="p">,</span> <span class="n">imgquarter1y</span> <span class="o">=</span> <span class="n">centerx</span> <span class="o">-</span> <span class="n">imgshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span><span class="n">centery</span> <span class="o">-</span> <span class="n">imgshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span>
+    <span class="n">imgquarter3x</span><span class="p">,</span> <span class="n">imgquarter3y</span> <span class="o">=</span> <span class="n">centerx</span> <span class="o">+</span> <span class="n">imgshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span><span class="n">centery</span> <span class="o">+</span> <span class="n">imgshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span>
+    <span class="n">kernelquarter1x</span><span class="p">,</span> <span class="n">kernelquarter1y</span> <span class="o">=</span> <span class="n">centerx</span> <span class="o">-</span> <span class="n">kernshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span><span class="n">centery</span> <span class="o">-</span> <span class="n">kernshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span>
+    <span class="n">kernelquarter3x</span><span class="p">,</span> <span class="n">kernelquarter3y</span> <span class="o">=</span> <span class="n">centerx</span> <span class="o">+</span> <span class="n">kernshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span><span class="n">centery</span> <span class="o">+</span> <span class="n">kernshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span>
+    <span class="n">bigimg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">newshape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="n">bigkernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">newshape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+    <span class="n">bigimg</span><span class="p">[</span><span class="n">imgquarter1x</span><span class="p">:</span><span class="n">imgquarter3x</span><span class="p">,</span><span class="n">imgquarter1y</span><span class="p">:</span><span class="n">imgquarter3y</span><span class="p">]</span> <span class="o">=</span> <span class="n">img</span>
+    <span class="n">bigkernel</span><span class="p">[</span><span class="n">kernelquarter1x</span><span class="p">:</span><span class="n">kernelquarter3x</span><span class="p">,</span><span class="n">kernelquarter1y</span><span class="p">:</span><span class="n">kernelquarter3y</span><span class="p">]</span> <span class="o">=</span> <span class="n">kernel</span> 
+    <span class="n">imgfft</span> <span class="o">=</span> <span class="n">fft2</span><span class="p">(</span><span class="n">bigimg</span><span class="p">)</span>
+    <span class="n">kernfft</span> <span class="o">=</span> <span class="n">fft2</span><span class="p">(</span><span class="n">bigkernel</span><span class="p">)</span>
+    <span class="n">fftmult</span> <span class="o">=</span> <span class="n">imgfft</span><span class="o">*</span><span class="n">kernfft</span>
+    <span class="k">if</span> <span class="n">debug</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Kernel sum: </span><span class="si">%g</span><span class="s">  Bigkernel sum: </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">kernel</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">bigkernel</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">ignore_nan</span> <span class="ow">or</span> <span class="n">ignore_zeros</span><span class="p">:</span>
+        <span class="n">bigimwt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">newshape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ignore_zeros</span><span class="p">:</span> <span class="n">bigimwt</span><span class="p">[:]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">bigimwt</span><span class="p">[</span><span class="n">imgquarter1x</span><span class="p">:</span><span class="n">imgquarter3x</span><span class="p">,</span><span class="n">imgquarter1y</span><span class="p">:</span><span class="n">imgquarter3y</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">-</span><span class="n">nanmaskimg</span><span class="o">*</span><span class="n">ignore_nan</span>
+        <span class="n">wtfft</span> <span class="o">=</span> <span class="n">fft2</span><span class="p">(</span><span class="n">bigimwt</span><span class="p">)</span>
+        <span class="n">wtfftmult</span> <span class="o">=</span> <span class="n">wtfft</span><span class="o">*</span><span class="n">kernfft</span><span class="o">/</span><span class="n">kernel</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">wtfftsm</span>   <span class="o">=</span> <span class="n">ifft2</span><span class="p">(</span><span class="n">wtfftmult</span><span class="p">)</span>
+        <span class="n">pixel_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">wtfftsm</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+        <span class="k">if</span> <span class="n">debug</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Pixel weight: </span><span class="si">%g</span><span class="s">  bigimwt: </span><span class="si">%g</span><span class="s"> wtfft sum: </span><span class="si">%g</span><span class="s"> kernfft sum: </span><span class="si">%g</span><span class="s"> wtfftsm sum: </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pixel_weight</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">bigimwt</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">wtfft</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">kernfft</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="n">wtfftsm</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">debug</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;img shape:&quot;</span><span class="p">,</span><span class="n">imgshape</span><span class="p">,</span><span class="s">&quot; kern shape:&quot;</span><span class="p">,</span><span class="n">kernshape</span><span class="p">,</span><span class="s">&quot; newshape:&quot;</span><span class="p">,</span><span class="n">newshape</span><span class="p">,</span>\
+                    <span class="s">&quot; imgquarter1x,3x,1y,3y:&quot;</span><span class="p">,</span><span class="n">imgquarter1x</span><span class="p">,</span><span class="n">imgquarter3x</span><span class="p">,</span><span class="n">imgquarter1y</span><span class="p">,</span><span class="n">imgquarter3y</span><span class="p">,</span> \
+                    <span class="s">&quot; kernelquarter1x,3x,1y,3y:&quot;</span><span class="p">,</span><span class="n">kernelquarter1x</span><span class="p">,</span><span class="n">kernelquarter3x</span><span class="p">,</span><span class="n">kernelquarter1y</span><span class="p">,</span><span class="n">kernelquarter3y</span>  
+
+    <span class="k">if</span> <span class="n">return_fft</span><span class="p">:</span> 
+        <span class="k">if</span> <span class="n">fftshift</span><span class="p">:</span> <span class="c"># default on </span>
+            <span class="k">if</span> <span class="n">crop</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">fftmult</span><span class="p">)[</span> <span class="n">imgquarter1x</span><span class="p">:</span><span class="n">imgquarter3x</span><span class="p">,</span> <span class="n">imgquarter1y</span><span class="p">:</span><span class="n">imgquarter3y</span> <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">fftmult</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">fftmult</span>
+
+    <span class="k">if</span> <span class="n">ignore_nan</span> <span class="ow">or</span> <span class="n">ignore_zeros</span><span class="p">:</span>
+        <span class="n">rifft</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span> <span class="n">ifft2</span><span class="p">(</span> <span class="n">fftmult</span> <span class="p">)</span> <span class="p">)</span> <span class="o">/</span> <span class="n">pixel_weight</span>
+        <span class="n">rifft</span><span class="p">[</span><span class="n">pixel_weight</span> <span class="o">&lt;</span> <span class="n">min_wt</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rifft</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span> <span class="n">ifft2</span><span class="p">(</span> <span class="n">fftmult</span> <span class="p">)</span> <span class="p">)</span> 
+    <span class="k">if</span> <span class="n">crop</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">rifft</span><span class="p">[</span> <span class="n">imgquarter1x</span><span class="p">:</span><span class="n">imgquarter3x</span><span class="p">,</span> <span class="n">imgquarter1y</span><span class="p">:</span><span class="n">imgquarter3y</span> <span class="p">]</span><span class="o">.</span><span class="n">real</span>
+        <span class="k">return</span> <span class="n">result</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rifft</span><span class="o">.</span><span class="n">real</span>
+</div>
+<div class="viewcode-block" id="smooth"><a class="viewcode-back" href="../../fft_tools.html#AG_fft_tools.convolve.smooth">[docs]</a><span class="k">def</span> <span class="nf">smooth</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">kernelwidth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">kerneltype</span><span class="o">=</span><span class="s">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">trapslope</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">silent</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">psf_pad</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">interp_nan</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">nwidths</span><span class="o">=</span><span class="s">&#39;max&#39;</span><span class="p">,</span>
+        <span class="n">min_nwidths</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">return_kernel</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">normalize_kernel</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a smoothed image using a gaussian, boxcar, or tophat kernel</span>
+
+<span class="sd">    Options: </span>
+<span class="sd">    kernelwidth - width of kernel in pixels  (see definitions below)</span>
+<span class="sd">    kerneltype - gaussian, boxcar, or tophat.  </span>
+<span class="sd">        For a gaussian, uses a gaussian with sigma = kernelwidth (in pixels)</span>
+<span class="sd">            out to [nwidths]-sigma</span>
+<span class="sd">        A boxcar is a kernelwidth x kernelwidth square </span>
+<span class="sd">        A tophat is a flat circle with radius = kernelwidth</span>
+<span class="sd">    Default options:</span>
+<span class="sd">        psf_pad = True - will pad the input image to be the image size + PSF.</span>
+<span class="sd">            Slows things down but removes edge-wrapping effects (see convolve)</span>
+<span class="sd">            This option should be set to false if the edges of your image are</span>
+<span class="sd">            symmetric.</span>
+<span class="sd">        interp_nan = False - Will replace NaN points in an image with the</span>
+<span class="sd">            smoothed average of its neighbors (you can still simply ignore NaN </span>
+<span class="sd">            values by setting ignore_nan=True but leaving interp_nan=False)</span>
+<span class="sd">        silent = True - turn it off to get verbose statements about kernel</span>
+<span class="sd">            types</span>
+<span class="sd">        return_kernel = False - If set to true, will return the kernel as the</span>
+<span class="sd">            second return value</span>
+<span class="sd">        nwidths = &#39;max&#39; - number of kernel widths wide to make the kernel.  Set to</span>
+<span class="sd">            &#39;max&#39; to match the image shape, otherwise use any integer </span>
+<span class="sd">        min_nwidths = 6 - minimum number of gaussian widths to make the kernel</span>
+<span class="sd">            (the kernel will be larger than the image if the image size is &lt;</span>
+<span class="sd">            min_widths*kernelsize)</span>
+<span class="sd">        normalize_kernel - Should the kernel preserve the map sum (i.e. kernel.sum() = 1)</span>
+<span class="sd">            or the kernel peak (i.e. kernel.max() = 1) ?  Must be a *function* that can</span>
+<span class="sd">            operate on a numpy array</span>
+
+<span class="sd">    Note that the kernel is forced to be even sized on each axis to assure no</span>
+<span class="sd">    offset when smoothing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">kernelwidth</span><span class="o">*</span><span class="n">min_nwidths</span> <span class="o">&gt;</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">kernelwidth</span><span class="o">*</span><span class="n">min_nwidths</span> <span class="o">&gt;</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">nwidths</span> <span class="o">=</span> <span class="n">min_nwidths</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">nwidths</span><span class="o">!=</span><span class="s">&#39;max&#39;</span><span class="p">):</span><span class="c"># and kernelwidth*nwidths &lt; image.shape[0] and kernelwidth*nwidths &lt; image.shape[1]):</span>
+        <span class="n">dimsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">kernelwidth</span><span class="o">*</span><span class="n">nwidths</span><span class="p">)</span>
+        <span class="n">dimsize</span> <span class="o">+=</span> <span class="n">dimsize</span> <span class="o">%</span> <span class="mi">2</span>
+        <span class="n">yy</span><span class="p">,</span><span class="n">xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">([</span><span class="n">dimsize</span><span class="p">,</span><span class="n">dimsize</span><span class="p">])</span>
+        <span class="n">szY</span><span class="p">,</span><span class="n">szX</span> <span class="o">=</span> <span class="n">dimsize</span><span class="p">,</span><span class="n">dimsize</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">szY</span><span class="p">,</span><span class="n">szX</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">szY</span> <span class="o">+=</span> <span class="n">szY</span> <span class="o">%</span> <span class="mi">2</span>
+        <span class="n">szX</span> <span class="o">+=</span> <span class="n">szX</span> <span class="o">%</span> <span class="mi">2</span>
+        <span class="n">yy</span><span class="p">,</span><span class="n">xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">([</span><span class="n">szY</span><span class="p">,</span><span class="n">szX</span><span class="p">])</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">szY</span><span class="p">,</span><span class="n">szX</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Kernel size set to &quot;</span><span class="p">,</span><span class="n">shape</span>
+    <span class="n">rr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">xx</span><span class="o">-</span><span class="n">szX</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="p">(</span><span class="n">yy</span><span class="o">-</span><span class="n">szY</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">kerneltype</span> <span class="o">==</span> <span class="s">&#39;gaussian&#39;</span><span class="p">:</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">rr</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">kernelwidth</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">kernel</span> <span class="o">/=</span> <span class="n">normalize_kernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span> <span class="c">#/ (kernelwidth**2 * (2*np.pi))</span>
+<span class="c">#        if kernelwidth != np.round(kernelwidth):</span>
+<span class="c">#            print &quot;Rounding kernel width to %i pixels&quot; % np.round(kernelwidth)</span>
+<span class="c">#            kernelwidth = np.round(kernelwidth)</span>
+
+    <span class="k">elif</span> <span class="n">kerneltype</span> <span class="o">==</span> <span class="s">&#39;boxcar&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Using boxcar kernel size </span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">kernelwidth</span><span class="p">)</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">kernelwidth</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">kernelwidth</span><span class="p">)],</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;float64&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">kernelwidth</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">elif</span> <span class="n">kerneltype</span> <span class="o">==</span> <span class="s">&#39;tophat&#39;</span><span class="p">:</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;float64&#39;</span><span class="p">)</span>
+        <span class="n">kernel</span><span class="p">[</span><span class="n">rr</span><span class="o">&lt;</span><span class="n">kernelwidth</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="c"># normalize</span>
+        <span class="n">kernel</span> <span class="o">/=</span> <span class="n">normalize_kernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">kerneltype</span> <span class="o">==</span> <span class="s">&#39;brickwall&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Smoothing with a </span><span class="si">%i</span><span class="s"> pixel airy function&quot;</span> <span class="o">%</span> <span class="n">kernelwidth</span>
+        <span class="c"># airy function is first bessel(x) / x  [like the sinc]</span>
+        <span class="k">print</span> <span class="s">&quot;WARNING: I think the Airy should be (2*Besel(x)/x)^2?&quot;</span> <span class="c"># http://en.wikipedia.org/wiki/Airy_disk</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">j1</span><span class="p">(</span><span class="n">rr</span><span class="o">/</span><span class="n">kernelwidth</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">rr</span><span class="o">/</span><span class="n">kernelwidth</span><span class="p">)</span> 
+        <span class="c"># fix NAN @ center</span>
+        <span class="n">kernel</span><span class="p">[</span><span class="n">rr</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="c"># normalize - technically, this should work, but practically, flux is GAINED in some images.  </span>
+        <span class="n">kernel</span> <span class="o">/=</span> <span class="n">normalize_kernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">kerneltype</span> <span class="o">==</span> <span class="s">&#39;trapezoid&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">trapslope</span><span class="p">:</span>
+            <span class="n">zz</span> <span class="o">=</span> <span class="n">rr</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="p">(</span><span class="n">rr</span><span class="o">*</span><span class="n">trapslope</span><span class="p">)</span>
+            <span class="n">zz</span><span class="p">[</span><span class="n">zz</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">zz</span><span class="p">[</span><span class="n">rr</span><span class="o">&lt;</span><span class="n">kernelwidth</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="n">zz</span><span class="o">/</span><span class="n">zz</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;trapezoid function requires a slope&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Kernel of type </span><span class="si">%s</span><span class="s"> normalized with </span><span class="si">%s</span><span class="s"> has peak </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">kerneltype</span><span class="p">,</span> <span class="n">normalize_kernel</span><span class="p">,</span> <span class="n">kernel</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+
+    <span class="n">bad</span> <span class="o">=</span> <span class="p">(</span><span class="n">image</span> <span class="o">!=</span> <span class="n">image</span><span class="p">)</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c"># to preserve NaN values</span>
+    <span class="c"># convolve does this already temp[bad] = 0</span>
+
+    <span class="c"># kwargs parsing to avoid duplicate keyword passing</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;ignore_zeros&#39;</span><span class="p">):</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;ignore_zeros&#39;</span><span class="p">]</span><span class="o">=</span><span class="bp">True</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;ignore_nan&#39;</span><span class="p">):</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;ignore_nan&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">interp_nan</span>
+
+    <span class="c"># No need to normalize - normalization is dealt with in this code</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">convolve</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span><span class="n">kernel</span><span class="p">,</span><span class="n">psf_pad</span><span class="o">=</span><span class="n">psf_pad</span><span class="p">,</span> <span class="n">normalize_kernel</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">interp_nan</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span> <span class="n">temp</span><span class="p">[</span><span class="n">bad</span><span class="p">]</span> <span class="o">=</span> <span class="n">image</span><span class="p">[</span><span class="n">bad</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">temp</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Output image changed size; this is completely impossible.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_kernel</span><span class="p">:</span> <span class="k">return</span> <span class="n">temp</span><span class="p">,</span><span class="n">kernel</span>
+    <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">temp</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

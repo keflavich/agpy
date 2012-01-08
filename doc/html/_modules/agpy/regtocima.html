@@ -1,0 +1,190 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>agpy.regtocima &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="agpy" href="../agpy.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for agpy.regtocima</h1><div class="highlight"><pre>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyregion</span>
+    <span class="kn">import</span> <span class="nn">coords</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot;regtocima requires pyregion and coords packages&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">region_positions</span> <span class="kn">import</span> <span class="o">*</span>
+
+<div class="viewcode-block" id="regtocima"><a class="viewcode-back" href="../../agpy.html#agpy.regtocima.regtocima">[docs]</a><span class="k">def</span> <span class="nf">regtocima</span><span class="p">(</span><span class="n">regfile</span><span class="p">,</span><span class="n">outfile</span><span class="p">,</span><span class="n">filtercolor</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Take an input ds9 .reg file and create an output file</span>
+<span class="sd">    formatted to work with Arecibo&#39;s CIMA</span>
+<span class="sd">    [NOT FUNCTIONAL]</span>
+
+<span class="sd">    filtercolor - if specified, will ignore any regions of this color</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">print</span> <span class="s">&quot;Doesn&#39;t work yet&quot;</span>
+    <span class="k">return</span>
+
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">pyregion</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">regfile</span><span class="p">)</span>
+    <span class="n">outf</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="s">&#39;w&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reg</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">attr</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s">&#39;color&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">filtercolor</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">attr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;text&#39;</span><span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="n">text</span> <span class="o">=</span> <span class="n">pos_to_name</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&#39;box&#39;</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">dx</span><span class="p">,</span><span class="n">dy</span><span class="p">,</span><span class="n">posang</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">coord_list</span>
+            <span class="n">radec</span> <span class="o">=</span> <span class="n">position_region</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">hmsdms</span><span class="p">()</span>
+            <span class="c"># ds9&#39;s position angles are 90 degrees offset from APO&#39;s</span>
+            <span class="k">if</span> <span class="n">posang</span><span class="o">+</span><span class="mi">90</span> <span class="o">&gt;</span> <span class="mi">360</span><span class="p">:</span> <span class="n">posang</span> <span class="o">-=</span> <span class="mi">360</span>
+            <span class="k">print</span> <span class="o">&gt;&gt;</span><span class="n">outf</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%32s</span><span class="s"> </span><span class="si">%26s</span><span class="s"> rotangle=</span><span class="si">%f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span> <span class="s">&#39;&quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">r</span><span class="o">.</span><span class="n">attr</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s">&#39;text&#39;</span><span class="p">],</span><span class="n">radec</span><span class="p">,</span><span class="n">posang</span><span class="o">+</span><span class="mi">90</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">radec</span> <span class="o">=</span> <span class="n">position_region</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">hmsdms</span><span class="p">()</span>
+            <span class="k">print</span> <span class="o">&gt;&gt;</span><span class="n">outf</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%32s</span><span class="s"> </span><span class="si">%26s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&#39;&quot;</span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">r</span><span class="o">.</span><span class="n">attr</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s">&#39;text&#39;</span><span class="p">],</span><span class="n">radec</span><span class="p">)</span>
+
+    <span class="n">outf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="regtouptime"><a class="viewcode-back" href="../../agpy.html#agpy.regtocima.regtouptime">[docs]</a><span class="k">def</span> <span class="nf">regtouptime</span><span class="p">(</span><span class="n">regfile</span><span class="p">,</span><span class="n">outfile</span><span class="p">,</span><span class="n">maxza</span><span class="o">=</span><span class="mf">15.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts a region file to a list of target names + how long they are observable @ arecibo</span>
+
+<span class="sd">    maxza = 15.0 degrees for &quot;broken&quot; Arecibo (2010) or 18-19 for normal Arecibo</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># coordinates @ http://www.naic.edu/~astro/guide/node2.html</span>
+    <span class="n">ra_arecibo</span>  <span class="o">=</span> <span class="p">(</span><span class="mi">66</span><span class="o">+</span><span class="mi">45</span><span class="o">/</span><span class="mf">60.</span><span class="o">+</span><span class="mf">11.1</span><span class="o">/</span><span class="mf">3600.</span><span class="p">)</span>
+    <span class="n">dec_arecibo</span> <span class="o">=</span> <span class="p">(</span><span class="mi">18</span><span class="o">+</span><span class="mi">20</span><span class="o">/</span><span class="mf">60.</span><span class="o">+</span><span class="mf">36.6</span><span class="o">/</span><span class="mf">3600.</span><span class="p">)</span>
+
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">pyregion</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">regfile</span><span class="p">)</span>
+    <span class="n">outf</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span><span class="s">&#39;w&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reg</span><span class="p">:</span>
+        <span class="c">#if r.attr[1][&#39;color&#39;] == filtercolor or not r.attr[1].has_key(&#39;text&#39;):</span>
+        <span class="c">#    continue</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">pos_to_name</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+        <span class="n">radec</span> <span class="o">=</span> <span class="n">position_region</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">hmsdms</span><span class="p">()</span>
+        <span class="n">ra</span><span class="p">,</span><span class="n">dec</span> <span class="o">=</span> <span class="n">position_region</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">j2000</span><span class="p">()</span>
+        <span class="n">za_min</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dec</span><span class="o">-</span><span class="n">dec_arecibo</span><span class="p">)</span>
+        <span class="c"># isoscoles triangle with za_min as perpendicular bisector, maxza as long leg lenth</span>
+        <span class="n">tup</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">maxza</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">za_min</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="mf">2.0</span><span class="o">/</span><span class="mf">15.0</span> <span class="o">*</span> <span class="mf">60.0</span> <span class="c"># minutes</span>
+        <span class="k">print</span> <span class="o">&gt;&gt;</span><span class="n">outf</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%12s</span><span class="s"> </span><span class="si">%10.2f</span><span class="s"> </span><span class="si">%10.1f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">text</span><span class="p">,</span><span class="n">za_min</span><span class="p">,</span><span class="n">tup</span><span class="p">)</span>
+
+    <span class="n">outf</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Allows script to be run from the command line:</span>
+<span class="sd">    python regtocima.py blah.reg bleh.txt purple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">regtocima</span><span class="p">(</span><span class="o">*</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+   
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

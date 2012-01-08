@@ -1,0 +1,661 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>agpy.gaussfitter &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="agpy" href="../agpy.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for agpy.gaussfitter</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">===========</span>
+<span class="sd">gaussfitter</span>
+<span class="sd">===========</span>
+<span class="sd">.. codeauthor:: Adam Ginsburg &lt;adam.g.ginsburg@gmail.com&gt; 3/17/08</span>
+
+<span class="sd">Latest version available at &lt;http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">numpy.ma</span> <span class="kn">import</span> <span class="n">median</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">pi</span>
+<span class="c">#from scipy import optimize,stats,pi</span>
+<span class="kn">from</span> <span class="nn">mpfit</span> <span class="kn">import</span> <span class="n">mpfit</span>
+<span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">Note about mpfit/leastsq: </span>
+<span class="sd">I switched everything over to the Markwardt mpfit routine for a few reasons,</span>
+<span class="sd">but foremost being the ability to set limits on parameters, not just force them</span>
+<span class="sd">to be fixed.  As far as I can tell, leastsq does not have that capability.  </span>
+
+<span class="sd">The version of mpfit I use can be found here:</span>
+<span class="sd">    http://code.google.com/p/agpy/source/browse/trunk/mpfit</span>
+
+<span class="sd">.. todo::</span>
+<span class="sd">    -turn into a class instead of a collection of objects</span>
+<span class="sd">    -implement WCS-based gaussian fitting with correct coordinates</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="moments"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.moments">[docs]</a><span class="k">def</span> <span class="nf">moments</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">,</span><span class="n">estimator</span><span class="o">=</span><span class="n">median</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns (height, amplitude, x, y, width_x, width_y, rotation angle)</span>
+<span class="sd">    the gaussian parameters of a 2D distribution by calculating its</span>
+<span class="sd">    moments.  Depending on the input parameters, will only output </span>
+<span class="sd">    a subset of the above.</span>
+<span class="sd">    </span>
+<span class="sd">    If using masked arrays, pass estimator=numpy.ma.median</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">Y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="c"># python convention: reverse x,y numpy.indices</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argmax</span><span class="p">((</span><span class="n">X</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">total</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argmax</span><span class="p">((</span><span class="n">Y</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">data</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="n">total</span><span class="p">)</span>
+    <span class="n">col</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="p">),:]</span>
+    <span class="c"># FIRST moment, not second!</span>
+    <span class="n">width_x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">col</span><span class="o">.</span><span class="n">size</span><span class="p">)</span><span class="o">-</span><span class="n">y</span><span class="p">)</span><span class="o">*</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">/</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)]</span>
+    <span class="n">width_y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">size</span><span class="p">)</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">/</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">row</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="p">(</span> <span class="n">width_x</span> <span class="o">+</span> <span class="n">width_y</span> <span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+    <span class="n">amplitude</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">height</span>
+    <span class="n">mylist</span> <span class="o">=</span> <span class="p">[</span><span class="n">amplitude</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">width_y</span><span class="p">)</span> <span class="ow">or</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">width_x</span><span class="p">)</span> <span class="ow">or</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">height</span><span class="p">)</span> <span class="ow">or</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">amplitude</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;something is nan&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">vheight</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">mylist</span> <span class="o">=</span> <span class="p">[</span><span class="n">height</span><span class="p">]</span> <span class="o">+</span> <span class="n">mylist</span>
+    <span class="k">if</span> <span class="n">circle</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">mylist</span> <span class="o">=</span> <span class="n">mylist</span> <span class="o">+</span> <span class="p">[</span><span class="n">width_x</span><span class="p">,</span><span class="n">width_y</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">rotate</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">mylist</span> <span class="o">=</span> <span class="n">mylist</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.</span><span class="p">]</span> <span class="c">#rotation &quot;moment&quot; is just zero...</span>
+            <span class="c"># also, circles don&#39;t rotate.</span>
+    <span class="k">else</span><span class="p">:</span>  
+        <span class="n">mylist</span> <span class="o">=</span> <span class="n">mylist</span> <span class="o">+</span> <span class="p">[</span><span class="n">width</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">mylist</span>
+</div>
+<div class="viewcode-block" id="twodgaussian"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.twodgaussian">[docs]</a><span class="k">def</span> <span class="nf">twodgaussian</span><span class="p">(</span><span class="n">inpars</span><span class="p">,</span> <span class="n">circle</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">rotate</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">vheight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a 2d gaussian function of the form:</span>
+<span class="sd">        x&#39; = numpy.cos(rota) * x - numpy.sin(rota) * y</span>
+<span class="sd">        y&#39; = numpy.sin(rota) * x + numpy.cos(rota) * y</span>
+<span class="sd">        (rota should be in degrees)</span>
+<span class="sd">        g = b + a * numpy.exp ( - ( ((x-center_x)/width_x)**2 +</span>
+<span class="sd">        ((y-center_y)/width_y)**2 ) / 2 )</span>
+
+<span class="sd">        inpars = [b,a,center_x,center_y,width_x,width_y,rota]</span>
+<span class="sd">                 (b is background height, a is peak amplitude)</span>
+
+<span class="sd">        where x and y are the input parameters of the returned function,</span>
+<span class="sd">        and all other parameters are specified by this function</span>
+
+<span class="sd">        However, the above values are passed by list.  The list should be:</span>
+<span class="sd">        inpars = (height,amplitude,center_x,center_y,width_x,width_y,rota)</span>
+
+<span class="sd">        You can choose to ignore / neglect some of the above input parameters </span>
+<span class="sd">            unumpy.sing the following options:</span>
+<span class="sd">            circle=0 - default is an elliptical gaussian (different x, y</span>
+<span class="sd">                widths), but can reduce the input by one parameter if it&#39;s a</span>
+<span class="sd">                circular gaussian</span>
+<span class="sd">            rotate=1 - default allows rotation of the gaussian ellipse.  Can</span>
+<span class="sd">                remove last parameter by setting rotate=0</span>
+<span class="sd">            vheight=1 - default allows a variable height-above-zero, i.e. an</span>
+<span class="sd">                additive constant for the Gaussian function.  Can remove first</span>
+<span class="sd">                parameter by setting this to 0</span>
+<span class="sd">            shape=None - if shape is set (to a 2-parameter list) then returns</span>
+<span class="sd">                an image with the gaussian defined by inpars</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="n">inpars_old</span> <span class="o">=</span> <span class="n">inpars</span>
+    <span class="n">inpars</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">inpars</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">vheight</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">height</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">amplitude</span><span class="p">,</span> <span class="n">center_y</span><span class="p">,</span> <span class="n">center_x</span> <span class="o">=</span> <span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">amplitude</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">amplitude</span><span class="p">)</span>
+    <span class="n">center_x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">center_x</span><span class="p">)</span>
+    <span class="n">center_y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">center_y</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">circle</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">width_x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+        <span class="n">width_y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+        <span class="n">rotate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">width_x</span><span class="p">,</span> <span class="n">width_y</span> <span class="o">=</span> <span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">width_x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">width_x</span><span class="p">)</span>
+        <span class="n">width_y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">width_y</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rotate</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">rota</span> <span class="o">=</span> <span class="n">inpars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">rota</span> <span class="o">=</span> <span class="n">pi</span><span class="o">/</span><span class="mf">180.</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span>
+        <span class="n">rcen_x</span> <span class="o">=</span> <span class="n">center_x</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span> <span class="o">-</span> <span class="n">center_y</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span>
+        <span class="n">rcen_y</span> <span class="o">=</span> <span class="n">center_x</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span> <span class="o">+</span> <span class="n">center_y</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rcen_x</span> <span class="o">=</span> <span class="n">center_x</span>
+        <span class="n">rcen_y</span> <span class="o">=</span> <span class="n">center_y</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inpars</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;There are still input parameters:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">inpars</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="s">&quot; and you&#39;ve input: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">inpars_old</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="s">&quot; circle=</span><span class="si">%d</span><span class="s">, rotate=</span><span class="si">%d</span><span class="s">, vheight=</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">)</span> <span class="p">)</span>
+            
+    <span class="k">def</span> <span class="nf">rotgauss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">rotate</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">xp</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span> <span class="o">-</span> <span class="n">y</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span>
+            <span class="n">yp</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span> <span class="o">+</span> <span class="n">y</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">rota</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">xp</span> <span class="o">=</span> <span class="n">x</span>
+            <span class="n">yp</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">height</span><span class="o">+</span><span class="n">amplitude</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
+            <span class="o">-</span><span class="p">(((</span><span class="n">rcen_x</span><span class="o">-</span><span class="n">xp</span><span class="p">)</span><span class="o">/</span><span class="n">width_x</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span>
+            <span class="p">((</span><span class="n">rcen_y</span><span class="o">-</span><span class="n">yp</span><span class="p">)</span><span class="o">/</span><span class="n">width_y</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">g</span>
+    <span class="k">if</span> <span class="n">shape</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rotgauss</span><span class="p">(</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">shape</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rotgauss</span>
+</div>
+<div class="viewcode-block" id="gaussfit"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.gaussfit">[docs]</a><span class="k">def</span> <span class="nf">gaussfit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">params</span><span class="o">=</span><span class="p">(),</span><span class="n">autoderiv</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">return_all</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">circle</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">fixed</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span><span class="mi">7</span><span class="p">),</span><span class="n">limitedmin</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">,</span><span class="bp">True</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
+        <span class="n">limitedmax</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
+        <span class="n">usemoment</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;bool&#39;</span><span class="p">),</span>
+        <span class="n">minpars</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">7</span><span class="p">),</span><span class="n">maxpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">360</span><span class="p">],</span>
+        <span class="n">rotate</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">vheight</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">quiet</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">returnmp</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">returnfitimage</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gaussian fitter with the ability to fit a variety of different forms of</span>
+<span class="sd">    2-dimensional gaussian.</span>
+<span class="sd">    </span>
+<span class="sd">    Input Parameters:</span>
+<span class="sd">        data - 2-dimensional data array</span>
+<span class="sd">        err=None - error array with same size as data array</span>
+<span class="sd">        params=[] - initial input parameters for Gaussian function.</span>
+<span class="sd">            (height, amplitude, x, y, width_x, width_y, rota)</span>
+<span class="sd">            if not input, these will be determined from the moments of the system, </span>
+<span class="sd">            assuming no rotation</span>
+<span class="sd">        autoderiv=1 - use the autoderiv provided in the lmder.f function (the</span>
+<span class="sd">            alternative is to us an analytic derivative with lmdif.f: this method</span>
+<span class="sd">            is less robust)</span>
+<span class="sd">        return_all=0 - Default is to return only the Gaussian parameters.  </span>
+<span class="sd">                   1 - fit params, fit error</span>
+<span class="sd">        returnfitimage - returns (best fit params,best fit image)</span>
+<span class="sd">        returnmp - returns the full mpfit struct</span>
+<span class="sd">        circle=0 - default is an elliptical gaussian (different x, y widths),</span>
+<span class="sd">            but can reduce the input by one parameter if it&#39;s a circular gaussian</span>
+<span class="sd">        rotate=1 - default allows rotation of the gaussian ellipse.  Can remove</span>
+<span class="sd">            last parameter by setting rotate=0.  numpy.expects angle in DEGREES</span>
+<span class="sd">        vheight=1 - default allows a variable height-above-zero, i.e. an</span>
+<span class="sd">            additive constant for the Gaussian function.  Can remove first</span>
+<span class="sd">            parameter by setting this to 0</span>
+<span class="sd">        usemoment - can choose which parameters to use a moment estimation for.</span>
+<span class="sd">            Other parameters will be taken from params.  Needs to be a boolean</span>
+<span class="sd">            array.</span>
+
+<span class="sd">    Output:</span>
+<span class="sd">        Default output is a set of Gaussian parameters with the same shape as</span>
+<span class="sd">            the input parameters</span>
+
+<span class="sd">        Can also output the covariance matrix, &#39;infodict&#39; that contains a lot</span>
+<span class="sd">            more detail about the fit (see scipy.optimize.leastsq), and a message</span>
+<span class="sd">            from leastsq telling what the exit status of the fitting routine was</span>
+
+<span class="sd">        Warning: Does NOT necessarily output a rotation angle between 0 and 360 degrees.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">usemoment</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">usemoment</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;bool&#39;</span><span class="p">)</span>
+    <span class="n">params</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;float&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">usemoment</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">usemoment</span><span class="p">):</span>
+        <span class="n">moment</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">moments</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;float&#39;</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="n">usemoment</span><span class="p">]</span> <span class="o">=</span> <span class="n">moment</span><span class="p">[</span><span class="n">usemoment</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">params</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">(</span><span class="n">moments</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">vheight</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="n">vheight</span><span class="o">=</span><span class="mi">1</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span><span class="n">params</span><span class="p">])</span>
+        <span class="n">fixed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+
+    <span class="c"># mpfit will fail if it is given a start parameter outside the allowed range:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)):</span> 
+        <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">maxpars</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span> <span class="n">limitedmax</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">maxpars</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">minpars</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span> <span class="n">limitedmin</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span> <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">minpars</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">err</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">errorfunction</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ravel</span><span class="p">((</span><span class="n">twodgaussian</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">)</span>\
+                <span class="p">(</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span> <span class="o">-</span> <span class="n">data</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">errorfunction</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ravel</span><span class="p">((</span><span class="n">twodgaussian</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">)</span>\
+                <span class="p">(</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span> <span class="o">-</span> <span class="n">data</span><span class="p">)</span><span class="o">/</span><span class="n">err</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">mpfitfun</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">err</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">err</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">data</span><span class="o">-</span><span class="n">twodgaussian</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">)</span>\
+                    <span class="p">(</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)))]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ravel</span><span class="p">((</span><span class="n">data</span><span class="o">-</span><span class="n">twodgaussian</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">)</span>\
+                    <span class="p">(</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)))</span><span class="o">/</span><span class="n">err</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">f</span>
+
+                    
+    <span class="n">parinfo</span> <span class="o">=</span> <span class="p">[</span> 
+                <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;AMPLITUDE&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;XSHIFT&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">3</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">3</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;YSHIFT&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">4</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">4</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;XWIDTH&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span> <span class="p">]</span>
+    <span class="k">if</span> <span class="n">vheight</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">parinfo</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;HEIGHT&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">circle</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">parinfo</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">5</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">5</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;YWIDTH&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">rotate</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">parinfo</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">6</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">6</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">6</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;ROTATION&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span>
+
+    <span class="k">if</span> <span class="n">autoderiv</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c"># the analytic derivative, while not terribly difficult, is less</span>
+        <span class="c"># efficient and useful.  I only bothered putting it here because I was</span>
+        <span class="c"># instructed to do so for a class project - please ask if you would</span>
+        <span class="c"># like this feature implemented</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;I&#39;m sorry, I haven&#39;t implemented this feature yet.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+<span class="c">#        p, cov, infodict, errmsg, success = optimize.leastsq(errorfunction,\</span>
+<span class="c">#                params, full_output=1)</span>
+        <span class="n">mp</span> <span class="o">=</span> <span class="n">mpfit</span><span class="p">(</span><span class="n">mpfitfun</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">err</span><span class="p">),</span><span class="n">parinfo</span><span class="o">=</span><span class="n">parinfo</span><span class="p">,</span><span class="n">quiet</span><span class="o">=</span><span class="n">quiet</span><span class="p">)</span>
+
+
+    <span class="k">if</span> <span class="n">returnmp</span><span class="p">:</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">(</span><span class="n">mp</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">return_all</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">params</span>
+    <span class="k">elif</span> <span class="n">return_all</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">params</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">perror</span>
+    <span class="k">if</span> <span class="n">returnfitimage</span><span class="p">:</span>
+        <span class="n">fitimage</span> <span class="o">=</span> <span class="n">twodgaussian</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">params</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">)(</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">(</span><span class="n">returns</span><span class="p">,</span><span class="n">fitimage</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">returns</span>
+</div>
+<div class="viewcode-block" id="onedmoments"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.onedmoments">[docs]</a><span class="k">def</span> <span class="nf">onedmoments</span><span class="p">(</span><span class="n">Xax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">vheight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">estimator</span><span class="o">=</span><span class="n">median</span><span class="p">,</span><span class="n">negamp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">veryverbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns (height, amplitude, x, width_x)</span>
+<span class="sd">    the gaussian parameters of a 1D distribution by calculating its</span>
+<span class="sd">    moments.  Depending on the input parameters, will only output </span>
+<span class="sd">    a subset of the above.</span>
+<span class="sd">    </span>
+<span class="sd">    If using masked arrays, pass estimator=numpy.ma.median</span>
+<span class="sd">    &#39;estimator&#39; is used to measure the background level (height)</span>
+
+<span class="sd">    negamp can be used to force the peak negative (True), positive (False),</span>
+<span class="sd">    or it will be &quot;autodetected&quot; (negamp=None)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">Xax</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">Xax</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="c"># assume a regular grid</span>
+    <span class="n">integral</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="o">*</span><span class="n">dx</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    
+    <span class="c"># try to figure out whether pos or neg based on the minimum width of the pos/neg peaks</span>
+    <span class="n">Lpeakintegral</span> <span class="o">=</span> <span class="n">integral</span> <span class="o">-</span> <span class="n">height</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">Xax</span><span class="p">)</span><span class="o">*</span><span class="n">dx</span> <span class="o">-</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">data</span><span class="o">&gt;</span><span class="n">height</span><span class="p">]</span><span class="o">*</span><span class="n">dx</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">Lamplitude</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">-</span><span class="n">height</span>
+    <span class="n">Lwidth_x</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Lpeakintegral</span> <span class="o">/</span> <span class="n">Lamplitude</span><span class="p">))</span>
+    <span class="n">Hpeakintegral</span> <span class="o">=</span> <span class="n">integral</span> <span class="o">-</span> <span class="n">height</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">Xax</span><span class="p">)</span><span class="o">*</span><span class="n">dx</span> <span class="o">-</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">data</span><span class="o">&lt;</span><span class="n">height</span><span class="p">]</span><span class="o">*</span><span class="n">dx</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">Hamplitude</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">height</span>
+    <span class="n">Hwidth_x</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Hpeakintegral</span> <span class="o">/</span> <span class="n">Hamplitude</span><span class="p">))</span>
+    <span class="n">Lstddev</span> <span class="o">=</span> <span class="n">Xax</span><span class="p">[</span><span class="n">data</span><span class="o">&lt;</span><span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">()]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+    <span class="n">Hstddev</span> <span class="o">=</span> <span class="n">Xax</span><span class="p">[</span><span class="n">data</span><span class="o">&gt;</span><span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">()]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+    <span class="c">#print &quot;Lstddev: %10.3g  Hstddev: %10.3g&quot; % (Lstddev,Hstddev)</span>
+    <span class="c">#print &quot;Lwidth_x: %10.3g  Hwidth_x: %10.3g&quot; % (Lwidth_x,Hwidth_x)</span>
+
+    <span class="k">if</span> <span class="n">negamp</span><span class="p">:</span> <span class="c"># can force the guess to be negative</span>
+        <span class="n">xcen</span><span class="p">,</span><span class="n">amplitude</span><span class="p">,</span><span class="n">width_x</span> <span class="o">=</span> <span class="n">Xax</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">data</span><span class="p">)],</span><span class="n">Lamplitude</span><span class="p">,</span><span class="n">Lwidth_x</span>
+    <span class="k">elif</span> <span class="n">negamp</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">Hstddev</span> <span class="o">&lt;</span> <span class="n">Lstddev</span><span class="p">:</span> 
+            <span class="n">xcen</span><span class="p">,</span><span class="n">amplitude</span><span class="p">,</span><span class="n">width_x</span><span class="p">,</span> <span class="o">=</span> <span class="n">Xax</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">data</span><span class="p">)],</span><span class="n">Hamplitude</span><span class="p">,</span><span class="n">Hwidth_x</span>
+        <span class="k">else</span><span class="p">:</span>                                                                   
+            <span class="n">xcen</span><span class="p">,</span><span class="n">amplitude</span><span class="p">,</span><span class="n">width_x</span><span class="p">,</span> <span class="o">=</span> <span class="n">Xax</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">data</span><span class="p">)],</span><span class="n">Lamplitude</span><span class="p">,</span><span class="n">Lwidth_x</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c"># if negamp==False, make positive</span>
+        <span class="n">xcen</span><span class="p">,</span><span class="n">amplitude</span><span class="p">,</span><span class="n">width_x</span> <span class="o">=</span> <span class="n">Xax</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">data</span><span class="p">)],</span><span class="n">Hamplitude</span><span class="p">,</span><span class="n">Hwidth_x</span>
+
+    <span class="k">if</span> <span class="n">veryverbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;negamp: </span><span class="si">%s</span><span class="s">  amp,width,cen Lower: </span><span class="si">%g</span><span class="s">, </span><span class="si">%g</span><span class="s">   Upper: </span><span class="si">%g</span><span class="s">, </span><span class="si">%g</span><span class="s">  Center: </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span>\
+                <span class="p">(</span><span class="n">negamp</span><span class="p">,</span><span class="n">Lamplitude</span><span class="p">,</span><span class="n">Lwidth_x</span><span class="p">,</span><span class="n">Hamplitude</span><span class="p">,</span><span class="n">Hwidth_x</span><span class="p">,</span><span class="n">xcen</span><span class="p">)</span>
+    <span class="n">mylist</span> <span class="o">=</span> <span class="p">[</span><span class="n">amplitude</span><span class="p">,</span><span class="n">xcen</span><span class="p">,</span><span class="n">width_x</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">width_x</span><span class="p">)</span> <span class="ow">or</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">height</span><span class="p">)</span> <span class="ow">or</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">amplitude</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;something is nan&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">vheight</span><span class="p">:</span>
+        <span class="n">mylist</span> <span class="o">=</span> <span class="p">[</span><span class="n">height</span><span class="p">]</span> <span class="o">+</span> <span class="n">mylist</span>
+    <span class="k">return</span> <span class="n">mylist</span>
+</div>
+<div class="viewcode-block" id="onedgaussian"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.onedgaussian">[docs]</a><span class="k">def</span> <span class="nf">onedgaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">H</span><span class="p">,</span><span class="n">A</span><span class="p">,</span><span class="n">dx</span><span class="p">,</span><span class="n">w</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a 1-dimensional gaussian of form</span>
+<span class="sd">    H+A*numpy.exp(-(x-dx)**2/(2*w**2))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">H</span><span class="o">+</span><span class="n">A</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">dx</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">w</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="onedgaussfit"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.onedgaussfit">[docs]</a><span class="k">def</span> <span class="nf">onedgaussfit</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="n">fixed</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span>
+        <span class="n">limitedmin</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
+        <span class="n">limitedmax</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span> <span class="n">minpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">maxpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">quiet</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">shh</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">veryverbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">vheight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">negamp</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">usemoments</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Inputs:</span>
+<span class="sd">       xax - x axis</span>
+<span class="sd">       data - y axis</span>
+<span class="sd">       err - error corresponding to data</span>
+
+<span class="sd">       params - Fit parameters: Height of background, Amplitude, Shift, Width</span>
+<span class="sd">       fixed - Is parameter fixed?</span>
+<span class="sd">       limitedmin/minpars - set lower limits on each parameter (default: width&gt;0)</span>
+<span class="sd">       limitedmax/maxpars - set upper limits on each parameter</span>
+<span class="sd">       quiet - should MPFIT output each iteration?</span>
+<span class="sd">       shh - output final parameters?</span>
+<span class="sd">       usemoments - replace default parameters with moments</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">       Fit parameters</span>
+<span class="sd">       Model</span>
+<span class="sd">       Fit errors</span>
+<span class="sd">       chi2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">mpfitfun</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">err</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">err</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,(</span><span class="n">y</span><span class="o">-</span><span class="n">onedgaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="o">*</span><span class="n">p</span><span class="p">))]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,(</span><span class="n">y</span><span class="o">-</span><span class="n">onedgaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="o">*</span><span class="n">p</span><span class="p">))</span><span class="o">/</span><span class="n">err</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">f</span>
+
+    <span class="k">if</span> <span class="n">xax</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">xax</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">vheight</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span> 
+        <span class="n">height</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">fixed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">if</span> <span class="n">usemoments</span><span class="p">:</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">onedmoments</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">vheight</span><span class="o">=</span><span class="n">vheight</span><span class="p">,</span><span class="n">negamp</span><span class="o">=</span><span class="n">negamp</span><span class="p">,</span> <span class="n">veryverbose</span><span class="o">=</span><span class="n">veryverbose</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">vheight</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span> <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="n">height</span><span class="p">]</span><span class="o">+</span><span class="n">params</span>
+        <span class="k">if</span> <span class="n">veryverbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;OneD moments: h: </span><span class="si">%g</span><span class="s">  a: </span><span class="si">%g</span><span class="s">  c: </span><span class="si">%g</span><span class="s">  w: </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="n">parinfo</span> <span class="o">=</span> <span class="p">[</span> <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;HEIGHT&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span> <span class="p">,</span>
+                <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;AMPLITUDE&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">2</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;SHIFT&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">},</span>
+                <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="mi">3</span><span class="p">]],</span><span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="mi">3</span><span class="p">]],</span><span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="s">&quot;WIDTH&quot;</span><span class="p">,</span><span class="s">&#39;error&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">}]</span>
+
+    <span class="n">mp</span> <span class="o">=</span> <span class="n">mpfit</span><span class="p">(</span><span class="n">mpfitfun</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">err</span><span class="p">),</span><span class="n">parinfo</span><span class="o">=</span><span class="n">parinfo</span><span class="p">,</span><span class="n">quiet</span><span class="o">=</span><span class="n">quiet</span><span class="p">)</span>
+    <span class="n">mpp</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">params</span>
+    <span class="n">mpperr</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">perror</span>
+    <span class="n">chi2</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">fnorm</span>
+
+    <span class="k">if</span> <span class="n">mp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">errmsg</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">shh</span><span class="p">)</span> <span class="ow">or</span> <span class="n">veryverbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Fit status: &quot;</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">status</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mpp</span><span class="p">):</span>
+            <span class="n">parinfo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
+            <span class="k">print</span> <span class="n">parinfo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;parname&#39;</span><span class="p">],</span><span class="n">p</span><span class="p">,</span><span class="s">&quot; +/- &quot;</span><span class="p">,</span><span class="n">mpperr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">print</span> <span class="s">&quot;Chi2: &quot;</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">fnorm</span><span class="p">,</span><span class="s">&quot; Reduced Chi2: &quot;</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">fnorm</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span><span class="s">&quot; DOF:&quot;</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">mpp</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">mpp</span><span class="p">,</span><span class="n">onedgaussian</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span><span class="o">*</span><span class="n">mpp</span><span class="p">),</span><span class="n">mpperr</span><span class="p">,</span><span class="n">chi2</span>
+
+</div>
+<div class="viewcode-block" id="n_gaussian"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.n_gaussian">[docs]</a><span class="k">def</span> <span class="nf">n_gaussian</span><span class="p">(</span><span class="n">pars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">a</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">sigma</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a function that sums over N gaussians, where N is the length of</span>
+<span class="sd">    a,dx,sigma *OR* N = len(pars) / 3</span>
+
+<span class="sd">    The background &quot;height&quot; is assumed to be zero (you must &quot;baseline&quot; your</span>
+<span class="sd">    spectrum before fitting)</span>
+
+<span class="sd">    pars  - a list with len(pars) = 3n, assuming a,dx,sigma repeated</span>
+<span class="sd">    dx    - offset (velocity center) values</span>
+<span class="sd">    sigma - line widths</span>
+<span class="sd">    a     - amplitudes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="p">[</span><span class="n">pars</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">pars</span><span class="p">),</span><span class="mi">3</span><span class="p">)]</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="p">[</span><span class="n">pars</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">pars</span><span class="p">),</span><span class="mi">3</span><span class="p">)]</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="p">[</span><span class="n">pars</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">pars</span><span class="p">),</span><span class="mi">3</span><span class="p">)]</span>
+    <span class="k">elif</span> <span class="ow">not</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dx</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Wrong array lengths! dx: </span><span class="si">%i</span><span class="s">  sigma: </span><span class="si">%i</span><span class="s">  a: </span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dx</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">sigma</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">g</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dx</span><span class="p">)):</span>
+            <span class="n">v</span> <span class="o">+=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span> <span class="o">-</span> <span class="p">(</span> <span class="n">x</span> <span class="o">-</span> <span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">sigma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">g</span>
+</div>
+<div class="viewcode-block" id="multigaussfit"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.multigaussfit">[docs]</a><span class="k">def</span> <span class="nf">multigaussfit</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">ngauss</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">fixed</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span> <span class="n">limitedmin</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
+        <span class="n">limitedmax</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span> <span class="n">minpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">maxpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">quiet</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">shh</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">veryverbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An improvement on onedgaussfit.  Lets you fit multiple gaussians.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">       xax - x axis</span>
+<span class="sd">       data - y axis</span>
+<span class="sd">       ngauss - How many gaussians to fit?  Default 1 (this could supersede onedgaussfit)</span>
+<span class="sd">       err - error corresponding to data</span>
+
+<span class="sd">     These parameters need to have length = 3*ngauss.  If ngauss &gt; 1 and length = 3, they will</span>
+<span class="sd">     be replicated ngauss times, otherwise they will be reset to defaults:</span>
+<span class="sd">       params - Fit parameters: [amplitude, offset, width] * ngauss</span>
+<span class="sd">              If len(params) % 3 == 0, ngauss will be set to len(params) / 3</span>
+<span class="sd">       fixed - Is parameter fixed?</span>
+<span class="sd">       limitedmin/minpars - set lower limits on each parameter (default: width&gt;0)</span>
+<span class="sd">       limitedmax/maxpars - set upper limits on each parameter</span>
+
+<span class="sd">       quiet - should MPFIT output each iteration?</span>
+<span class="sd">       shh - output final parameters?</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">       Fit parameters</span>
+<span class="sd">       Model</span>
+<span class="sd">       Fit errors</span>
+<span class="sd">       chi2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">!=</span> <span class="n">ngauss</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">ngauss</span><span class="p">:</span>
+        <span class="n">ngauss</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">/</span> <span class="mi">3</span> 
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">params</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="c"># make sure all various things are the right length; if they&#39;re not, fix them using the defaults</span>
+    <span class="k">for</span> <span class="n">parlist</span> <span class="ow">in</span> <span class="p">(</span><span class="n">params</span><span class="p">,</span><span class="n">fixed</span><span class="p">,</span><span class="n">limitedmin</span><span class="p">,</span><span class="n">limitedmax</span><span class="p">,</span><span class="n">minpars</span><span class="p">,</span><span class="n">maxpars</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parlist</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="o">*</span><span class="n">ngauss</span><span class="p">:</span>
+            <span class="c"># if you leave the defaults, or enter something that can be multiplied by 3 to get to the</span>
+            <span class="c"># right number of gaussians, it will just replicate</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parlist</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span> 
+                <span class="n">parlist</span> <span class="o">*=</span> <span class="n">ngauss</span> 
+            <span class="k">elif</span> <span class="n">parlist</span><span class="o">==</span><span class="n">params</span><span class="p">:</span>
+                <span class="n">parlist</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">ngauss</span>
+            <span class="k">elif</span> <span class="n">parlist</span><span class="o">==</span><span class="n">fixed</span> <span class="ow">or</span> <span class="n">parlist</span><span class="o">==</span><span class="n">limitedmax</span><span class="p">:</span>
+                <span class="n">parlist</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">]</span> <span class="o">*</span> <span class="n">ngauss</span>
+            <span class="k">elif</span> <span class="n">parlist</span><span class="o">==</span><span class="n">limitedmin</span><span class="p">:</span>
+                <span class="n">parlist</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">]</span> <span class="o">*</span> <span class="n">ngauss</span>
+            <span class="k">elif</span> <span class="n">parlist</span><span class="o">==</span><span class="n">minpars</span> <span class="ow">or</span> <span class="n">parlist</span><span class="o">==</span><span class="n">maxpars</span><span class="p">:</span>
+                <span class="n">parlist</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">ngauss</span>
+
+    <span class="k">def</span> <span class="nf">mpfitfun</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">err</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">err</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,(</span><span class="n">y</span><span class="o">-</span><span class="n">n_gaussian</span><span class="p">(</span><span class="n">pars</span><span class="o">=</span><span class="n">p</span><span class="p">)(</span><span class="n">x</span><span class="p">))]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,(</span><span class="n">y</span><span class="o">-</span><span class="n">n_gaussian</span><span class="p">(</span><span class="n">pars</span><span class="o">=</span><span class="n">p</span><span class="p">)(</span><span class="n">x</span><span class="p">))</span><span class="o">/</span><span class="n">err</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">f</span>
+
+    <span class="k">if</span> <span class="n">xax</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">xax</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+
+    <span class="n">parnames</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span><span class="s">&quot;AMPLITUDE&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">:</span><span class="s">&quot;SHIFT&quot;</span><span class="p">,</span><span class="mi">2</span><span class="p">:</span><span class="s">&quot;WIDTH&quot;</span><span class="p">}</span>
+
+    <span class="n">parinfo</span> <span class="o">=</span> <span class="p">[</span> <span class="p">{</span><span class="s">&#39;n&#39;</span><span class="p">:</span><span class="n">ii</span><span class="p">,</span> <span class="s">&#39;value&#39;</span><span class="p">:</span><span class="n">params</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span>
+        <span class="s">&#39;limits&#39;</span><span class="p">:[</span><span class="n">minpars</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span><span class="n">maxpars</span><span class="p">[</span><span class="n">ii</span><span class="p">]],</span>
+        <span class="s">&#39;limited&#39;</span><span class="p">:[</span><span class="n">limitedmin</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span><span class="n">limitedmax</span><span class="p">[</span><span class="n">ii</span><span class="p">]],</span> <span class="s">&#39;fixed&#39;</span><span class="p">:</span><span class="n">fixed</span><span class="p">[</span><span class="n">ii</span><span class="p">],</span>
+        <span class="s">&#39;parname&#39;</span><span class="p">:</span><span class="n">parnames</span><span class="p">[</span><span class="n">ii</span><span class="o">%</span><span class="mi">3</span><span class="p">]</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">ii</span><span class="o">%</span><span class="mi">3</span><span class="p">),</span> <span class="s">&#39;error&#39;</span><span class="p">:</span><span class="n">ii</span><span class="p">}</span> 
+        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">))</span> <span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">veryverbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;GUESSES: &quot;</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s">&#39;parname&#39;</span><span class="p">],</span><span class="n">p</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parinfo</span><span class="p">])</span>
+
+    <span class="n">mp</span> <span class="o">=</span> <span class="n">mpfit</span><span class="p">(</span><span class="n">mpfitfun</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">err</span><span class="p">),</span><span class="n">parinfo</span><span class="o">=</span><span class="n">parinfo</span><span class="p">,</span><span class="n">quiet</span><span class="o">=</span><span class="n">quiet</span><span class="p">)</span>
+    <span class="n">mpp</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">params</span>
+    <span class="n">mpperr</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">perror</span>
+    <span class="n">chi2</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">fnorm</span>
+
+    <span class="k">if</span> <span class="n">mp</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">mp</span><span class="o">.</span><span class="n">errmsg</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">shh</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Final fit values: &quot;</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mpp</span><span class="p">):</span>
+            <span class="n">parinfo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
+            <span class="k">print</span> <span class="n">parinfo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s">&#39;parname&#39;</span><span class="p">],</span><span class="n">p</span><span class="p">,</span><span class="s">&quot; +/- &quot;</span><span class="p">,</span><span class="n">mpperr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">print</span> <span class="s">&quot;Chi2: &quot;</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">fnorm</span><span class="p">,</span><span class="s">&quot; Reduced Chi2: &quot;</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">fnorm</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span><span class="s">&quot; DOF:&quot;</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">mpp</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">mpp</span><span class="p">,</span><span class="n">n_gaussian</span><span class="p">(</span><span class="n">pars</span><span class="o">=</span><span class="n">mpp</span><span class="p">)(</span><span class="n">xax</span><span class="p">),</span><span class="n">mpperr</span><span class="p">,</span><span class="n">chi2</span>
+</div>
+<div class="viewcode-block" id="collapse_gaussfit"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.collapse_gaussfit">[docs]</a><span class="k">def</span> <span class="nf">collapse_gaussfit</span><span class="p">(</span><span class="n">cube</span><span class="p">,</span><span class="n">xax</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">negamp</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">usemoments</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">nsigcut</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span><span class="n">mppsigcut</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">return_errors</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">time</span>
+    <span class="n">std_coll</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+    <span class="n">std_coll</span><span class="p">[</span><span class="n">std_coll</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span> <span class="c"># must eliminate all-zero spectra</span>
+    <span class="n">mean_std</span> <span class="o">=</span> <span class="n">median</span><span class="p">(</span><span class="n">std_coll</span><span class="p">[</span><span class="n">std_coll</span><span class="o">==</span><span class="n">std_coll</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">cube</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">axis</span><span class="p">)</span>
+    <span class="n">width_arr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">amp_arr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">chi2_arr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">offset_arr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">width_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">amp_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">offset_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">if</span> <span class="n">xax</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">xax</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">starttime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">print</span> <span class="s">&quot;Cube shape: &quot;</span><span class="p">,</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="n">negamp</span><span class="p">:</span> <span class="n">extremum</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">min</span>
+    <span class="k">else</span><span class="p">:</span> <span class="n">extremum</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">max</span>
+    <span class="k">print</span> <span class="s">&quot;Fitting a total of </span><span class="si">%i</span><span class="s"> spectra with peak signal above </span><span class="si">%f</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">extremum</span><span class="p">(</span><span class="n">cube</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">mean_std</span><span class="o">*</span><span class="n">nsigcut</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span><span class="n">mean_std</span><span class="o">*</span><span class="n">nsigcut</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">nspec</span> <span class="o">=</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">extremum</span><span class="p">(</span><span class="n">cube</span><span class="p">[:,</span><span class="n">i</span><span class="p">,:],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">mean_std</span><span class="o">*</span><span class="n">nsigcut</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&quot;Working on row </span><span class="si">%d</span><span class="s"> with </span><span class="si">%d</span><span class="s"> spectra to fit&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">nspec</span><span class="p">)</span> <span class="p">,</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">extremum</span><span class="p">(</span><span class="n">cube</span><span class="p">[:,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]))</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">mean_std</span><span class="o">*</span><span class="n">nsigcut</span><span class="p">):</span>
+                <span class="n">mpp</span><span class="p">,</span><span class="n">gfit</span><span class="p">,</span><span class="n">mpperr</span><span class="p">,</span><span class="n">chi2</span> <span class="o">=</span> <span class="n">onedgaussfit</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span><span class="n">cube</span><span class="p">[:,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">],</span><span class="n">err</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="n">mean_std</span><span class="p">,</span><span class="n">negamp</span><span class="o">=</span><span class="n">negamp</span><span class="p">,</span><span class="n">usemoments</span><span class="o">=</span><span class="n">usemoments</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">mpp</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">mpperr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">mppsigcut</span><span class="p">):</span>
+                    <span class="n">width_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpp</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="n">offset_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpp</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="n">chi2_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">chi2</span>
+                    <span class="n">amp_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">width_err</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpperr</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="n">offset_err</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpperr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="n">amp_err</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">mpperr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">t0</span>
+        <span class="k">if</span> <span class="n">nspec</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;in </span><span class="si">%f</span><span class="s"> seconds (average: </span><span class="si">%f</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dt</span><span class="p">,</span><span class="n">dt</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">nspec</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;in </span><span class="si">%f</span><span class="s"> seconds&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;Total time </span><span class="si">%f</span><span class="s"> seconds&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">starttime</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_errors</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">width_arr</span><span class="p">,</span><span class="n">offset_arr</span><span class="p">,</span><span class="n">amp_arr</span><span class="p">,</span><span class="n">width_err</span><span class="p">,</span><span class="n">offset_err</span><span class="p">,</span><span class="n">amp_err</span><span class="p">,</span><span class="n">chi2_arr</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">width_arr</span><span class="p">,</span><span class="n">offset_arr</span><span class="p">,</span><span class="n">amp_arr</span><span class="p">,</span><span class="n">chi2_arr</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

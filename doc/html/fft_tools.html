@@ -1,0 +1,308 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AG_fft_tools Package &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="index.html" />
+    <link rel="next" title="plfit Package" href="plfit.html" />
+    <link rel="prev" title="Image Tools" href="image_tools.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="ag-fft-tools-package">
+<h1>AG_fft_tools Package<a class="headerlink" href="#ag-fft-tools-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><a class="reference internal" href="#module-AG_fft_tools" title="AG_fft_tools"><tt class="xref py py-mod docutils literal"><span class="pre">AG_fft_tools</span></tt></a> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-AG_fft_tools"></span><div class="section" id="fft-tools">
+<h3>FFT Tools<a class="headerlink" href="#fft-tools" title="Permalink to this headline">¶</a></h3>
+<p>Wrappers around numpy, scipy, and pyfftw tools to perform 2D convolution in
+general, smoothing with a set of &#8216;standard&#8217; kernels, and computing power
+spectra and PSDs.</p>
+</div>
+</div>
+<div class="section" id="module-AG_fft_tools.convolve">
+<span id="convolve-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">convolve</span></tt> Module<a class="headerlink" href="#module-AG_fft_tools.convolve" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="AG_fft_tools.convolve.convolve">
+<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">convolve</tt><big>(</big><em>img</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x102671050&gt;</em>, <em>debug=False</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#convolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.convolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convolve an image with a kernel.  Returns something the size of an image.
+Assumes image &amp; kernel are centered</p>
+<p><em>NOTE</em> Order matters; the kernel should be second.</p>
+<p>Options:
+fft_pad - Default on.  Zero-pad image to the nearest 2^n
+psf_pad - Default off.  Zero-pad image to be at least the sum of the image</p>
+<blockquote>
+<div>sizes (in order to avoid edge-wrapping when smoothing)</div></blockquote>
+<dl class="docutils">
+<dt>crop - Default on.  Return an image of the size of the largest input image.</dt>
+<dd>If the images are asymmetric in opposite directions, will return the
+largest image in both directions.</dd>
+<dt>return_fft - Return the FFT instead of the convolution.  Useful for making</dt>
+<dd>PSDs.</dd>
+<dt>fftshift - If return_fft on, will shift &amp; crop image to appropriate</dt>
+<dd>dimensions</dd>
+<dt>ignore_nan - attempts to re-weight assuming NAN values are meant to be</dt>
+<dd>ignored, not treated as zero.</dd>
+<dt>ignore_zeros - Ignore the zero-pad-created zeros.  Desirable if you have</dt>
+<dd>periodic boundaries on a non-2^n grid</dd>
+<dt>force_ignore_zeros_off - You can choose to turn off the ignore-zeros when padding,</dt>
+<dd>but this is only recommended for purely debug purposes</dd>
+<dt>min_wt - If ignoring nans/zeros, force all grid points with a weight less</dt>
+<dd>than this value to NAN (the weight of a grid point with <em>no</em> ignored
+neighbors is 1.0)</dd>
+</dl>
+<p>normalize_kernel - if specified, function to divide kernel by to normalize it</p>
+<dl class="docutils">
+<dt>nthreads - if fftw3 is installed, can specify the number of threads to</dt>
+<dd>allow FFTs to use.  Probably only helpful for large arrays</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.convolve.fftw2">
+<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">fftw2</tt><big>(</big><em>array</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#fftw2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.fftw2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.convolve.ifftw2">
+<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">ifftw2</tt><big>(</big><em>array</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#ifftw2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.ifftw2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.convolve.smooth">
+<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x102671050&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#smooth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.smooth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a smoothed image using a gaussian, boxcar, or tophat kernel</p>
+<p>Options: 
+kernelwidth - width of kernel in pixels  (see definitions below)
+kerneltype - gaussian, boxcar, or tophat.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>For a gaussian, uses a gaussian with sigma = kernelwidth (in pixels)</dt>
+<dd>out to [nwidths]-sigma</dd>
+</dl>
+<p>A boxcar is a kernelwidth x kernelwidth square 
+A tophat is a flat circle with radius = kernelwidth</p>
+</div></blockquote>
+<dl class="docutils">
+<dt>Default options:</dt>
+<dd><dl class="first last docutils">
+<dt>psf_pad = True - will pad the input image to be the image size + PSF.</dt>
+<dd>Slows things down but removes edge-wrapping effects (see convolve)
+This option should be set to false if the edges of your image are
+symmetric.</dd>
+<dt>interp_nan = False - Will replace NaN points in an image with the</dt>
+<dd>smoothed average of its neighbors (you can still simply ignore NaN 
+values by setting ignore_nan=True but leaving interp_nan=False)</dd>
+<dt>silent = True - turn it off to get verbose statements about kernel</dt>
+<dd>types</dd>
+<dt>return_kernel = False - If set to true, will return the kernel as the</dt>
+<dd>second return value</dd>
+<dt>nwidths = &#8216;max&#8217; - number of kernel widths wide to make the kernel.  Set to</dt>
+<dd>&#8216;max&#8217; to match the image shape, otherwise use any integer</dd>
+<dt>min_nwidths = 6 - minimum number of gaussian widths to make the kernel</dt>
+<dd>(the kernel will be larger than the image if the image size is &lt;
+min_widths*kernelsize)</dd>
+<dt>normalize_kernel - Should the kernel preserve the map sum (i.e. kernel.sum() = 1)</dt>
+<dd>or the kernel peak (i.e. kernel.max() = 1) ?  Must be a <em>function</em> that can
+operate on a numpy array</dd>
+</dl>
+</dd>
+</dl>
+<p>Note that the kernel is forced to be even sized on each axis to assure no
+offset when smoothing.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-AG_fft_tools.correlate2d">
+<span id="correlate2d-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">correlate2d</span></tt> Module<a class="headerlink" href="#module-AG_fft_tools.correlate2d" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="AG_fft_tools.correlate2d.correlate2d">
+<tt class="descclassname">AG_fft_tools.correlate2d.</tt><tt class="descname">correlate2d</tt><big>(</big><em>im1</em>, <em>im2</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/correlate2d.html#correlate2d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.correlate2d.correlate2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cross-correlation of two images of arbitrary size.  Returns an image
+cropped to the largest of each dimension of the input images</p>
+<p>Options:
+return_fft - if true, return fft(im1)*fft(im2[::-1,::-1]), which is the power</p>
+<blockquote>
+<div>spectral density</div></blockquote>
+<dl class="docutils">
+<dt>fftshift - if true, return the shifted psd so that the DC component is in</dt>
+<dd>the center of the image</dd>
+</dl>
+<p>pad - Default on.  Zero-pad image to the nearest 2^n
+crop - Default on.  Return an image of the size of the largest input image.</p>
+<blockquote>
+<div>If the images are asymmetric in opposite directions, will return the largest 
+image in both directions.</div></blockquote>
+<p>WARNING: Normalization may be arbitrary if you use the PSD</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-AG_fft_tools.psds">
+<span id="psds-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">psds</span></tt> Module<a class="headerlink" href="#module-AG_fft_tools.psds" title="Permalink to this headline">¶</a></h2>
+<p>Power Spectra</p>
+<dl class="function">
+<dt id="AG_fft_tools.psds.PSD2">
+<tt class="descclassname">AG_fft_tools.psds.</tt><tt class="descname">PSD2</tt><big>(</big><em>image</em>, <em>image2=None</em>, <em>oned=False</em>, <em>fft_pad=False</em>, <em>real=False</em>, <em>imag=False</em>, <em>binsize=1.0</em>, <em>radbins=1</em>, <em>azbins=1</em>, <em>radial=False</em>, <em>hanning=False</em>, <em>wavnum_scale=False</em>, <em>twopi_scale=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/psds.html#PSD2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.psds.PSD2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Two-dimensional Power Spectral Density.
+NAN values are treated as zero.</p>
+<dl class="docutils">
+<dt>image2 - can specify a second image if you want to see the cross-power-spectrum instead of the </dt>
+<dd>power spectrum.</dd>
+<dt>oned - return radial profile of 2D PSD (i.e. mean power as a function of spatial frequency)</dt>
+<dd>freq,zz = PSD2(image); plot(freq,zz) is a power spectrum</dd>
+<dt>fft_pad - Add zeros to the edge of the image before FFTing for a speed</dt>
+<dd>boost?  (the edge padding will be removed afterwards)</dd>
+</dl>
+<p>real - Only compute the real part of the PSD (Default is absolute value)
+imag - Only compute the complex part of the PSD (Default is absolute value)
+hanning - Multiply the image to be PSD&#8217;d by a 2D Hanning window before performing the FTs.</p>
+<blockquote>
+<div>Reduces edge effects.  This idea courtesy Paul Ricchiazzia (May 1993), author of the
+IDL astrolib psd.pro</div></blockquote>
+<p>wavnum_scale - multiply the FFT^2 by the wavenumber when computing the PSD?
+twopi_scale - multiply the FFT^2 by 2pi?
+azbins - Number of azimuthal (angular) bins to include.  Default is 1, or</p>
+<blockquote>
+<div>all 360 degrees.  If azbins&gt;1, the data will be split into [azbins]
+equally sized pie pieces.  Azbins can also be a numpy array.  See
+AG_image_tools.azimuthalAverageBins for details</div></blockquote>
+<dl class="docutils">
+<dt>radial - An option to return the <em>azimuthal</em> power spectrum (i.e., the spectral power as a function </dt>
+<dd>of angle).  Not commonly used.</dd>
+</dl>
+<p>radbins - number of radial bins (you can compute the azimuthal power spectrum in different annuli)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.psds.hanning2d">
+<tt class="descclassname">AG_fft_tools.psds.</tt><tt class="descname">hanning2d</tt><big>(</big><em>M</em>, <em>N</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/psds.html#hanning2d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.psds.hanning2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>A 2D hanning window, as per IDL&#8217;s hanning function.  See numpy.hanning for the 1d description</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.psds.power_spectrum">
+<tt class="descclassname">AG_fft_tools.psds.</tt><tt class="descname">power_spectrum</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/psds.html#power_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.psds.power_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thin wrapper of PSD2.  Returns the 1D power spectrum in stead of the 2D Power Spectral Density</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.psds.pspec">
+<tt class="descclassname">AG_fft_tools.psds.</tt><tt class="descname">pspec</tt><big>(</big><em>psd2</em>, <em>return_index=True</em>, <em>wavenumber=False</em>, <em>return_stddev=False</em>, <em>azbins=1</em>, <em>binsize=1.0</em>, <em>view=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/psds.html#pspec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.psds.pspec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Power Spectrum (radial profile of a PSD) from a Power Spectral Density image</p>
+<p>return_index - if true, the first return item will be the indexes
+wavenumber - if one dimensional and return_index set, will return a normalized wavenumber instead
+view - Plot the PSD (in logspace)?</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_tools.html">Image Tools</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">AG_fft_tools Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">AG_fft_tools</span></tt> Package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fft-tools">FFT Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-AG_fft_tools.convolve"><tt class="docutils literal"><span class="pre">convolve</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-AG_fft_tools.correlate2d"><tt class="docutils literal"><span class="pre">correlate2d</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-AG_fft_tools.psds"><tt class="docutils literal"><span class="pre">psds</span></tt> Module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

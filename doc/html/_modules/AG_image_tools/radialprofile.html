@@ -1,0 +1,367 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AG_image_tools.radialprofile &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for AG_image_tools.radialprofile</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="azimuthalAverage"><a class="viewcode-back" href="../../image_tools.html#AG_image_tools.radialprofile.azimuthalAverage">[docs]</a><span class="k">def</span> <span class="nf">azimuthalAverage</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">stddev</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">returnradii</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">return_nr</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> 
+        <span class="n">binsize</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">interpnan</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="bp">None</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the azimuthally averaged radial profile.</span>
+
+<span class="sd">    image - The 2D image</span>
+<span class="sd">    center - The [x,y] pixel coordinates used as the center. The default is </span>
+<span class="sd">             None, which then uses the center of the image (including </span>
+<span class="sd">             fractional pixels).</span>
+<span class="sd">    stddev - if specified, return the azimuthal standard deviation instead of the average</span>
+<span class="sd">    returnradii - if specified, return (radii_array,radial_profile)</span>
+<span class="sd">    return_nr   - if specified, return number of pixels per radius *and* radius</span>
+<span class="sd">    binsize - size of the averaging bin.  Can lead to strange results if</span>
+<span class="sd">        non-binsize factors are used to specify the center and the binsize is</span>
+<span class="sd">        too large</span>
+<span class="sd">    weights - can do a weighted average instead of a simple average if this keyword parameter</span>
+<span class="sd">        is set.  weights.shape must = image.shape.  weighted stddev is undefined, so don&#39;t</span>
+<span class="sd">        set weights and stddev.</span>
+<span class="sd">    steps - if specified, will return a double-length bin array and radial</span>
+<span class="sd">        profile so you can plot a step-form radial profile (which more accurately</span>
+<span class="sd">        represents what&#39;s going on)</span>
+<span class="sd">    interpnan - Interpolate over NAN values, i.e. bins where there is no data?</span>
+<span class="sd">        left,right - passed to interpnan; they set the extrapolated values</span>
+<span class="sd">    mask - can supply a mask (boolean array same size as image with True for OK and False for not)</span>
+<span class="sd">        to average over only select data.</span>
+
+<span class="sd">    If a bin contains NO DATA, it will have a NAN value because of the</span>
+<span class="sd">    divide-by-sum-of-weights component.  I think this is a useful way to denote</span>
+<span class="sd">    lack of data, but users let me know if an alternative is prefered...</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Calculate the indices from the image</span>
+    <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">])</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">stddev</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Weighted standard deviation is not defined.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;bool&#39;</span><span class="p">)</span>
+    <span class="c"># obsolete elif len(mask.shape) &gt; 1:</span>
+    <span class="c"># obsolete     mask = mask.ravel()</span>
+
+    <span class="c"># the &#39;bins&#39; as initially defined are lower/upper bounds for each bin</span>
+    <span class="c"># so that values will be in [lower,upper)  </span>
+    <span class="n">nbins</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">/</span> <span class="n">binsize</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">maxbin</span> <span class="o">=</span> <span class="n">nbins</span> <span class="o">*</span> <span class="n">binsize</span>
+    <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">maxbin</span><span class="p">,</span><span class="n">nbins</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c"># but we&#39;re probably more interested in the bin centers than their left or right sides...</span>
+    <span class="n">bin_centers</span> <span class="o">=</span> <span class="p">(</span><span class="n">bins</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">+</span><span class="n">bins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="mf">2.0</span>
+
+    <span class="c"># how many per bin (i.e., histogram)?</span>
+    <span class="c"># there are never any in bin 0, because the lowest index returned by digitize is 1</span>
+    <span class="c">#nr = np.bincount(whichbin)[1:]</span>
+    <span class="n">nr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">r</span><span class="p">,</span><span class="n">bins</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c"># recall that bins are from 1 to nbins (which is expressed in array terms by arange(nbins)+1 or xrange(1,nbins+1) )</span>
+    <span class="c"># radial_prof.shape = bin_centers.shape</span>
+    <span class="k">if</span> <span class="n">stddev</span><span class="p">:</span>
+        <span class="c"># Find out which radial bin each point in the map belongs to</span>
+        <span class="n">whichbin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">flat</span><span class="p">,</span><span class="n">bins</span><span class="p">)</span>
+        <span class="c"># This method is still very slow; is there a trick to do this with histograms? </span>
+        <span class="n">radial_prof</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">image</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">mask</span><span class="o">.</span><span class="n">flat</span><span class="o">*</span><span class="p">(</span><span class="n">whichbin</span><span class="o">==</span><span class="n">b</span><span class="p">)]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">nbins</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span>
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="n">radial_prof</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="p">(</span><span class="n">image</span><span class="o">*</span><span class="n">weights</span><span class="o">*</span><span class="n">mask</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">bins</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="p">(</span><span class="n">mask</span><span class="o">*</span><span class="n">weights</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">interpnan</span><span class="p">:</span>
+        <span class="n">radial_prof</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">bin_centers</span><span class="p">,</span><span class="n">bin_centers</span><span class="p">[</span><span class="n">radial_prof</span><span class="o">==</span><span class="n">radial_prof</span><span class="p">],</span><span class="n">radial_prof</span><span class="p">[</span><span class="n">radial_prof</span><span class="o">==</span><span class="n">radial_prof</span><span class="p">],</span><span class="n">left</span><span class="o">=</span><span class="n">left</span><span class="p">,</span><span class="n">right</span><span class="o">=</span><span class="n">right</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="n">xarr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">bins</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> 
+        <span class="n">yarr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">radial_prof</span><span class="p">,</span><span class="n">radial_prof</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> 
+        <span class="k">return</span> <span class="n">xarr</span><span class="p">,</span><span class="n">yarr</span>
+    <span class="k">elif</span> <span class="n">returnradii</span><span class="p">:</span> 
+        <span class="k">return</span> <span class="n">bin_centers</span><span class="p">,</span><span class="n">radial_prof</span>
+    <span class="k">elif</span> <span class="n">return_nr</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">nr</span><span class="p">,</span><span class="n">bin_centers</span><span class="p">,</span><span class="n">radial_prof</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">radial_prof</span>
+</div>
+<div class="viewcode-block" id="azimuthalAverageBins"><a class="viewcode-back" href="../../image_tools.html#AG_image_tools.radialprofile.azimuthalAverageBins">[docs]</a><span class="k">def</span> <span class="nf">azimuthalAverageBins</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">azbins</span><span class="p">,</span><span class="n">symmetric</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute the azimuthal average over a limited range of angles </span>
+<span class="sd">    kwargs are passed to azimuthalAverage &quot;&quot;&quot;</span>
+    <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">])</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">theta</span><span class="p">[</span><span class="n">theta</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="n">theta_deg</span> <span class="o">=</span> <span class="n">theta</span><span class="o">*</span><span class="mf">180.0</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">azbins</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">azbins</span><span class="p">,</span><span class="nb">int</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">symmetric</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">azbins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">90</span><span class="p">,</span><span class="n">azbins</span><span class="p">)</span>
+            <span class="n">theta_deg</span> <span class="o">=</span> <span class="n">theta_deg</span> <span class="o">%</span> <span class="mi">90</span>
+        <span class="k">elif</span> <span class="n">symmetric</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">azbins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">180</span><span class="p">,</span><span class="n">azbins</span><span class="p">)</span>
+            <span class="n">theta_deg</span> <span class="o">=</span> <span class="n">theta_deg</span> <span class="o">%</span> <span class="mi">180</span>
+        <span class="k">elif</span> <span class="n">azbins</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">azbins</span><span class="p">,</span><span class="n">azimuthalAverage</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span><span class="n">returnradii</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">azbins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mf">359.9999999999999</span><span class="p">,</span><span class="n">azbins</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;azbins must be an ndarray or an integer&quot;</span><span class="p">)</span>
+
+    <span class="n">azavlist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">blow</span><span class="p">,</span><span class="n">bhigh</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">azbins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">azbins</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">theta_deg</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">blow</span> <span class="o">%</span> <span class="mi">360</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="n">theta_deg</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">bhigh</span> <span class="o">%</span> <span class="mi">360</span><span class="p">))</span>
+        <span class="n">rr</span><span class="p">,</span><span class="n">zz</span> <span class="o">=</span> <span class="n">azimuthalAverage</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span><span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span><span class="n">returnradii</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">azavlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">zz</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">azbins</span><span class="p">,</span><span class="n">rr</span><span class="p">,</span><span class="n">azavlist</span>
+</div>
+<div class="viewcode-block" id="radialAverage"><a class="viewcode-back" href="../../image_tools.html#AG_image_tools.radialprofile.radialAverage">[docs]</a><span class="k">def</span> <span class="nf">radialAverage</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">stddev</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">returnAz</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">return_naz</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> 
+        <span class="n">binsize</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">interpnan</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">symmetric</span><span class="o">=</span><span class="bp">None</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the radially averaged azimuthal profile.</span>
+<span class="sd">    (this code has not been optimized; it could be speed boosted by ~20x)</span>
+
+<span class="sd">    image - The 2D image</span>
+<span class="sd">    center - The [x,y] pixel coordinates used as the center. The default is </span>
+<span class="sd">             None, which then uses the center of the image (including </span>
+<span class="sd">             fractional pixels).</span>
+<span class="sd">    stddev - if specified, return the radial standard deviation instead of the average</span>
+<span class="sd">    returnAz - if specified, return (azimuthArray,azimuthal_profile)</span>
+<span class="sd">    return_naz   - if specified, return number of pixels per azimuth *and* azimuth</span>
+<span class="sd">    binsize - size of the averaging bin.  Can lead to strange results if</span>
+<span class="sd">        non-binsize factors are used to specify the center and the binsize is</span>
+<span class="sd">        too large</span>
+<span class="sd">    weights - can do a weighted average instead of a simple average if this keyword parameter</span>
+<span class="sd">        is set.  weights.shape must = image.shape.  weighted stddev is undefined, so don&#39;t</span>
+<span class="sd">        set weights and stddev.</span>
+<span class="sd">    steps - if specified, will return a double-length bin array and azimuthal</span>
+<span class="sd">        profile so you can plot a step-form azimuthal profile (which more accurately</span>
+<span class="sd">        represents what&#39;s going on)</span>
+<span class="sd">    interpnan - Interpolate over NAN values, i.e. bins where there is no data?</span>
+<span class="sd">        left,right - passed to interpnan; they set the extrapolated values</span>
+<span class="sd">    mask - can supply a mask (boolean array same size as image with True for OK and False for not)</span>
+<span class="sd">        to average over only select data.</span>
+
+<span class="sd">    If a bin contains NO DATA, it will have a NAN value because of the</span>
+<span class="sd">    divide-by-sum-of-weights component.  I think this is a useful way to denote</span>
+<span class="sd">    lack of data, but users let me know if an alternative is prefered...</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Calculate the indices from the image</span>
+    <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">])</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">theta</span><span class="p">[</span><span class="n">theta</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="n">theta_deg</span> <span class="o">=</span> <span class="n">theta</span><span class="o">*</span><span class="mf">180.0</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+    <span class="n">maxangle</span> <span class="o">=</span> <span class="mi">360</span>
+
+    <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">stddev</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Weighted standard deviation is not defined.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="c"># mask is only used in a flat context</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;bool&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="c"># allow for symmetries</span>
+    <span class="k">if</span> <span class="n">symmetric</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">theta_deg</span> <span class="o">=</span> <span class="n">theta_deg</span> <span class="o">%</span> <span class="mi">90</span>
+        <span class="n">maxangle</span> <span class="o">=</span> <span class="mi">90</span>
+    <span class="k">elif</span> <span class="n">symmetric</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">theta_deg</span> <span class="o">=</span> <span class="n">theta_deg</span> <span class="o">%</span> <span class="mi">180</span>
+        <span class="n">maxangle</span> <span class="o">=</span> <span class="mi">180</span>
+
+    <span class="c"># the &#39;bins&#39; as initially defined are lower/upper bounds for each bin</span>
+    <span class="c"># so that values will be in [lower,upper)  </span>
+    <span class="n">nbins</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">maxangle</span> <span class="o">/</span> <span class="n">binsize</span><span class="p">))</span>
+    <span class="n">maxbin</span> <span class="o">=</span> <span class="n">nbins</span> <span class="o">*</span> <span class="n">binsize</span>
+    <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">maxbin</span><span class="p">,</span><span class="n">nbins</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c"># but we&#39;re probably more interested in the bin centers than their left or right sides...</span>
+    <span class="n">bin_centers</span> <span class="o">=</span> <span class="p">(</span><span class="n">bins</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">+</span><span class="n">bins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="mf">2.0</span>
+
+    <span class="c"># Find out which azimuthal bin each point in the map belongs to</span>
+    <span class="n">whichbin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">theta_deg</span><span class="o">.</span><span class="n">flat</span><span class="p">,</span><span class="n">bins</span><span class="p">)</span>
+
+    <span class="c"># how many per bin (i.e., histogram)?</span>
+    <span class="c"># there are never any in bin 0, because the lowest index returned by digitize is 1</span>
+    <span class="n">nr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">whichbin</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
+
+    <span class="c"># recall that bins are from 1 to nbins (which is expressed in array terms by arange(nbins)+1 or xrange(1,nbins+1) )</span>
+    <span class="c"># azimuthal_prof.shape = bin_centers.shape</span>
+    <span class="k">if</span> <span class="n">stddev</span><span class="p">:</span>
+        <span class="n">azimuthal_prof</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">image</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">mask</span><span class="o">*</span><span class="p">(</span><span class="n">whichbin</span><span class="o">==</span><span class="n">b</span><span class="p">)]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">nbins</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">azimuthal_prof</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">image</span><span class="o">*</span><span class="n">weights</span><span class="p">)</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">mask</span><span class="o">*</span><span class="p">(</span><span class="n">whichbin</span><span class="o">==</span><span class="n">b</span><span class="p">)]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="n">weights</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">mask</span><span class="o">*</span><span class="p">(</span><span class="n">whichbin</span><span class="o">==</span><span class="n">b</span><span class="p">)]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">nbins</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span>
+
+    <span class="c">#import pdb; pdb.set_trace()</span>
+
+    <span class="k">if</span> <span class="n">interpnan</span><span class="p">:</span>
+        <span class="n">azimuthal_prof</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">bin_centers</span><span class="p">,</span>
+            <span class="n">bin_centers</span><span class="p">[</span><span class="n">azimuthal_prof</span><span class="o">==</span><span class="n">azimuthal_prof</span><span class="p">],</span>
+            <span class="n">azimuthal_prof</span><span class="p">[</span><span class="n">azimuthal_prof</span><span class="o">==</span><span class="n">azimuthal_prof</span><span class="p">],</span>
+            <span class="n">left</span><span class="o">=</span><span class="n">left</span><span class="p">,</span><span class="n">right</span><span class="o">=</span><span class="n">right</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="n">xarr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">bins</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> 
+        <span class="n">yarr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">azimuthal_prof</span><span class="p">,</span><span class="n">azimuthal_prof</span><span class="p">))</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> 
+        <span class="k">return</span> <span class="n">xarr</span><span class="p">,</span><span class="n">yarr</span>
+    <span class="k">elif</span> <span class="n">returnAz</span><span class="p">:</span> 
+        <span class="k">return</span> <span class="n">bin_centers</span><span class="p">,</span><span class="n">azimuthal_prof</span>
+    <span class="k">elif</span> <span class="n">return_naz</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">nr</span><span class="p">,</span><span class="n">bin_centers</span><span class="p">,</span><span class="n">azimuthal_prof</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">azimuthal_prof</span>
+</div>
+<div class="viewcode-block" id="radialAverageBins"><a class="viewcode-back" href="../../image_tools.html#AG_image_tools.radialprofile.radialAverageBins">[docs]</a><span class="k">def</span> <span class="nf">radialAverageBins</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">radbins</span><span class="p">,</span> <span class="n">corners</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute the radial average over a limited range of radii &quot;&quot;&quot;</span>
+    <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">center</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">/</span><span class="mf">2.0</span><span class="p">])</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">radbins</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">radbins</span><span class="p">,</span><span class="nb">int</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">radbins</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">radbins</span><span class="p">,</span><span class="n">radialAverage</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span><span class="n">returnAz</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">corners</span><span class="p">:</span>
+            <span class="n">radbins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">r</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span><span class="n">radbins</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">radbins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="o">-</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">y</span><span class="o">-</span><span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]]))),</span><span class="n">radbins</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;radbins must be an ndarray or an integer&quot;</span><span class="p">)</span>
+
+    <span class="n">radavlist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">blow</span><span class="p">,</span><span class="n">bhigh</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">radbins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">radbins</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">r</span><span class="o">&lt;</span><span class="n">bhigh</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">r</span><span class="o">&gt;</span><span class="n">blow</span><span class="p">)</span>
+        <span class="n">az</span><span class="p">,</span><span class="n">zz</span> <span class="o">=</span> <span class="n">radialAverage</span><span class="p">(</span><span class="n">image</span><span class="p">,</span><span class="n">center</span><span class="o">=</span><span class="n">center</span><span class="p">,</span><span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span><span class="n">returnAz</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">radavlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">zz</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">radbins</span><span class="p">,</span><span class="n">az</span><span class="p">,</span><span class="n">radavlist</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

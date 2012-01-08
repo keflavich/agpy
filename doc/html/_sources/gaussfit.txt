@@ -1,0 +1,3 @@
+.. automodule:: agpy.gaussfitter
+    :members:
+

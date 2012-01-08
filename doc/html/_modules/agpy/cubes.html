@@ -1,0 +1,708 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>agpy.cubes &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="agpy" href="../agpy.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for agpy.cubes</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">=====</span>
+<span class="sd">Cubes</span>
+<span class="sd">=====</span>
+
+<span class="sd">Many tools for cube manipulation.</span>
+
+<span class="sd">See `pyspeckit &lt;pyspeckit.bitbucket.org&gt;`_ for a similar code better incorporated into a package</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">sqrt</span><span class="p">,</span><span class="n">repeat</span><span class="p">,</span><span class="n">indices</span><span class="p">,</span><span class="n">newaxis</span><span class="p">,</span><span class="n">pi</span><span class="p">,</span><span class="n">cos</span><span class="p">,</span><span class="n">sin</span><span class="p">,</span><span class="n">array</span><span class="p">,</span><span class="n">mean</span><span class="p">,</span><span class="nb">sum</span><span class="p">,</span><span class="n">nansum</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">acos</span><span class="p">,</span><span class="n">atan2</span><span class="p">,</span><span class="n">tan</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pyfits</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">posang</span> <span class="c"># agpy code</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">coords</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot;cubes.py requires coords for aper_world2pix and coords_in_image&quot;</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyregion</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot;cubes.py requires pyregion for getspec_reg&quot;</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pywcs</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot;cubes.py requires pywcs for some subimage_integ,aper_wordl2pix,getspec, and coords_in_image&quot;</span>
+
+<span class="n">dtor</span> <span class="o">=</span> <span class="n">pi</span><span class="o">/</span><span class="mf">180.0</span>
+
+<div class="viewcode-block" id="flatten_header"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.flatten_header">[docs]</a><span class="k">def</span> <span class="nf">flatten_header</span><span class="p">(</span><span class="n">header</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attempt to turn an N-dimensional fits header into a 2-dimensional header</span>
+<span class="sd">    Turns all CRPIX[&gt;2] etc. into new keywords with suffix &#39;A&#39;</span>
+
+<span class="sd">    header must be a pyfits.Header instance</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">header</span><span class="p">,</span><span class="n">pyfits</span><span class="o">.</span><span class="n">Header</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;flatten_header requires a pyfits.Header instance&quot;</span><span class="p">)</span>
+
+    <span class="n">newheader</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">newheader</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;CD&#39;</span><span class="p">,</span><span class="s">&#39;CR&#39;</span><span class="p">,</span><span class="s">&#39;CT&#39;</span><span class="p">,</span><span class="s">&#39;CU&#39;</span><span class="p">,</span><span class="s">&#39;NA&#39;</span><span class="p">]:</span>
+                <span class="n">newheader</span><span class="o">.</span><span class="n">rename_key</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="s">&#39;A&#39;</span><span class="o">+</span><span class="n">key</span><span class="p">,</span><span class="n">force</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="c"># if key[-1] is not an int</span>
+            <span class="k">pass</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="c"># if len(key) &lt; 2</span>
+            <span class="k">pass</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;NAXIS&#39;</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">newheader</span>
+</div>
+<div class="viewcode-block" id="speccen_header"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.speccen_header">[docs]</a><span class="k">def</span> <span class="nf">speccen_header</span><span class="p">(</span><span class="n">header</span><span class="p">,</span><span class="n">lon</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">lat</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Turn a cube header into a spectrum header, retaining RA/Dec vals where possible</span>
+<span class="sd">    (speccen is like flatten; spec-ify would be better but, specify?  nah)</span>
+
+<span class="sd">    Assumes 3rd axis is velocity</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">newheader</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRVAL1&#39;</span><span class="p">,</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CRVAL3&#39;</span><span class="p">))</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRPIX1&#39;</span><span class="p">,</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CRPIX3&#39;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;CD1_1&#39;</span><span class="p">):</span> <span class="n">newheader</span><span class="o">.</span><span class="n">rename_key</span><span class="p">(</span><span class="s">&#39;CD1_1&#39;</span><span class="p">,</span><span class="s">&#39;OLDCD1_1&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">header</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;CDELT1&#39;</span><span class="p">):</span> <span class="n">newheader</span><span class="o">.</span><span class="n">rename_key</span><span class="p">(</span><span class="s">&#39;CDELT1&#39;</span><span class="p">,</span><span class="s">&#39;OLDCDEL1&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">):</span> <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CDELT1&#39;</span><span class="p">,</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">header</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;CDELT3&#39;</span><span class="p">):</span> <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CDELT1&#39;</span><span class="p">,</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CDELT3&#39;</span><span class="p">))</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CTYPE1&#39;</span><span class="p">,</span><span class="s">&#39;VRAD&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CUNIT3&#39;</span><span class="p">):</span> <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CUNIT1&#39;</span><span class="p">,</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CUNIT3&#39;</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span> 
+        <span class="k">print</span> <span class="s">&quot;Assuming CUNIT3 is km/s in speccen_header&quot;</span>
+        <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CUNIT1&#39;</span><span class="p">,</span><span class="s">&#39;km/s&#39;</span><span class="p">)</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRPIX2&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CTYPE2&#39;</span><span class="p">,</span><span class="s">&#39;RA---TAN&#39;</span><span class="p">)</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRPIX3&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CTYPE3&#39;</span><span class="p">,</span><span class="s">&#39;DEC--TAN&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">lon</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRVAL2&#39;</span><span class="p">,</span><span class="n">lon</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">lat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRVAL3&#39;</span><span class="p">,</span><span class="n">lat</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;CD2_2&#39;</span><span class="p">):</span> <span class="n">newheader</span><span class="o">.</span><span class="n">rename_key</span><span class="p">(</span><span class="s">&#39;CD2_2&#39;</span><span class="p">,</span><span class="s">&#39;OLDCD2_2&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">):</span> <span class="n">newheader</span><span class="o">.</span><span class="n">rename_key</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">,</span><span class="s">&#39;OLDCD3_3&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">newheader</span>
+</div>
+<div class="viewcode-block" id="extract_aperture"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.extract_aperture">[docs]</a><span class="k">def</span> <span class="nf">extract_aperture</span><span class="p">(</span><span class="n">cube</span><span class="p">,</span><span class="n">ap</span><span class="p">,</span><span class="n">r_mask</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">wcs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">coordsys</span><span class="o">=</span><span class="s">&#39;galactic&#39;</span><span class="p">,</span><span class="n">wunit</span><span class="o">=</span><span class="s">&#39;arcsec&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract an aperture from a data cube.  E.g. to acquire a spectrum</span>
+<span class="sd">    of an outflow that is extended.</span>
+
+<span class="sd">    Cube should have shape [z,y,x], e.g. </span>
+<span class="sd">    cube = pyfits.getdata(&#39;datacube.fits&#39;)</span>
+
+<span class="sd">    Apertures are specified in PIXEL units with an origin of 0,0 (NOT the 1,1</span>
+<span class="sd">    fits standard!) unless wcs and coordsys are specified</span>
+<span class="sd">    </span>
+<span class="sd">    INPUTS:</span>
+<span class="sd">        wcs - a pywcs.WCS instance associated with the data cube</span>
+<span class="sd">        coordsys - the coordinate system the aperture is specified in.</span>
+<span class="sd">            Options are &#39;celestial&#39; and &#39;galactic&#39;.  Default is &#39;galactic&#39;</span>
+<span class="sd">        wunit - units of width/height.  default &#39;arcsec&#39;, options &#39;arcmin&#39; and &#39;degree&#39;</span>
+
+<span class="sd">    For a circular aperture, len(ap)=3:</span>
+<span class="sd">        ap = [xcen,ycen,radius]</span>
+
+<span class="sd">    For an elliptical aperture, len(ap)=5:</span>
+<span class="sd">        ap = [xcen,ycen,height,width,PA]</span>
+
+<span class="sd">    Optional inputs:</span>
+<span class="sd">        r_mask - return mask in addition to spectrum (for error checking?)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">wcs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">coordsys</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">ap</span> <span class="o">=</span> <span class="n">aper_world2pix</span><span class="p">(</span><span class="n">ap</span><span class="p">,</span><span class="n">wcs</span><span class="p">,</span><span class="n">coordsys</span><span class="o">=</span><span class="n">coordsys</span><span class="p">,</span><span class="n">wunit</span><span class="o">=</span><span class="n">wunit</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">sh</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">yind</span><span class="p">,</span><span class="n">xind</span> <span class="o">=</span> <span class="n">indices</span><span class="p">(</span><span class="n">sh</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">])</span> <span class="c"># recall that python indices are backwards</span>
+        <span class="n">dis</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">((</span><span class="n">xind</span><span class="o">-</span><span class="n">ap</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="p">(</span><span class="n">yind</span><span class="o">-</span><span class="n">ap</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">dis</span> <span class="o">&lt;</span> <span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">ap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+        <span class="n">yinds</span><span class="p">,</span><span class="n">xinds</span> <span class="o">=</span> <span class="n">indices</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">])</span>
+        <span class="n">th</span> <span class="o">=</span> <span class="p">(</span><span class="n">ap</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span><span class="o">*</span><span class="n">dtor</span>
+        <span class="n">xindr</span> <span class="o">=</span> <span class="p">(</span><span class="n">xinds</span><span class="o">-</span><span class="n">ap</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">th</span><span class="p">)</span>  <span class="o">+</span> <span class="p">(</span><span class="n">yinds</span><span class="o">-</span><span class="n">ap</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">th</span><span class="p">)</span>
+        <span class="n">yindr</span> <span class="o">=</span> <span class="p">(</span><span class="n">xinds</span><span class="o">-</span><span class="n">ap</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*-</span><span class="n">sin</span><span class="p">(</span><span class="n">th</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">yinds</span><span class="o">-</span><span class="n">ap</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">th</span><span class="p">)</span>
+        <span class="n">ratio</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span><span class="o">/</span><span class="nb">min</span><span class="p">(</span><span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span> <span class="p">(</span><span class="n">xindr</span><span class="o">*</span><span class="n">ratio</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">yindr</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">max</span><span class="p">(</span><span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Wrong number of parameters.  Need either 3 parameters &quot;</span><span class="o">+</span>
+                <span class="s">&quot;for a circular aperture or 5 parameters for an elliptical &quot;</span><span class="o">+</span> 
+                <span class="s">&quot;aperture.&quot;</span><span class="p">)</span>
+
+    <span class="n">npixinmask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="n">mask3d</span> <span class="o">=</span> <span class="n">repeat</span><span class="p">(</span><span class="n">mask</span><span class="p">[</span><span class="n">newaxis</span><span class="p">,:,:],</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">nansum</span><span class="p">(</span><span class="n">nansum</span><span class="p">((</span><span class="n">cube</span><span class="o">*</span><span class="n">mask3d</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">npixinmask</span>
+
+    <span class="k">if</span> <span class="n">r_mask</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">spec</span><span class="p">,</span><span class="n">mask</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">spec</span>
+</div>
+<div class="viewcode-block" id="integ"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.integ">[docs]</a><span class="k">def</span> <span class="nf">integ</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span><span class="n">vrange</span><span class="p">,</span><span class="n">xcen</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">xwidth</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">ycen</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">ywidth</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    wrapper of subimage_integ that defaults to using the full image</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span><span class="n">pyfits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">):</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">header</span>
+        <span class="n">cube</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">data</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span><span class="n">pyfits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">):</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="nb">file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+        <span class="n">cube</span> <span class="o">=</span> <span class="nb">file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">file</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="nb">file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+        <span class="n">cube</span> <span class="o">=</span> <span class="nb">file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+
+    <span class="k">if</span> <span class="bp">None</span> <span class="ow">in</span> <span class="p">[</span><span class="n">xcen</span><span class="p">,</span><span class="n">xwidth</span><span class="p">,</span><span class="n">ycen</span><span class="p">,</span><span class="n">ywidth</span><span class="p">]:</span>
+        <span class="n">xcen</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="s">&#39;NAXIS1&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">xwidth</span> <span class="o">=</span> <span class="n">xcen</span>
+        <span class="n">ycen</span> <span class="o">=</span> <span class="n">header</span><span class="p">[</span><span class="s">&#39;NAXIS2&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">ywidth</span> <span class="o">=</span> <span class="n">ycen</span>
+
+    <span class="k">return</span> <span class="n">subimage_integ</span><span class="p">(</span><span class="n">cube</span><span class="p">,</span><span class="n">xcen</span><span class="p">,</span><span class="n">xwidth</span><span class="p">,</span><span class="n">ycen</span><span class="p">,</span><span class="n">ywidth</span><span class="p">,</span><span class="n">vrange</span><span class="p">,</span><span class="n">header</span><span class="o">=</span><span class="n">header</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="subimage_integ"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.subimage_integ">[docs]</a><span class="k">def</span> <span class="nf">subimage_integ</span><span class="p">(</span><span class="n">cube</span><span class="p">,</span> <span class="n">xcen</span><span class="p">,</span> <span class="n">xwidth</span><span class="p">,</span> <span class="n">ycen</span><span class="p">,</span> <span class="n">ywidth</span><span class="p">,</span> <span class="n">vrange</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">average</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span> <span class="n">dvmult</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">return_HDU</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s">&quot;pixels&quot;</span><span class="p">,</span>
+        <span class="n">zunits</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a sub-image from a data cube integrated over the specified velocity range</span>
+
+<span class="sd">    All units assumed to be pixel units</span>
+
+<span class="sd">    cube has dimensions (velocity, y, x)</span>
+
+<span class="sd">    xwidth and ywidth are &quot;radius&quot; values, i.e. half the length that will be extracted</span>
+
+<span class="sd">    if dvmult is set, multiply the average by DV (this is useful if you set</span>
+<span class="sd">    average=sum and dvmul=True to get an integrated value)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">header</span><span class="p">:</span>
+        <span class="n">flathead</span> <span class="o">=</span> <span class="n">flatten_header</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="n">wcs</span> <span class="o">=</span> <span class="n">pywcs</span><span class="o">.</span><span class="n">WCS</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="n">flathead</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">):</span> <span class="n">CD3</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">CD3</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CDELT3&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">units</span><span class="o">==</span><span class="s">&quot;pixels&quot;</span><span class="p">:</span>
+        <span class="n">xlo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">max</span><span class="p">([</span><span class="n">xcen</span><span class="o">-</span><span class="n">xwidth</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>              <span class="p">)</span>
+        <span class="n">ylo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">max</span><span class="p">([</span><span class="n">ycen</span><span class="o">-</span><span class="n">ywidth</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>              <span class="p">)</span>
+        <span class="n">xhi</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">min</span><span class="p">([</span><span class="n">xcen</span><span class="o">+</span><span class="n">xwidth</span><span class="p">,</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span>  <span class="p">)</span>
+        <span class="n">yhi</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">min</span><span class="p">([</span><span class="n">ycen</span><span class="o">+</span><span class="n">ywidth</span><span class="p">,</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>  <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">units</span><span class="o">==</span><span class="s">&quot;wcs&quot;</span> <span class="ow">and</span> <span class="n">header</span><span class="p">:</span>
+        <span class="n">newxcen</span><span class="p">,</span><span class="n">newycen</span> <span class="o">=</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs_sky2pix</span><span class="p">(</span><span class="n">xcen</span><span class="p">,</span><span class="n">ycen</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">newxwid</span><span class="p">,</span><span class="n">newywid</span> <span class="o">=</span> <span class="n">xwidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]),</span> <span class="n">ywidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">newxwid</span><span class="p">,</span><span class="n">newywid</span> <span class="o">=</span> <span class="n">xwidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">ywidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">xlo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">max</span><span class="p">([</span><span class="n">newxcen</span><span class="o">-</span><span class="n">newxwid</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span> <span class="p">)</span>
+        <span class="n">ylo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">max</span><span class="p">([</span><span class="n">newycen</span><span class="o">-</span><span class="n">newywid</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span> <span class="p">)</span>
+        <span class="n">xhi</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">min</span><span class="p">([</span><span class="n">newxcen</span><span class="o">+</span><span class="n">newxwid</span><span class="p">,</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span> <span class="p">)</span>
+        <span class="n">yhi</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="nb">min</span><span class="p">([</span><span class="n">newycen</span><span class="o">+</span><span class="n">newywid</span><span class="p">,</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Can only use wcs if you pass a header.&quot;</span>
+
+    <span class="k">if</span> <span class="n">zunits</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">zunits</span> <span class="o">=</span> <span class="n">units</span>
+    <span class="k">if</span> <span class="n">zunits</span> <span class="o">==</span> <span class="s">&#39;pixels&#39;</span><span class="p">:</span>
+        <span class="n">zrange</span> <span class="o">=</span> <span class="n">vrange</span>
+    <span class="k">if</span> <span class="n">zunits</span> <span class="o">==</span> <span class="s">&#39;wcs&#39;</span><span class="p">:</span>
+        <span class="n">zrange</span> <span class="o">=</span> <span class="p">(</span> <span class="n">array</span><span class="p">(</span><span class="n">vrange</span><span class="p">)</span><span class="o">-</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CRVAL3&#39;</span><span class="p">)</span> <span class="p">)</span> <span class="o">/</span> <span class="n">CD3</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CRPIX3&#39;</span><span class="p">)</span>
+
+    <span class="n">subim</span> <span class="o">=</span> <span class="n">average</span><span class="p">(</span><span class="n">cube</span><span class="p">[</span><span class="n">zrange</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">zrange</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">ylo</span><span class="p">:</span><span class="n">yhi</span><span class="p">,</span><span class="n">xlo</span><span class="p">:</span><span class="n">xhi</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dvmult</span> <span class="ow">and</span> <span class="n">CD3</span><span class="p">:</span> <span class="n">subim</span> <span class="o">*=</span> <span class="n">CD3</span>
+    <span class="k">elif</span> <span class="n">dvmult</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;Error: could not multiply by dv; CD3=&quot;</span><span class="p">,</span><span class="n">CD3</span>
+
+    <span class="k">if</span> <span class="n">header</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">subim</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">crv1</span><span class="p">,</span><span class="n">crv2</span> <span class="o">=</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs_pix2sky</span><span class="p">(</span><span class="n">xlo</span><span class="p">,</span><span class="n">ylo</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">flathead</span><span class="p">[</span><span class="s">&#39;CRVAL1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">crv1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">flathead</span><span class="p">[</span><span class="s">&#39;CRVAL2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">crv2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">flathead</span><span class="p">[</span><span class="s">&#39;CRPIX1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">flathead</span><span class="p">[</span><span class="s">&#39;CRPIX2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        
+        <span class="k">if</span> <span class="n">return_HDU</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">subim</span><span class="p">,</span><span class="n">header</span><span class="o">=</span><span class="n">flathead</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">subim</span><span class="p">,</span><span class="n">flathead</span>
+</div>
+<div class="viewcode-block" id="subcube"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.subcube">[docs]</a><span class="k">def</span> <span class="nf">subcube</span><span class="p">(</span><span class="n">cube</span><span class="p">,</span> <span class="n">xcen</span><span class="p">,</span> <span class="n">xwidth</span><span class="p">,</span> <span class="n">ycen</span><span class="p">,</span> <span class="n">ywidth</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">dvmult</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">return_HDU</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s">&quot;pixels&quot;</span><span class="p">,</span>
+        <span class="n">widthunits</span><span class="o">=</span><span class="s">&quot;pixels&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Crops a data cube</span>
+
+<span class="sd">    All units assumed to be pixel units</span>
+
+<span class="sd">    cube has dimensions (velocity, y, x)</span>
+
+<span class="sd">    xwidth and ywidth are &quot;radius&quot; values, i.e. half the length that will be extracted</span>
+
+<span class="sd">    if dvmult is set, multiple the average by DV (this is useful if you set</span>
+<span class="sd">    average=sum and dvmul=True to get an integrated value)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">header</span><span class="p">:</span>
+        <span class="n">newheader</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">flathead</span> <span class="o">=</span> <span class="n">flatten_header</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="n">wcs</span> <span class="o">=</span> <span class="n">pywcs</span><span class="o">.</span><span class="n">WCS</span><span class="p">(</span><span class="n">header</span><span class="o">=</span><span class="n">flathead</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">widthunits</span> <span class="o">==</span> <span class="s">&quot;pixels&quot;</span><span class="p">:</span>
+        <span class="n">newxwid</span><span class="p">,</span> <span class="n">newywid</span> <span class="o">=</span> <span class="n">xwidth</span><span class="p">,</span> <span class="n">ywidth</span>
+    <span class="k">elif</span> <span class="n">widthunits</span> <span class="o">==</span> <span class="s">&quot;wcs&quot;</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">newxwid</span><span class="p">,</span><span class="n">newywid</span> <span class="o">=</span> <span class="n">xwidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]),</span> <span class="n">ywidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">newxwid</span><span class="p">,</span><span class="n">newywid</span> <span class="o">=</span> <span class="n">xwidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">ywidth</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;widthunits must be either &#39;wcs&#39; or &#39;pixels&#39;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">units</span><span class="o">==</span><span class="s">&quot;pixels&quot;</span><span class="p">:</span>
+        <span class="n">newxcen</span><span class="p">,</span><span class="n">newycen</span> <span class="o">=</span> <span class="n">xcen</span><span class="p">,</span><span class="n">ycen</span>
+    <span class="k">elif</span> <span class="n">units</span><span class="o">==</span><span class="s">&quot;wcs&quot;</span> <span class="ow">and</span> <span class="n">header</span><span class="p">:</span>
+        <span class="n">newxcen</span><span class="p">,</span><span class="n">newycen</span> <span class="o">=</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs_sky2pix</span><span class="p">(</span><span class="n">xcen</span><span class="p">,</span><span class="n">ycen</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;units must be either &#39;wcs&#39; or &#39;pixels&#39;&quot;</span><span class="p">)</span>
+
+    <span class="n">x1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span> <span class="nb">max</span><span class="p">([</span><span class="n">newxcen</span><span class="o">-</span><span class="n">newxwid</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span> <span class="nb">max</span><span class="p">([</span><span class="n">newycen</span><span class="o">-</span><span class="n">newywid</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">x2</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span> <span class="nb">min</span><span class="p">([</span><span class="n">newxcen</span><span class="o">+</span><span class="n">newxwid</span><span class="p">,</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span> <span class="nb">min</span><span class="p">([</span><span class="n">newycen</span><span class="o">+</span><span class="n">newywid</span><span class="p">,</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span> <span class="p">)</span> <span class="p">)</span>
+
+    <span class="n">xhi</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span><span class="n">x2</span><span class="p">)</span>
+    <span class="n">xlo</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span><span class="n">x2</span><span class="p">)</span>
+    <span class="n">yhi</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">y1</span><span class="p">,</span><span class="n">y2</span><span class="p">)</span>
+    <span class="n">ylo</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">y1</span><span class="p">,</span><span class="n">y2</span><span class="p">)</span>
+
+    <span class="n">subim</span> <span class="o">=</span> <span class="n">cube</span><span class="p">[:,</span><span class="n">ylo</span><span class="p">:</span><span class="n">yhi</span><span class="p">,</span><span class="n">xlo</span><span class="p">:</span><span class="n">xhi</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">return_HDU</span><span class="p">:</span>
+
+        <span class="n">xmid_sky</span><span class="p">,</span><span class="n">ymid_sky</span> <span class="o">=</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs_pix2sky</span><span class="p">(</span><span class="n">xlo</span><span class="o">+</span><span class="n">xwidth</span><span class="p">,</span><span class="n">ylo</span><span class="o">+</span><span class="n">ywidth</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRVAL1&#39;</span><span class="p">,</span><span class="n">xmid_sky</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRVAL2&#39;</span><span class="p">,</span><span class="n">ymid_sky</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRPIX1&#39;</span><span class="p">,</span><span class="mi">1</span><span class="o">+</span><span class="n">xwidth</span><span class="p">)</span>
+        <span class="n">newheader</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRPIX2&#39;</span><span class="p">,</span><span class="mi">1</span><span class="o">+</span><span class="n">ywidth</span><span class="p">)</span>
+        
+        <span class="n">newHDU</span> <span class="o">=</span>  <span class="n">pyfits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">subim</span><span class="p">,</span><span class="n">header</span><span class="o">=</span><span class="n">newheader</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">newHDU</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;NAXIS1&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">newHDU</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;NAXIS2&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Cube has been cropped to 0 in one dimension&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">newHDU</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">subim</span>
+</div>
+<div class="viewcode-block" id="aper_world2pix"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.aper_world2pix">[docs]</a><span class="k">def</span> <span class="nf">aper_world2pix</span><span class="p">(</span><span class="n">ap</span><span class="p">,</span><span class="n">wcs</span><span class="p">,</span><span class="n">coordsys</span><span class="o">=</span><span class="s">&#39;galactic&#39;</span><span class="p">,</span><span class="n">wunit</span><span class="o">=</span><span class="s">&#39;arcsec&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts an elliptical aperture (x,y,width,height,PA) from</span>
+<span class="sd">    WCS to pixel coordinates given an input wcs (an instance</span>
+<span class="sd">    of the pywcs.WCS class).  Must be a 2D WCS header.</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">convopt</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;arcsec&#39;</span><span class="p">:</span><span class="mi">3600</span><span class="p">,</span><span class="s">&#39;arcmin&#39;</span><span class="p">:</span><span class="mi">60</span><span class="p">,</span><span class="s">&#39;degree&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">conv</span> <span class="o">=</span> <span class="n">convopt</span><span class="p">[</span><span class="n">wunit</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Must specify wunit=&#39;arcsec&#39;,&#39;arcmin&#39;, or &#39;degree&#39;&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;WCS header is not strictly 2-dimensional.  Look for 3D keywords.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s">&#39;&#39;</span> <span class="ow">in</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">ctype</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;WCS header has no CTYPE.&quot;</span><span class="p">)</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="n">coords</span><span class="o">.</span><span class="n">Position</span><span class="p">((</span><span class="n">ap</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">ap</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">system</span><span class="o">=</span><span class="n">coordsys</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">ctype</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;RA&#39;</span><span class="p">:</span>
+        <span class="n">ra</span><span class="p">,</span><span class="n">dec</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">j2000</span><span class="p">()</span>
+        <span class="n">corrfactor</span> <span class="o">=</span> <span class="n">cos</span><span class="p">(</span><span class="n">dec</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">ctype</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;GLON&#39;</span><span class="p">:</span>
+        <span class="n">ra</span><span class="p">,</span><span class="n">dec</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">galactic</span><span class="p">()</span>
+        <span class="n">corrfactor</span><span class="o">=</span><span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;WCS CTYPE has no match.&quot;</span><span class="p">)</span>
+    <span class="c"># workaround for a broken wcs.wcs_sky2pix</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">radif</span> <span class="o">=</span> <span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">ra</span><span class="p">)</span><span class="o">*</span><span class="n">dtor</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="n">acos</span><span class="p">(</span><span class="n">cos</span><span class="p">(</span><span class="n">dec</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">radif</span><span class="p">)</span><span class="o">+</span><span class="n">sin</span><span class="p">(</span><span class="n">dec</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">))</span> <span class="o">/</span> <span class="n">dtor</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">atan2</span><span class="p">(</span> <span class="n">sin</span><span class="p">(</span><span class="n">radif</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span> <span class="n">tan</span><span class="p">(</span><span class="n">dec</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">-</span><span class="n">sin</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">radif</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="o">-</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">/</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crpix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">/</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crpix</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">radif</span> <span class="o">=</span> <span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">ra</span><span class="p">)</span><span class="o">*</span><span class="n">dtor</span>
+        <span class="n">gamma</span> <span class="o">=</span> <span class="n">acos</span><span class="p">(</span><span class="n">cos</span><span class="p">(</span><span class="n">dec</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">radif</span><span class="p">)</span><span class="o">+</span><span class="n">sin</span><span class="p">(</span><span class="n">dec</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">))</span> <span class="o">/</span> <span class="n">dtor</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">atan2</span><span class="p">(</span> <span class="n">sin</span><span class="p">(</span><span class="n">radif</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span> <span class="n">tan</span><span class="p">(</span><span class="n">dec</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">-</span><span class="n">sin</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crval</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dtor</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">radif</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="o">-</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">/</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crpix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">/</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">crpix</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    
+    <span class="c">#print &quot;DEBUG: x,y from math (vectors): &quot;,x,y</span>
+    <span class="c">#x,y = wcs.wcs_sky2pix(ra,dec,0)  # convert WCS coordinate to pixel coordinate (0 is origin, do not use fits convention)</span>
+    <span class="c">#print &quot;DEBUG: x,y from wcs: &quot;,x,y</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="c"># change from FITS to python convention</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span> <span class="c"># change from FITS to python convention</span>
+        <span class="c">#print &quot;DEBUG: x,y from math: &quot;,x,y</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="c"># cd is default, cdelt is backup</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ap</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">width</span>  <span class="o">=</span> <span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">conv</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>  <span class="c"># first is width, second is height in DS9 PA convention</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="n">ap</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">conv</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">width</span>  <span class="o">=</span> <span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">conv</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  <span class="c"># first is width, second is height in DS9 PA convention</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="n">ap</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">conv</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">apold</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">ap</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">PA</span> <span class="o">=</span> <span class="n">ap</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> 
+            <span class="n">ap</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">width</span><span class="p">,</span><span class="n">height</span><span class="p">,</span><span class="n">PA</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ap</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">width</span><span class="p">,</span><span class="n">height</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">ap</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">width</span>  <span class="o">=</span> <span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">conv</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cd</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>  <span class="c"># first is width, second is height in DS9 PA convention</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">width</span>  <span class="o">=</span> <span class="n">ap</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">conv</span> <span class="o">/</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  <span class="c"># first is width, second is height in DS9 PA convention</span>
+        <span class="n">apold</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">ap</span><span class="p">)</span>
+        <span class="n">ap</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">width</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">ap</span>
+
+</div>
+<div class="viewcode-block" id="getspec"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.getspec">[docs]</a><span class="k">def</span> <span class="nf">getspec</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span><span class="n">lat</span><span class="p">,</span><span class="n">rad</span><span class="p">,</span><span class="n">cube</span><span class="p">,</span><span class="n">header</span><span class="p">,</span><span class="n">r_fits</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">inherit</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">wunit</span><span class="o">=</span><span class="s">&#39;arcsec&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given a longitude, latitude, aperture radius (arcsec), and a cube file,</span>
+<span class="sd">    return a .fits file or a spectrum.</span>
+<span class="sd">    </span>
+<span class="sd">    lon,lat - longitude and latitude center of a circular aperture in WCS coordinates</span>
+<span class="sd">    rad     - radius (default degrees) of aperture</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">convopt</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;arcsec&#39;</span><span class="p">:</span><span class="mf">1.0</span><span class="p">,</span><span class="s">&#39;arcmin&#39;</span><span class="p">:</span><span class="mf">60.0</span><span class="p">,</span><span class="s">&#39;degree&#39;</span><span class="p">:</span><span class="mf">3600.0</span><span class="p">}</span>
+
+    <span class="n">flathead</span> <span class="o">=</span> <span class="n">flatten_header</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+    <span class="n">wcs</span> <span class="o">=</span> <span class="n">pywcs</span><span class="o">.</span><span class="n">WCS</span><span class="p">(</span><span class="n">flathead</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">ctype</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;RA&#39;</span><span class="p">:</span>
+      <span class="n">coordsys</span><span class="o">=</span><span class="s">&#39;celestial&#39;</span>
+    <span class="k">elif</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">ctype</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;GLON&#39;</span><span class="p">:</span>
+      <span class="n">coordsys</span><span class="o">=</span><span class="s">&#39;galactic&#39;</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">extract_aperture</span><span class="p">(</span><span class="n">cube</span><span class="p">,[</span><span class="n">lon</span><span class="p">,</span><span class="n">lat</span><span class="p">,</span><span class="n">rad</span><span class="p">],</span><span class="n">wcs</span><span class="o">=</span><span class="n">wcs</span><span class="p">,</span>
+            <span class="n">coordsys</span><span class="o">=</span><span class="n">coordsys</span><span class="p">,</span><span class="n">wunit</span><span class="o">=</span><span class="n">wunit</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">nansum</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Total of extracted spectrum was zero. lon,lat,rad: &quot;</span><span class="p">,</span><span class="n">lon</span><span class="p">,</span><span class="n">lat</span><span class="p">,</span><span class="n">rad</span> <span class="c">#  Tracing to find your problem.&quot;</span>
+        <span class="c">#import pdb; pdb.set_trace()</span>
+
+    <span class="k">if</span> <span class="n">r_fits</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">inherit</span><span class="p">:</span>
+            <span class="n">newhead</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">newhead</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">Header</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CD1_1&#39;</span><span class="p">,</span><span class="n">header</span><span class="p">[</span><span class="s">&#39;CD3_3&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CD1_1&#39;</span><span class="p">,</span><span class="n">header</span><span class="p">[</span><span class="s">&#39;CDELT3&#39;</span><span class="p">])</span>
+        <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRPIX1&#39;</span><span class="p">,</span><span class="n">header</span><span class="p">[</span><span class="s">&#39;CRPIX3&#39;</span><span class="p">])</span>
+        <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CRVAL1&#39;</span><span class="p">,</span><span class="n">header</span><span class="p">[</span><span class="s">&#39;CRVAL3&#39;</span><span class="p">])</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CTYPE1&#39;</span><span class="p">,</span><span class="n">header</span><span class="p">[</span><span class="s">&#39;CTYPE3&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CTYPE1&#39;</span><span class="p">,</span><span class="s">&quot;VRAD&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CUNIT1&#39;</span><span class="p">,</span><span class="n">header</span><span class="p">[</span><span class="s">&#39;CUNIT3&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Header did not contain CUNIT3 keyword.  Defaulting to km/s&quot;</span>
+            <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CUNIT1&#39;</span><span class="p">,</span><span class="s">&quot;km/s&quot;</span><span class="p">)</span>
+        <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;BUNIT&#39;</span><span class="p">,</span><span class="n">header</span><span class="p">[</span><span class="s">&#39;BUNIT&#39;</span><span class="p">])</span>
+        <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;APGLON&#39;</span><span class="p">,</span><span class="n">lon</span><span class="p">)</span>
+        <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;APGLAT&#39;</span><span class="p">,</span><span class="n">lat</span><span class="p">)</span>
+        <span class="n">newhead</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;APRAD&#39;</span><span class="p">,</span><span class="n">rad</span><span class="o">*</span><span class="n">convopt</span><span class="p">[</span><span class="n">wunit</span><span class="p">],</span><span class="n">comment</span><span class="o">=</span><span class="s">&#39;arcseconds&#39;</span><span class="p">)</span> <span class="c"># radius in arcsec</span>
+        <span class="n">newfile</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">spec</span><span class="p">,</span><span class="n">header</span><span class="o">=</span><span class="n">newhead</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">newfile</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">spec</span>
+</div>
+<div class="viewcode-block" id="getspec_reg"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.getspec_reg">[docs]</a><span class="k">def</span> <span class="nf">getspec_reg</span><span class="p">(</span><span class="n">cubefilename</span><span class="p">,</span><span class="n">region</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Aperture extraction from a cube using a pyregion circle region</span>
+
+<span class="sd">    The region must be in the same coordinate system as the cube header</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">ds9tocoords</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;fk5&#39;</span><span class="p">:</span><span class="s">&#39;celestial&#39;</span><span class="p">,</span><span class="s">&#39;galactic&#39;</span><span class="p">:</span><span class="s">&#39;galactic&#39;</span><span class="p">,</span><span class="s">&#39;icrs&#39;</span><span class="p">:</span><span class="s">&#39;celestial&#39;</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">region</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;circle&#39;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Only circular apertures are implemented so far&quot;</span><span class="p">)</span>
+
+    <span class="n">l</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">r</span> <span class="o">=</span> <span class="n">region</span><span class="o">.</span><span class="n">coord_list</span>
+    <span class="c">#pos = coords.Position([l,b],system=ds9tocoords[region.coord_format])</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cubefilename</span><span class="p">,</span><span class="n">pyfits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">):</span>
+        <span class="n">cubefile</span> <span class="o">=</span> <span class="n">cubefilename</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">cubefile</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">cubefilename</span><span class="p">)</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">cubefile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+    <span class="n">cube</span> <span class="o">=</span> <span class="n">cubefile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span> <span class="n">cube</span> <span class="o">=</span> <span class="n">cube</span><span class="p">[</span><span class="mi">0</span><span class="p">,:,:,:]</span>
+
+    <span class="n">sp</span> <span class="o">=</span> <span class="n">getspec</span><span class="p">(</span><span class="n">l</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">r</span><span class="p">,</span><span class="n">cube</span><span class="p">,</span><span class="n">header</span><span class="p">,</span><span class="n">wunit</span><span class="o">=</span><span class="s">&#39;degree&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">sp</span>
+</div>
+<div class="viewcode-block" id="coords_in_image"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.coords_in_image">[docs]</a><span class="k">def</span> <span class="nf">coords_in_image</span><span class="p">(</span><span class="n">fitsfile</span><span class="p">,</span><span class="n">lon</span><span class="p">,</span><span class="n">lat</span><span class="p">,</span><span class="n">system</span><span class="o">=</span><span class="s">&#39;galactic&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine whether the coordinates are inside the image</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fitsfile</span><span class="p">,</span><span class="n">pyfits</span><span class="o">.</span><span class="n">HDUList</span><span class="p">):</span>
+        <span class="n">fitsfile</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fitsfile</span><span class="p">)</span>
+
+    <span class="n">wcs</span> <span class="o">=</span> <span class="n">pywcs</span><span class="o">.</span><span class="n">WCS</span><span class="p">(</span><span class="n">flatten_header</span><span class="p">(</span><span class="n">fitsfile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="s">&#39;RA&#39;</span> <span class="ow">in</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">ctype</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">coords</span><span class="o">.</span><span class="n">Position</span><span class="p">((</span><span class="n">lon</span><span class="p">,</span><span class="n">lat</span><span class="p">),</span><span class="n">system</span><span class="o">=</span><span class="n">system</span><span class="p">)</span>
+        <span class="n">lon</span><span class="p">,</span><span class="n">lat</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">j2000</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s">&#39;GLON&#39;</span> <span class="ow">in</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">ctype</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">coords</span><span class="o">.</span><span class="n">Position</span><span class="p">((</span><span class="n">lon</span><span class="p">,</span><span class="n">lat</span><span class="p">),</span><span class="n">system</span><span class="o">=</span><span class="n">system</span><span class="p">)</span>
+        <span class="n">lon</span><span class="p">,</span><span class="n">lat</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span class="n">galactic</span><span class="p">()</span>
+
+    <span class="n">x</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">wcs</span><span class="o">.</span><span class="n">wcs_sky2pix</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span><span class="n">lat</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+    <span class="c">#DEBUG print x,y,wcs.naxis1,wcs.naxis2</span>
+    <span class="k">if</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="n">wcs</span><span class="o">.</span><span class="n">naxis1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="n">wcs</span><span class="o">.</span><span class="n">naxis2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="smooth_cube"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.smooth_cube">[docs]</a><span class="k">def</span> <span class="nf">smooth_cube</span><span class="p">(</span><span class="n">cube</span><span class="p">,</span><span class="n">cubedim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">parallel</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">numcores</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    parallel-map the smooth function</span>
+
+<span class="sd">    parallel - defaults True.  Set to false if you want serial (for debug</span>
+<span class="sd">        purposes?)</span>
+<span class="sd">    numcores - pass to parallel_map (None = use all available)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">convolve</span> <span class="kn">import</span> <span class="n">smooth</span>
+    <span class="kn">from</span> <span class="nn">contributed</span> <span class="kn">import</span> <span class="n">parallel_map</span>
+
+    <span class="k">if</span> <span class="n">cubedim</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">cube</span> <span class="o">=</span> <span class="n">cube</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">cubedim</span><span class="p">)</span>
+
+    <span class="n">cubelist</span> <span class="o">=</span> <span class="p">[</span><span class="n">cube</span><span class="p">[</span><span class="n">ii</span><span class="p">,:,:]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">cube</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+
+    <span class="n">Psmooth</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">C</span><span class="p">:</span> <span class="n">smooth</span><span class="p">(</span><span class="n">C</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">parallel</span><span class="p">:</span>
+        <span class="n">smoothcube</span> <span class="o">=</span> <span class="n">array</span><span class="p">(</span><span class="n">parallel_map</span><span class="p">(</span><span class="n">Psmooth</span><span class="p">,</span><span class="n">cubelist</span><span class="p">,</span><span class="n">numcores</span><span class="o">=</span><span class="n">numcores</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">smoothcube</span> <span class="o">=</span> <span class="n">array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">Psmooth</span><span class="p">,</span><span class="n">cubelist</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="n">cubedim</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">smoothcube</span> <span class="o">=</span> <span class="n">smoothcube</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">cubedim</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">smoothcube</span>
+
+</div>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">montage</span> 
+
+<div class="viewcode-block" id="rotcrop_cube"><a class="viewcode-back" href="../../agpy.html#agpy.cubes.rotcrop_cube">[docs]</a>    <span class="k">def</span> <span class="nf">rotcrop_cube</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">,</span> <span class="n">cubename</span><span class="p">,</span> <span class="n">outname</span><span class="p">,</span> <span class="n">xwidth</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">ywidth</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
+            <span class="n">in_system</span><span class="o">=</span><span class="s">&#39;galactic&#39;</span><span class="p">,</span>  <span class="n">out_system</span><span class="o">=</span><span class="s">&#39;equatorial&#39;</span><span class="p">,</span> <span class="n">clobber</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Crop a data cube and then rotate it with montage</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">cubefile</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">cubename</span><span class="p">)</span>
+
+        <span class="n">pos1</span> <span class="o">=</span> <span class="n">coords</span><span class="o">.</span><span class="n">Position</span><span class="p">([</span><span class="n">x1</span><span class="p">,</span><span class="n">y1</span><span class="p">],</span><span class="n">system</span><span class="o">=</span><span class="n">in_system</span><span class="p">)</span>
+        <span class="n">pos2</span> <span class="o">=</span> <span class="n">coords</span><span class="o">.</span><span class="n">Position</span><span class="p">([</span><span class="n">x2</span><span class="p">,</span><span class="n">y2</span><span class="p">],</span><span class="n">system</span><span class="o">=</span><span class="n">in_system</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cubefile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CTYPE1&#39;</span><span class="p">)[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;RA&#39;</span><span class="p">:</span>
+            <span class="n">x1</span><span class="p">,</span><span class="n">y1</span> <span class="o">=</span> <span class="n">pos1</span><span class="o">.</span><span class="n">j2000</span><span class="p">()</span>
+            <span class="n">x2</span><span class="p">,</span><span class="n">y2</span> <span class="o">=</span> <span class="n">pos2</span><span class="o">.</span><span class="n">j2000</span><span class="p">()</span>
+            <span class="n">coord_system</span> <span class="o">=</span> <span class="s">&#39;celestial&#39;</span>
+        <span class="k">elif</span>  <span class="n">cubefile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CTYPE1&#39;</span><span class="p">)[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;GLON&#39;</span><span class="p">:</span>
+            <span class="n">x1</span><span class="p">,</span><span class="n">y1</span> <span class="o">=</span> <span class="n">pos1</span><span class="o">.</span><span class="n">galactic</span><span class="p">()</span>
+            <span class="n">x2</span><span class="p">,</span><span class="n">y2</span> <span class="o">=</span> <span class="n">pos2</span><span class="o">.</span><span class="n">galactic</span><span class="p">()</span>
+            <span class="n">coord_system</span> <span class="o">=</span> <span class="s">&#39;galactic&#39;</span>
+
+        <span class="n">xcen</span> <span class="o">=</span> <span class="p">(</span><span class="n">x1</span><span class="o">+</span><span class="n">x2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span>
+        <span class="n">ycen</span> <span class="o">=</span> <span class="p">(</span><span class="n">y1</span><span class="o">+</span><span class="n">y2</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span>
+
+        <span class="n">sc</span> <span class="o">=</span> <span class="n">subcube</span><span class="p">(</span><span class="n">cubefile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">xcen</span><span class="p">,</span> <span class="n">xwidth</span><span class="p">,</span> <span class="n">ycen</span><span class="p">,</span> <span class="n">ywidth</span><span class="p">,</span> 
+                <span class="n">widthunits</span><span class="o">=</span><span class="s">&#39;pixels&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s">&quot;wcs&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="n">cubefile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">,</span>
+                <span class="n">return_HDU</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="c"># note: there should be no security risk here because pyfits&#39; writeto</span>
+        <span class="c"># will not overwrite by default</span>
+        <span class="n">tempcube</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mktemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.fits&#39;</span><span class="p">)</span>
+        <span class="n">sc</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">tempcube</span><span class="p">)</span>
+        
+        <span class="n">pa</span> <span class="o">=</span> <span class="n">posang</span><span class="o">.</span><span class="n">posang</span><span class="p">(</span><span class="n">x1</span><span class="p">,</span><span class="n">y1</span><span class="p">,</span><span class="n">x2</span><span class="p">,</span><span class="n">y2</span><span class="p">,</span><span class="n">system</span><span class="o">=</span><span class="n">coord_system</span><span class="p">)</span> <span class="o">-</span> <span class="mi">90</span>
+
+        <span class="n">newheader</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">header</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">cd11</span> <span class="o">=</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CDELT1&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CDELT1&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD1_1&#39;</span><span class="p">)</span>
+        <span class="n">cd22</span> <span class="o">=</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CDELT2&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CDELT2&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD2_2&#39;</span><span class="p">)</span>
+        <span class="n">cd12</span> <span class="o">=</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD1_2&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD1_2&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">cd21</span> <span class="o">=</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD2_1&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD2_1&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">cdelt</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">cd11</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">cd12</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">tempheader</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mktemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s">&#39;.hdr&#39;</span><span class="p">)</span>
+        <span class="n">ycensign</span> <span class="o">=</span> <span class="s">&quot;+&quot;</span> <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">ycen</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;-&quot;</span>
+        <span class="n">montage</span><span class="o">.</span><span class="n">mHdr</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> </span><span class="si">%1s%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">xcen</span><span class="p">,</span> <span class="n">ycensign</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ycen</span><span class="p">)),</span> <span class="n">xwidth</span><span class="o">*</span><span class="n">cdelt</span><span class="p">,</span>
+                <span class="n">tempheader</span><span class="p">,</span> <span class="n">system</span><span class="o">=</span><span class="n">out_system</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">ywidth</span><span class="o">*</span><span class="n">cdelt</span><span class="p">,</span>
+                <span class="n">pix_size</span><span class="o">=</span><span class="n">cdelt</span><span class="o">*</span><span class="mf">3600.0</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="n">pa</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s">&quot;sed -i bck &#39;/END/d&#39; </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">tempheader</span><span class="p">))</span>
+        <span class="n">newheader2</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">Header</span><span class="p">()</span>
+        <span class="n">newheader2</span><span class="o">.</span><span class="n">fromTxtFile</span><span class="p">(</span><span class="n">tempheader</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;CRPIX3&#39;</span><span class="p">,</span><span class="s">&#39;CRVAL3&#39;</span><span class="p">,</span><span class="s">&#39;CDELT3&#39;</span><span class="p">,</span><span class="s">&#39;CD3_3&#39;</span><span class="p">,</span><span class="s">&#39;CUNIT3&#39;</span><span class="p">,</span><span class="s">&#39;WCSTYPE3&#39;</span><span class="p">,</span><span class="s">&#39;CTYPE3&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                <span class="n">newheader2</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">newheader2</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CDELT3&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">newheader2</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s">&#39;CDELT3&#39;</span><span class="p">,</span><span class="n">newheader</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;CD3_3&#39;</span><span class="p">))</span>
+        <span class="n">newheader2</span><span class="o">.</span><span class="n">toTxtFile</span><span class="p">(</span><span class="n">tempheader</span><span class="p">,</span><span class="n">clobber</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="c">#if newheader2.get(&#39;CDELT3&#39;) is None:</span>
+        <span class="c">#    raise Exception(&quot;No CD3_3 or CDELT3 in header.&quot;)</span>
+
+        <span class="n">montage</span><span class="o">.</span><span class="n">wrappers</span><span class="o">.</span><span class="n">reproject_cube</span><span class="p">(</span><span class="n">tempcube</span><span class="p">,</span><span class="n">outname</span><span class="p">,</span><span class="n">header</span><span class="o">=</span><span class="n">tempheader</span><span class="p">,</span><span class="n">clobber</span><span class="o">=</span><span class="n">clobber</span><span class="p">)</span>
+        <span class="c">#print &quot;\n&quot;,outname</span>
+        <span class="c">#os.system(&#39;imhead %s | grep CDELT&#39; % outname)</span>
+
+        <span class="c"># AWFUL hack because montage removes CDELT3</span>
+        <span class="n">tempcube</span> <span class="o">=</span> <span class="n">pyfits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">outname</span><span class="p">)</span>
+        <span class="n">tempcube</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="n">newheader2</span>
+        <span class="c">#if tempcube.header.get(&#39;CDELT3&#39;) is None:</span>
+        <span class="c">#    raise Exception(&quot;No CD3_3 or CDELT3 in header.&quot;)</span>
+        <span class="c">#print tempcube.header.get(&#39;CDELT3&#39;)</span>
+        <span class="n">tempcube</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">outname</span><span class="p">,</span><span class="n">clobber</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="c">#print tempcube.get(&#39;CDELT3&#39;)</span>
+        <span class="c">#print &quot;\n&quot;,outname</span>
+        <span class="c">#os.system(&#39;imhead %s | grep CDELT&#39; % outname)</span>
+
+        <span class="c">#print &quot;\nnewheader2&quot;</span>
+        <span class="c">#print newheader2.ascard</span>
+        <span class="c">#print</span>
+        
+        <span class="k">return</span>
+</div>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

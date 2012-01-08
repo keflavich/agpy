@@ -1,0 +1,550 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>plfit Package &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="index.html" />
+    <link rel="prev" title="AG_fft_tools Package" href="fft_tools.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="plfit-package">
+<h1>plfit Package<a class="headerlink" href="#plfit-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><a class="reference internal" href="#module-plfit" title="plfit"><tt class="xref py py-mod docutils literal"><span class="pre">plfit</span></tt></a> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-plfit"></span></div>
+<div class="section" id="cython-plfit-module">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">cython_plfit</span></tt> Module<a class="headerlink" href="#cython-plfit-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-plfit.fortran_plfit">
+<span id="fortran-plfit-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">fortran_plfit</span></tt> Module<a class="headerlink" href="#module-plfit.fortran_plfit" title="Permalink to this headline">¶</a></h2>
+<p>plfit.py - a python power-law fitter based on code by Aaron Clauset
+<a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a>
+<a class="reference external" href="http://arxiv.org/abs/0706.1062">http://arxiv.org/abs/0706.1062</a> &#8220;Power-law distributions in empirical data&#8221; 
+Requires pylab (matplotlib), which requires numpy</p>
+<p>example use:
+from plfit import plfit</p>
+<p>MyPL = plfit(mydata)
+MyPL.plotpdf(log=True)</p>
+<dl class="function">
+<dt id="plfit.fortran_plfit.pl_inv">
+<tt class="descclassname">plfit.fortran_plfit.</tt><tt class="descname">pl_inv</tt><big>(</big><em>P</em>, <em>xm</em>, <em>a</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#pl_inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.pl_inv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse CDF for a pure power-law</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.fortran_plfit.plexp">
+<tt class="descclassname">plfit.fortran_plfit.</tt><tt class="descname">plexp</tt><big>(</big><em>x</em>, <em>xm=1</em>, <em>a=2.5</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plexp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plexp" title="Permalink to this definition">¶</a></dt>
+<dd><p>CDF(x) for the piecewise distribution exponential x&lt;xmin, powerlaw x&gt;=xmin
+This is the CDF version of the distributions drawn in fig 3.4a of Clauset et al.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.fortran_plfit.plexp_inv">
+<tt class="descclassname">plfit.fortran_plfit.</tt><tt class="descname">plexp_inv</tt><big>(</big><em>P</em>, <em>xm</em>, <em>a</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plexp_inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plexp_inv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse CDF for a piecewise PDF as defined in eqn. 3.10
+of Clauset et al.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="plfit.fortran_plfit.plfit">
+<em class="property">class </em><tt class="descclassname">plfit.fortran_plfit.</tt><tt class="descname">plfit</tt><big>(</big><em>x</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Python implementation of the Matlab code <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/plfit.m">http://www.santafe.edu/~aaronc/powerlaws/plfit.m</a>
+from <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a></p>
+<p>See A. Clauset, C.R. Shalizi, and M.E.J. Newman, &#8220;Power-law distributions
+in empirical data&#8221; SIAM Review, to appear (2009). (arXiv:0706.1062)
+http://arxiv.org/abs/0706.1062</p>
+<p>The output &#8220;alpha&#8221; is defined such that p(x) ~ (x/xmin)^-alpha</p>
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.alpha_">
+<tt class="descname">alpha_</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.alpha_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.alpha_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.alphavsks">
+<tt class="descname">alphavsks</tt><big>(</big><em>autozoom=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.alphavsks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.alphavsks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot alpha versus the ks value for derived alpha.  This plot can be used
+as a diagnostic of whether you have derived the &#8216;best&#8217; fit: if there are 
+multiple local minima, your data set may be well suited to a broken 
+powerlaw or a different function.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.kstest_">
+<tt class="descname">kstest_</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.kstest_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.kstest_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.plfit">
+<tt class="descname">plfit</tt><big>(</big><em>nosmall=True</em>, <em>finite=False</em>, <em>quiet=False</em>, <em>silent=False</em>, <em>usefortran=False</em>, <em>usecy=False</em>, <em>xmin=None</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.plfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.plfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Python implementation of the Matlab code <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/plfit.m">http://www.santafe.edu/~aaronc/powerlaws/plfit.m</a>
+from <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a></p>
+<p>See A. Clauset, C.R. Shalizi, and M.E.J. Newman, &#8220;Power-law distributions
+in empirical data&#8221; SIAM Review, to appear (2009). (arXiv:0706.1062)
+http://arxiv.org/abs/0706.1062</p>
+<p>nosmall is on by default; it rejects low s/n points
+can specify xmin to skip xmin estimation</p>
+<p>There are 3 implementations of xmin estimation.  The fortran version is fastest, the C (cython)
+version is ~10% slower, and the python version is ~3x slower than the fortran version.
+Also, the cython code suffers ~2% numerical error relative to the fortran and python for unknown
+reasons.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.plotcdf">
+<tt class="descname">plotcdf</tt><big>(</big><em>x=None</em>, <em>xmin=None</em>, <em>alpha=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.plotcdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.plotcdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots CDF and powerlaw</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.plotpdf">
+<tt class="descname">plotpdf</tt><big>(</big><em>x=None</em>, <em>xmin=None</em>, <em>alpha=None</em>, <em>nbins=50</em>, <em>dolog=True</em>, <em>dnds=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.plotpdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.plotpdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots PDF and powerlaw.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.plotppf">
+<tt class="descname">plotppf</tt><big>(</big><em>x=None</em>, <em>xmin=None</em>, <em>alpha=None</em>, <em>dolog=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.plotppf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.plotppf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="plfit.fortran_plfit.plfit.test_pl">
+<tt class="descname">test_pl</tt><big>(</big><em>niter=1000.0</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit.test_pl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit.test_pl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Monte-Carlo test to determine whether distribution is consistent with a power law</p>
+<p>Runs through niter iterations of a sample size identical to the input sample size.</p>
+<p>Will randomly select values from the data &lt; xmin.  The number of values selected will
+be chosen from a uniform random distribution with p(&lt;xmin) = n(&lt;xmin)/n.</p>
+<p>Once the sample is created, is fit using above methods, then the best fit is used to
+compute a Kolmogorov-Smirnov statistic.  The KS stat distribution is compared to the 
+KS value for the fit to the actual data, and p = fraction of random ks values greater
+than the data ks value is computed.  If p&lt;.1, the data may be inconsistent with a 
+powerlaw.  A data set of n(&gt;xmin)&gt;100 is required to distinguish a PL from an exponential,
+and n(&gt;xmin)&gt;~300 is required to distinguish a log-normal distribution from a PL.
+For more details, see figure 4.1 and section</p>
+<p><strong>WARNING</strong> This can take a very long time to run!  Execution time scales as 
+niter * setsize</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.fortran_plfit.plfit_lsq">
+<tt class="descclassname">plfit.fortran_plfit.</tt><tt class="descname">plfit_lsq</tt><big>(</big><em>x</em>, <em>y</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#plfit_lsq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.plfit_lsq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns A and B in y=Ax^B
+<a class="reference external" href="http://mathworld.wolfram.com/LeastSquaresFittingPowerLaw.html">http://mathworld.wolfram.com/LeastSquaresFittingPowerLaw.html</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.fortran_plfit.test_fitter">
+<tt class="descclassname">plfit.fortran_plfit.</tt><tt class="descname">test_fitter</tt><big>(</big><em>xmin=1.0</em>, <em>alpha=2.5</em>, <em>niter=500</em>, <em>npts=1000</em>, <em>invcdf=&lt;function plexp_inv at 0x10b310488&gt;</em><big>)</big><a class="reference internal" href="_modules/plfit/fortran_plfit.html#test_fitter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.fortran_plfit.test_fitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tests the power-law fitter</p>
+<p>Example (fig 3.4b in Clauset et al.):
+xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=1,npts=50000)
+loglog(xminin,xmarr.squeeze(),&#8217;x&#8217;)</p>
+<p>Example 2:
+xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=10,npts=1000)
+loglog(xminin,xmarr.mean(axis=0),&#8217;x&#8217;)</p>
+<p>Example 3:
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000)
+hist(xmarr.squeeze());
+# Test results:
+# mean(xmarr) = 0.70, median(xmarr)=0.65 std(xmarr)=0.20
+# mean(af) = 2.51 median(af) = 2.49  std(af)=0.14
+# biased distribution; far from correct value of xmin but close to correct alpha</p>
+<p>Example 4:
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000,invcdf=pl_inv)
+print(&#8220;mean(xmarr): %0.2f median(xmarr): %0.2f std(xmarr): %0.2f&#8221; % (mean(xmarr),median(xmarr),std(xmarr)))
+print(&#8220;mean(af): %0.2f median(af): %0.2f std(af): %0.2f&#8221; % (mean(af),median(af),std(af)))
+# mean(xmarr): 1.19 median(xmarr): 1.03 std(xmarr): 0.35
+# mean(af): 2.51 median(af): 2.50 std(af): 0.07</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-plfit.plfit">
+<span id="plfit-module"></span><h2><a class="reference internal" href="#module-plfit" title="plfit"><tt class="xref py py-mod docutils literal"><span class="pre">plfit</span></tt></a> Module<a class="headerlink" href="#module-plfit.plfit" title="Permalink to this headline">¶</a></h2>
+<p>plfit.py - a python power-law fitter based on code by Aaron Clauset
+<a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a>
+<a class="reference external" href="http://arxiv.org/abs/0706.1062">http://arxiv.org/abs/0706.1062</a> &#8220;Power-law distributions in empirical data&#8221; 
+Requires pylab (matplotlib), which requires numpy</p>
+<p>example use:
+from plfit import plfit</p>
+<p>MyPL = plfit(mydata)
+MyPL.plotpdf(log=True)</p>
+<dl class="function">
+<dt id="plfit.plfit.pl_inv">
+<tt class="descclassname">plfit.plfit.</tt><tt class="descname">pl_inv</tt><big>(</big><em>P</em>, <em>xm</em>, <em>a</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#pl_inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.pl_inv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse CDF for a pure power-law</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.plfit.plexp">
+<tt class="descclassname">plfit.plfit.</tt><tt class="descname">plexp</tt><big>(</big><em>x</em>, <em>xm=1</em>, <em>a=2.5</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plexp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plexp" title="Permalink to this definition">¶</a></dt>
+<dd><p>CDF(x) for the piecewise distribution exponential x&lt;xmin, powerlaw x&gt;=xmin
+This is the CDF version of the distributions drawn in fig 3.4a of Clauset et al.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.plfit.plexp_inv">
+<tt class="descclassname">plfit.plfit.</tt><tt class="descname">plexp_inv</tt><big>(</big><em>P</em>, <em>xm</em>, <em>a</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plexp_inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plexp_inv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse CDF for a piecewise PDF as defined in eqn. 3.10
+of Clauset et al.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="plfit.plfit.plfit">
+<em class="property">class </em><tt class="descclassname">plfit.plfit.</tt><tt class="descname">plfit</tt><big>(</big><em>x</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Python implementation of the Matlab code <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/plfit.m">http://www.santafe.edu/~aaronc/powerlaws/plfit.m</a>
+from <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a></p>
+<p>See A. Clauset, C.R. Shalizi, and M.E.J. Newman, &#8220;Power-law distributions
+in empirical data&#8221; SIAM Review, 51, 661-703 (2009). (arXiv:0706.1062)
+http://arxiv.org/abs/0706.1062</p>
+<p>The output &#8220;alpha&#8221; is defined such that p(x) ~ (x/xmin)^-alpha</p>
+<dl class="method">
+<dt id="plfit.plfit.plfit.alpha_">
+<tt class="descname">alpha_</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.alpha_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.alpha_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.alphavsks">
+<tt class="descname">alphavsks</tt><big>(</big><em>autozoom=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.alphavsks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.alphavsks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot alpha versus the ks value for derived alpha.  This plot can be used
+as a diagnostic of whether you have derived the &#8216;best&#8217; fit: if there are 
+multiple local minima, your data set may be well suited to a broken 
+powerlaw or a different function.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.kstest_">
+<tt class="descname">kstest_</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.kstest_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.kstest_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.lognormal">
+<tt class="descname">lognormal</tt><big>(</big><em>doprint=True</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.lognormal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.lognormal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use the maximum likelihood estimator for a lognormal distribution to
+produce the best-fit lognormal parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.plfit">
+<tt class="descname">plfit</tt><big>(</big><em>nosmall=True</em>, <em>finite=False</em>, <em>quiet=False</em>, <em>silent=False</em>, <em>usefortran=False</em>, <em>usecy=False</em>, <em>xmin=None</em>, <em>verbose=False</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.plfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.plfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Python implementation of the Matlab code <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/plfit.m">http://www.santafe.edu/~aaronc/powerlaws/plfit.m</a>
+from <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a></p>
+<p>See A. Clauset, C.R. Shalizi, and M.E.J. Newman, &#8220;Power-law distributions
+in empirical data&#8221; SIAM Review, 51, 661-703 (2009). (arXiv:0706.1062)
+http://arxiv.org/abs/0706.1062</p>
+<p>nosmall is on by default; it rejects low s/n points
+can specify xmin to skip xmin estimation</p>
+<p>There are 3 implementations of xmin estimation.  The fortran version is fastest, the C (cython)
+version is ~10% slower, and the python version is ~3x slower than the fortran version.
+Also, the cython code suffers ~2% numerical error relative to the fortran and python for unknown
+reasons.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.plot_lognormal_cdf">
+<tt class="descname">plot_lognormal_cdf</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.plot_lognormal_cdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.plot_lognormal_cdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the fitted lognormal distribution</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.plot_lognormal_pdf">
+<tt class="descname">plot_lognormal_pdf</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.plot_lognormal_pdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.plot_lognormal_pdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the fitted lognormal distribution</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.plotcdf">
+<tt class="descname">plotcdf</tt><big>(</big><em>x=None</em>, <em>xmin=None</em>, <em>alpha=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.plotcdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.plotcdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots CDF and powerlaw</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.plotpdf">
+<tt class="descname">plotpdf</tt><big>(</big><em>x=None</em>, <em>xmin=None</em>, <em>alpha=None</em>, <em>nbins=50</em>, <em>dolog=True</em>, <em>dnds=False</em>, <em>drawstyle='steps-post'</em>, <em>histcolor='k'</em>, <em>plcolor='r'</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.plotpdf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.plotpdf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots PDF and powerlaw.</p>
+<p>kwargs is passed to pylab.hist and pylab.plot</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.plotppf">
+<tt class="descname">plotppf</tt><big>(</big><em>x=None</em>, <em>xmin=None</em>, <em>alpha=None</em>, <em>dolog=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.plotppf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.plotppf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the power-law-predicted value on the Y-axis against the real
+values along the X-axis.  Can be used as a diagnostic of the fit 
+quality.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.test_pl">
+<tt class="descname">test_pl</tt><big>(</big><em>niter=1000.0</em>, <em>print_timing=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.test_pl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.test_pl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Monte-Carlo test to determine whether distribution is consistent with a power law</p>
+<p>Runs through niter iterations of a sample size identical to the input sample size.</p>
+<p>Will randomly select values from the data &lt; xmin.  The number of values selected will
+be chosen from a uniform random distribution with p(&lt;xmin) = n(&lt;xmin)/n.</p>
+<p>Once the sample is created, it is fit using above methods, then the best fit is used to
+compute a Kolmogorov-Smirnov statistic.  The KS stat distribution is compared to the 
+KS value for the fit to the actual data, and p = fraction of random ks values greater
+than the data ks value is computed.  If p&lt;.1, the data may be inconsistent with a 
+powerlaw.  A data set of n(&gt;xmin)&gt;100 is required to distinguish a PL from an exponential,
+and n(&gt;xmin)&gt;~300 is required to distinguish a log-normal distribution from a PL.
+For more details, see figure 4.1 and section</p>
+<p><strong>WARNING</strong> This can take a very long time to run!  Execution time scales as 
+niter * setsize</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit.plfit.xminvsks">
+<tt class="descname">xminvsks</tt><big>(</big><em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit.xminvsks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit.xminvsks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot alpha versus the ks value for derived alpha.  This plot can be used
+as a diagnostic of whether you have derived the &#8216;best&#8217; fit: if there are 
+multiple local minima, your data set may be well suited to a broken 
+powerlaw or a different function.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.plfit.plfit_lsq">
+<tt class="descclassname">plfit.plfit.</tt><tt class="descname">plfit_lsq</tt><big>(</big><em>x</em>, <em>y</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#plfit_lsq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.plfit_lsq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns A and B in y=Ax^B
+<a class="reference external" href="http://mathworld.wolfram.com/LeastSquaresFittingPowerLaw.html">http://mathworld.wolfram.com/LeastSquaresFittingPowerLaw.html</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.plfit.test_fitter">
+<tt class="descclassname">plfit.plfit.</tt><tt class="descname">test_fitter</tt><big>(</big><em>xmin=1.0</em>, <em>alpha=2.5</em>, <em>niter=500</em>, <em>npts=1000</em>, <em>invcdf=&lt;function plexp_inv at 0x10a9d10c8&gt;</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit.html#test_fitter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit.test_fitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tests the power-law fitter</p>
+<p>Example (fig 3.4b in Clauset et al.):
+xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=1,npts=50000)
+loglog(xminin,xmarr.squeeze(),&#8217;x&#8217;)</p>
+<p>Example 2:
+xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=10,npts=1000)
+loglog(xminin,xmarr.mean(axis=0),&#8217;x&#8217;)</p>
+<p>Example 3:
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000)
+hist(xmarr.squeeze());
+# Test results:
+# mean(xmarr) = 0.70, median(xmarr)=0.65 std(xmarr)=0.20
+# mean(af) = 2.51 median(af) = 2.49  std(af)=0.14
+# biased distribution; far from correct value of xmin but close to correct alpha</p>
+<p>Example 4:
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000,invcdf=pl_inv)
+print(&#8220;mean(xmarr): %0.2f median(xmarr): %0.2f std(xmarr): %0.2f&#8221; % (mean(xmarr),median(xmarr),std(xmarr)))
+print(&#8220;mean(af): %0.2f median(af): %0.2f std(af): %0.2f&#8221; % (mean(af),median(af),std(af)))
+# mean(xmarr): 1.19 median(xmarr): 1.03 std(xmarr): 0.35
+# mean(af): 2.51 median(af): 2.50 std(af): 0.07</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-plfit.plfit_py">
+<span id="plfit-py-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">plfit_py</span></tt> Module<a class="headerlink" href="#module-plfit.plfit_py" title="Permalink to this headline">¶</a></h2>
+<p>plfit.py - a python power-law fitter based on code by Aaron Clauset
+<a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a>
+<a class="reference external" href="http://arxiv.org/abs/0706.1062">http://arxiv.org/abs/0706.1062</a> &#8220;Power-law distributions in empirical data&#8221; 
+Requires pylab (matplotlib), which requires numpy</p>
+<p>example use:
+from plfit import plfit</p>
+<p>MyPL = plfit(mydata)
+MyPL.plotpdf(log=True)</p>
+<dl class="function">
+<dt id="plfit.plfit_py.pl_inv">
+<tt class="descclassname">plfit.plfit_py.</tt><tt class="descname">pl_inv</tt><big>(</big><em>P</em>, <em>xm</em>, <em>a</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#pl_inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.pl_inv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse CDF for a pure power-law</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.plfit_py.plexp">
+<tt class="descclassname">plfit.plfit_py.</tt><tt class="descname">plexp</tt><big>(</big><em>x</em>, <em>xm=1</em>, <em>a=2.5</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#plexp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.plexp" title="Permalink to this definition">¶</a></dt>
+<dd><p>CDF(x) for the piecewise distribution exponential x&lt;xmin, powerlaw x&gt;=xmin
+This is the CDF version of the distributions drawn in fig 3.4a of Clauset et al.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.plfit_py.plexp_inv">
+<tt class="descclassname">plfit.plfit_py.</tt><tt class="descname">plexp_inv</tt><big>(</big><em>P</em>, <em>xm</em>, <em>a</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#plexp_inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.plexp_inv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse CDF for a piecewise PDF as defined in eqn. 3.10
+of Clauset et al.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="plfit.plfit_py.plfit">
+<em class="property">class </em><tt class="descclassname">plfit.plfit_py.</tt><tt class="descname">plfit</tt><big>(</big><em>x</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#plfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.plfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Python implementation of the Matlab code <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/plfit.m">http://www.santafe.edu/~aaronc/powerlaws/plfit.m</a>
+from <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a></p>
+<p>See A. Clauset, C.R. Shalizi, and M.E.J. Newman, &#8220;Power-law distributions
+in empirical data&#8221; SIAM Review, 51, 661-703 (2009). (arXiv:0706.1062)
+http://arxiv.org/abs/0706.1062</p>
+<p>The output &#8220;alpha&#8221; is defined such that p(x) ~ (x/xmin)^-alpha</p>
+<dl class="method">
+<dt id="plfit.plfit_py.plfit.alpha_">
+<tt class="descname">alpha_</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#plfit.alpha_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.plfit.alpha_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit_py.plfit.kstest_">
+<tt class="descname">kstest_</tt><big>(</big><em>x</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#plfit.kstest_"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.plfit.kstest_" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="plfit.plfit_py.plfit.plfit">
+<tt class="descname">plfit</tt><big>(</big><em>nosmall=True</em>, <em>finite=False</em>, <em>quiet=False</em>, <em>silent=False</em>, <em>usefortran=False</em>, <em>usecy=False</em>, <em>xmin=None</em>, <em>verbose=False</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#plfit.plfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.plfit.plfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Python implementation of the Matlab code <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/plfit.m">http://www.santafe.edu/~aaronc/powerlaws/plfit.m</a>
+from <a class="reference external" href="http://www.santafe.edu/~aaronc/powerlaws/">http://www.santafe.edu/~aaronc/powerlaws/</a></p>
+<p>See A. Clauset, C.R. Shalizi, and M.E.J. Newman, &#8220;Power-law distributions
+in empirical data&#8221; SIAM Review, 51, 661-703 (2009). (arXiv:0706.1062)
+http://arxiv.org/abs/0706.1062</p>
+<p>nosmall is on by default; it rejects low s/n points
+can specify xmin to skip xmin estimation</p>
+<p>There are 3 implementations of xmin estimation.  The fortran version is fastest, the C (cython)
+version is ~10% slower, and the python version is ~3x slower than the fortran version.
+Also, the cython code suffers ~2% numerical error relative to the fortran and python for unknown
+reasons.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="plfit.plfit_py.test_fitter">
+<tt class="descclassname">plfit.plfit_py.</tt><tt class="descname">test_fitter</tt><big>(</big><em>xmin=1.0</em>, <em>alpha=2.5</em>, <em>niter=500</em>, <em>npts=1000</em>, <em>invcdf=&lt;function plexp_inv at 0x1096fe1b8&gt;</em>, <em>quiet=True</em>, <em>silent=True</em><big>)</big><a class="reference internal" href="_modules/plfit/plfit_py.html#test_fitter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#plfit.plfit_py.test_fitter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tests the power-law fitter</p>
+<p>Example (fig 3.4b in Clauset et al.):
+xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=1,npts=50000)
+loglog(xminin,xmarr.squeeze(),&#8217;x&#8217;)</p>
+<p>Example 2:
+xminin=[0.25,0.5,0.75,1,1.5,2,5,10,50,100]
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=xminin,niter=10,npts=1000)
+loglog(xminin,xmarr.mean(axis=0),&#8217;x&#8217;)</p>
+<p>Example 3:
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000)
+hist(xmarr.squeeze());
+# Test results:
+# mean(xmarr) = 0.70, median(xmarr)=0.65 std(xmarr)=0.20
+# mean(af) = 2.51 median(af) = 2.49  std(af)=0.14
+# biased distribution; far from correct value of xmin but close to correct alpha</p>
+<p>Example 4:
+xmarr,af,ksv,nxarr = plfit.test_fitter(xmin=1.0,niter=1000,npts=1000,invcdf=pl_inv)
+print(&#8220;mean(xmarr): %0.2f median(xmarr): %0.2f std(xmarr): %0.2f&#8221; % (mean(xmarr),median(xmarr),std(xmarr)))
+print(&#8220;mean(af): %0.2f median(af): %0.2f std(af): %0.2f&#8221; % (mean(af),median(af),std(af)))
+# mean(xmarr): 1.19 median(xmarr): 1.03 std(xmarr): 0.35
+# mean(af): 2.51 median(af): 2.50 std(af): 0.07</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-plfit.setup">
+<span id="setup-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">setup</span></tt> Module<a class="headerlink" href="#module-plfit.setup" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">plfit Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">plfit</span></tt> Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cython-plfit-module"><tt class="docutils literal"><span class="pre">cython_plfit</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-plfit.fortran_plfit"><tt class="docutils literal"><span class="pre">fortran_plfit</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-plfit.plfit"><tt class="docutils literal"><span class="pre">plfit</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-plfit.plfit_py"><tt class="docutils literal"><span class="pre">plfit_py</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-plfit.setup"><tt class="docutils literal"><span class="pre">setup</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

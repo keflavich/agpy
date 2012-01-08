@@ -1,0 +1,481 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>agpy.luminosity &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="agpy" href="../agpy.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for agpy.luminosity</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="k">try</span><span class="p">:</span> 
+    <span class="kn">import</span> <span class="nn">pylab</span>
+    <span class="n">pylabok</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="n">pylabok</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">print</span> <span class="s">&quot;Pylab could not be imported; plotting functions will be disabled&quot;</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">scipy.special</span>
+    <span class="n">scipyok</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="n">scipyok</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">print</span> <span class="s">&quot;Scipy could not be imported.&quot;</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">pi</span>
+<span class="n">pc</span> <span class="o">=</span> <span class="mf">3.086e18</span> <span class="c"># cm</span>
+<span class="n">c</span> <span class="o">=</span> <span class="mf">2.99792458e10</span> <span class="c"># cm/s</span>
+<span class="n">lsun</span> <span class="o">=</span> <span class="mf">3.839e33</span> <span class="c"># erg/s</span>
+<span class="n">kb</span> <span class="o">=</span> <span class="mf">1.3806503e-16</span> <span class="c"># erg/K</span>
+<span class="n">h</span> <span class="o">=</span> <span class="mf">6.626068e-27</span> <span class="c"># erg s</span>
+
+
+<span class="k">class</span> <span class="nc">luminosity</span><span class="p">:</span>
+<div class="viewcode-block" id="luminosity"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity">[docs]</a>    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Measures luminosity from an SED following the method of Kauffmann et al 2008</span>
+<span class="sd">    http://adsabs.harvard.edu/abs/2008A%26A...487..993K</span>
+
+<span class="sd">    For frequency, bandwidth, etc. see http://casa.colorado.edu/~ginsbura/filtersets.htm</span>
+
+<span class="sd">    Units are CGS</span>
+
+<span class="sd">    nu - frequency (assumed Hz)</span>
+<span class="sd">    wnu - [optional/required for non-interpolation] width of frequency bin</span>
+<span class="sd">    lnu/unu - lower/upper bounds on frequency bin</span>
+<span class="sd">    fnu - flux (assumed Jy)</span>
+<span class="sd">    efnu - [optional; currently does nothing] flux error</span>
+
+<span class="sd">    When interpolation is used, data is added to the luminosity&#39; classes nu/fnu vectors.</span>
+<span class="sd">    If you use, e.g. luminosity.lbol_meas(), it will still work correctly because it sets</span>
+<span class="sd">    wnu ~ unu-lnu = 0</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">nu</span><span class="p">,</span><span class="n">fnu</span><span class="p">,</span><span class="n">wnu</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">lnu</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">unu</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">efnu</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">dist_pc</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">npoints</span><span class="o">=</span><span class="mf">1e5</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span>   <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">nu</span><span class="p">)</span>
+        <span class="n">nusort</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="n">nusort</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span>  <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">wnu</span><span class="p">)[</span><span class="n">nusort</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="o">=</span> <span class="n">wnu</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span>  <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lnu</span><span class="p">)[</span><span class="n">nusort</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unu</span>  <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">unu</span><span class="p">)[</span><span class="n">nusort</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="o">=</span> <span class="n">lnu</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="o">=</span> <span class="n">unu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span>  <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">fnu</span><span class="p">)[</span><span class="n">nusort</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">efnu</span><span class="p">)[</span><span class="n">nusort</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="o">=</span> <span class="n">efnu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dist_pc</span> <span class="o">=</span> <span class="n">dist_pc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_interp</span><span class="p">(</span><span class="n">npoints</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">fbol_meas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="luminosity.fbol_meas"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.fbol_meas">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the total integrated flux (int[nu fnu dnu]) measured within </span>
+<span class="sd">        the bands.  Does not interpolate</span>
+
+<span class="sd">        The Casoli et al 1986 formula is not used...</span>
+<span class="sd">        FIR (10^-13 W m^-2) = 1.75 ( F12 / 0.79 + F25/2 + F60/3.9 + F100/9.9 )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Must specify bandwidths.&quot;</span>
+            <span class="k">return</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_intflux</span> <span class="o">=</span> <span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_intflux</span> <span class="o">=</span> <span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unu</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lnu</span><span class="p">)</span> <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intflux</span>
+
+    <span class="k">def</span> <span class="nf">lbol_meas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">dist_pc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.lbol_meas"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.lbol_meas">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returned the luminosity within the measured bins.  Does not interpolate.</span>
+<span class="sd">        A distance must be specified either here or in the initialization</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">dist_pc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dist_pc</span> <span class="o">=</span> <span class="n">dist_pc</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dist_pc</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Must specify distance to compute luminosity&quot;</span><span class="p">)</span>
+
+        <span class="n">lum</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dist_pc</span><span class="o">*</span><span class="n">pc</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fbol_meas</span><span class="p">()</span> <span class="o">*</span> <span class="mf">1e-23</span> <span class="o">/</span> <span class="n">lsun</span>
+
+        <span class="k">return</span> <span class="n">lum</span>
+
+    <span class="k">def</span> <span class="nf">init_interp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">npoints</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.init_interp"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.init_interp">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        initializes the interpolation parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span><span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span><span class="n">npoints</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span><span class="o">*</span><span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addedpoint</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extrapolated</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">mminterp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">freq</span><span class="p">,</span><span class="n">lowfreq</span><span class="o">=</span><span class="n">c</span><span class="o">/</span><span class="mf">500e-4</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">4.0</span><span class="p">,</span><span class="n">addpoint</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.mminterp"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.mminterp">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates an interpolated point using an assumed nu^alpha opacity...</span>
+<span class="sd">        defaults to alpha=4 (beta=2)</span>
+
+<span class="sd">        Default point location is 500 microns</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">freq</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">whpt</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">whpt</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="o">==</span><span class="n">freq</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">whpt</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Couldn&#39;t find a data point at that frequency.  Please check your </span><span class="se">\</span>
+<span class="s">                    input frequency, input data, or a floating point match.&quot;</span><span class="p">)</span>
+
+        <span class="n">numm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="n">whpt</span><span class="p">]</span>
+        <span class="n">fnumm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">[</span><span class="n">whpt</span><span class="p">]</span>
+
+        <span class="n">userange</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span> <span class="o">&lt;</span> <span class="n">freq</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span> <span class="o">&gt;</span> <span class="n">lowfreq</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span><span class="p">[</span><span class="n">userange</span><span class="p">]</span> <span class="o">=</span> <span class="n">fnumm</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span><span class="p">[</span><span class="n">userange</span><span class="p">]</span><span class="o">/</span><span class="n">numm</span><span class="p">)</span><span class="o">**</span><span class="n">alpha</span>
+
+        <span class="k">if</span> <span class="n">addpoint</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">addedpoint</span><span class="p">:</span>
+            <span class="n">newfnu</span> <span class="o">=</span> <span class="n">fnumm</span> <span class="o">*</span> <span class="p">(</span><span class="n">lowfreq</span><span class="o">/</span><span class="n">numm</span><span class="p">)</span><span class="o">**</span><span class="n">alpha</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">newfnu</span><span class="p">])))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lowfreq</span><span class="p">])))</span>
+            <span class="n">nusort</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="n">nusort</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">[</span><span class="n">nusort</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">addedpoint</span> <span class="o">=</span> <span class="bp">True</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">efnu</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">])))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span><span class="p">[</span><span class="n">nusort</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">wnu</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">])))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span><span class="p">[</span><span class="n">nusort</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">lnu</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lowfreq</span><span class="p">])))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span><span class="p">[</span><span class="n">nusort</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">unu</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lowfreq</span><span class="p">])))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unu</span><span class="p">[</span><span class="n">nusort</span><span class="p">]</span>
+
+
+    <span class="k">def</span> <span class="nf">fbol_interp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fnu</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">mminterp</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">npoints</span><span class="o">=</span><span class="mf">1e5</span><span class="p">,</span><span class="n">addpoint</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">mmfreq</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">extrap</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">write</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.fbol_interp"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.fbol_interp">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interpolates between data points to integrate over SED</span>
+
+<span class="sd">        If mminterp is set, will assume a nu^4 power law (opacity lambda^-2)</span>
+<span class="sd">        from the longest wavelength point</span>
+
+<span class="sd">        Returns int( nuFnu ) in units HzJy</span>
+
+<span class="sd">        Extrapolate via a constant line at the low/high frequency data point</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">mminterp</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mminterp</span><span class="p">(</span><span class="n">mmfreq</span><span class="p">,</span><span class="n">addpoint</span><span class="o">=</span><span class="n">addpoint</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">fnu</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">fnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span>
+
+        <span class="c"># powerlaw interpolation is done in logspace</span>
+        <span class="n">logf</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">fnu</span><span class="p">)</span>
+        <span class="n">logn</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">)</span>
+
+        <span class="c"># slope = dy/dx</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span> <span class="n">logf</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">logf</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="p">)</span> <span class="o">/</span> <span class="p">(</span> <span class="n">logn</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">logn</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="p">)</span>
+
+        <span class="c"># evenly spaced sampling in logspace</span>
+        <span class="n">newnu</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span>
+        <span class="n">newfnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span>
+
+        <span class="c"># need to loop through data and interpolate</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">logn</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">lownu</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+            <span class="n">highnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="n">ind</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">userange</span> <span class="o">=</span> <span class="p">(</span><span class="n">newnu</span> <span class="o">&gt;</span> <span class="n">lownu</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">newnu</span> <span class="o">&lt;</span> <span class="n">highnu</span><span class="p">)</span>
+            <span class="n">nu0</span> <span class="o">=</span> <span class="n">newnu</span><span class="p">[</span><span class="n">userange</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">newfnu</span><span class="p">[</span><span class="n">userange</span><span class="p">]</span> <span class="o">=</span> <span class="n">fnu</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">newnu</span><span class="p">[</span><span class="n">userange</span><span class="p">]</span><span class="o">/</span><span class="n">nu0</span><span class="p">)</span><span class="o">**</span><span class="n">alpha</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+
+        <span class="n">dnu</span> <span class="o">=</span> <span class="n">newnu</span><span class="o">*</span><span class="mi">0</span>
+        <span class="n">dnu</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">newnu</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">newnu</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">dnu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">dnu</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">extrap</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">extrapolated</span><span class="p">:</span>
+            <span class="c"># extrapolate 50% from either endpoint</span>
+            <span class="n">nulow</span> <span class="o">=</span> <span class="n">newnu</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">/</span><span class="mf">2.0</span>
+            <span class="n">nuhigh</span> <span class="o">=</span> <span class="n">newnu</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">*</span><span class="mf">2.0</span>
+            <span class="n">dnulow</span> <span class="o">=</span> <span class="n">newnu</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">-</span><span class="n">nulow</span>
+            <span class="n">dnuhigh</span> <span class="o">=</span> <span class="n">newnu</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">-</span><span class="n">nuhigh</span>
+            <span class="n">scale_lownu</span>  <span class="o">=</span> <span class="nb">min</span><span class="p">(</span> <span class="p">[</span> <span class="n">newfnu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">newfnu</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="p">,</span> <span class="mf">1.0</span> <span class="p">]</span> <span class="p">)</span> <span class="c"># do not allow positive-slope extrapolation</span>
+            <span class="n">scale_highnu</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mf">0.5</span> <span class="p">]</span> <span class="p">)</span>
+            <span class="n">newnu</span>  <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span> <span class="p">([</span><span class="n">nulow</span><span class="p">],</span><span class="n">newnu</span><span class="p">,[</span><span class="n">nuhigh</span><span class="p">])</span> <span class="p">)</span>
+            <span class="n">newfnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span> <span class="p">([</span><span class="n">newfnu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">scale_lownu</span><span class="p">],</span><span class="n">newfnu</span><span class="p">,[</span><span class="n">newfnu</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">scale_highnu</span><span class="p">])</span> <span class="p">)</span>
+            <span class="n">dnu</span>    <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span> <span class="p">([</span><span class="n">dnulow</span><span class="p">],</span><span class="n">dnu</span><span class="p">,[</span><span class="n">dnuhigh</span><span class="p">])</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">extrapolated</span><span class="o">=</span><span class="bp">True</span>
+
+        <span class="k">if</span> <span class="n">write</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">interpdnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dnu</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span> <span class="o">=</span> <span class="n">newnu</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span> <span class="o">=</span> <span class="n">newfnu</span>
+
+            <span class="n">fbint</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpdnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fbol_integ</span> <span class="o">=</span> <span class="n">fbint</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c"># unfortunate repeated code; should clean this up / not write self. variables</span>
+            <span class="n">interpdnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dnu</span><span class="p">)</span>
+            <span class="n">interpnu</span> <span class="o">=</span> <span class="n">newnu</span>
+            <span class="n">interpfnu</span> <span class="o">=</span> <span class="n">newfnu</span>
+
+            <span class="n">fbint</span> <span class="o">=</span> <span class="p">(</span><span class="n">interpdnu</span><span class="o">*</span><span class="n">interpfnu</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">fbint</span>
+
+    <span class="k">def</span> <span class="nf">lbol_interp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.lbol_interp"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.lbol_interp">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bolometric luminosity from interpolation in units of solar luminosities</span>
+
+<span class="sd">        By default, adds a point at 500 microns extrapolated using a nu^4 power law </span>
+<span class="sd">        (opacity nu^2) from the longest wavelength data point.  Specify addpoint=False</span>
+<span class="sd">        to disable this feature.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lbol_interp</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dist_pc</span><span class="o">*</span><span class="n">pc</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fbol_interp</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-23</span> <span class="o">/</span> <span class="n">lsun</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lbol_interp</span>
+
+    <span class="k">def</span> <span class="nf">lbol_interp_ulim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.lbol_interp_ulim"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.lbol_interp_ulim">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If errors are specified, returns lbol(fnu+efnu)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Can&#39;t calculate limits unless errors are specified&quot;</span>
+
+        <span class="n">lbol_upper</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dist_pc</span><span class="o">*</span><span class="n">pc</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fbol_interp</span><span class="p">(</span><span class="n">fnu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">efnu</span><span class="p">,</span><span class="n">write</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-23</span> <span class="o">/</span> <span class="n">lsun</span>
+
+        <span class="k">return</span> <span class="n">lbol_upper</span>
+
+    <span class="k">def</span> <span class="nf">lbol_interp_llim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.lbol_interp_llim"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.lbol_interp_llim">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If errors are specified, returns lbol(fnu+efnu)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Can&#39;t calculate limits unless errors are specified&quot;</span>
+
+        <span class="n">lbol_upper</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="n">pi</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dist_pc</span><span class="o">*</span><span class="n">pc</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fbol_interp</span><span class="p">(</span><span class="n">fnu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">efnu</span><span class="p">,</span><span class="n">write</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-23</span> <span class="o">/</span> <span class="n">lsun</span>
+
+        <span class="k">return</span> <span class="n">lbol_upper</span>
+
+    <span class="k">def</span> <span class="nf">tbol</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">interp</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.tbol"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.tbol">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the &quot;bolometric temperature&quot; as specified in the same document.</span>
+<span class="sd">        Uses scipy&#39;s zeta function if scipy is available</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#print &quot;tbol not yet implemented&quot;</span>
+
+        <span class="k">if</span> <span class="n">scipyok</span><span class="p">:</span>
+            <span class="n">zeta4d5</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">zeta</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">scipy</span><span class="o">.</span><span class="n">special</span><span class="o">.</span><span class="n">zeta</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">zeta4d5</span> <span class="o">=</span> <span class="mf">1.0437788248434832</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">interpdnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">interp</span><span class="p">:</span>
+            <span class="n">meannu</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">interpdnu</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">interpdnu</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">meannu</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unu</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lnu</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="o">*</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unu</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lnu</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">meannu</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">wnu</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">wnu</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Need to specify either wnu (width of each band) or interpolate.&quot;</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Tbol</span> <span class="o">=</span> <span class="n">zeta4d5</span> <span class="o">*</span> <span class="n">h</span> <span class="o">*</span> <span class="n">meannu</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">kb</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tbol</span>
+
+
+    <span class="k">def</span> <span class="nf">plotsed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">loglog</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">nufnu</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">interpplot</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span></div>
+<div class="viewcode-block" id="luminosity.plotsed"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.luminosity.plotsed">[docs]</a>        <span class="sd">&quot;&quot;&quot; Plots the SED &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pylabok</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;pylab was not successfully imported.  Aborting.&quot;</span>
+            <span class="k">return</span>
+
+        <span class="c"># must divide wnu by 2 because plotter assumes &quot;1-sigma&quot;, but wnu is full width</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">efnu</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">efnu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">efnu</span>
+
+        <span class="k">if</span> <span class="n">nufnu</span><span class="p">:</span>
+          <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">xerr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">lnu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">unu</span><span class="p">])</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">,</span><span class="n">xerr</span><span class="o">=</span><span class="n">xerr</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="n">efnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="n">fmt</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+          <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">,</span><span class="n">xerr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wnu</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="n">efnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="n">fmt</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+          <span class="k">else</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="n">efnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="n">fmt</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+          <span class="k">if</span> <span class="n">interpplot</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">unu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">xerr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">lnu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">unu</span><span class="p">])</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nu</span> <span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">,</span><span class="n">xerr</span><span class="o">=</span><span class="n">xerr</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="n">efnu</span><span class="p">,</span><span class="n">fmt</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+          <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">wnu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">,</span><span class="n">xerr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wnu</span><span class="o">/</span><span class="mf">2.0</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="n">efnu</span><span class="p">,</span><span class="n">fmt</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+          <span class="k">else</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">fnu</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="n">efnu</span><span class="p">,</span><span class="n">fmt</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+          <span class="k">if</span> <span class="n">interpplot</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interpnu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">interpfnu</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">loglog</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s">&#39;log&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s">&#39;log&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s">&#39;linear&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s">&#39;linear&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Frequency (Hz)&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Flux Density (Jy)&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ax</span>
+
+
+<span class="kn">import</span> <span class="nn">readcol</span></div></div>
+
+<span class="k">def</span> <span class="nf">test_case</span><span class="p">():</span>
+<div class="viewcode-block" id="test_case"><a class="viewcode-back" href="../../agpy.html#agpy.luminosity.test_case">[docs]</a>    <span class="sd">&quot;&quot;&quot; A specific test case using the Klein 2005 luminosity computations &quot;&quot;&quot;</span>
+
+    <span class="n">dtab</span> <span class="o">=</span> <span class="n">readcol</span><span class="o">.</span><span class="n">readcol</span><span class="p">(</span><span class="s">&#39;/Users/adam/agpy/tests/klein2005sourcelist.txt&#39;</span><span class="p">,</span><span class="n">skipline</span><span class="o">=</span><span class="mi">33</span><span class="p">,</span><span class="n">fsep</span><span class="o">=</span><span class="s">&#39;|&#39;</span><span class="p">)</span>
+
+    <span class="n">kleinlum</span> <span class="o">=</span> <span class="n">dtab</span><span class="p">[:,</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float&#39;</span><span class="p">)</span>
+
+    <span class="n">irasfluxes</span> <span class="o">=</span> <span class="n">dtab</span><span class="p">[:,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">22</span><span class="p">,</span><span class="mi">25</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">31</span><span class="p">])]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float&#39;</span><span class="p">)</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="n">dtab</span><span class="p">[:,</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float&#39;</span><span class="p">)</span><span class="o">*</span><span class="mi">1000</span>
+
+    <span class="n">mylum</span> <span class="o">=</span> <span class="n">kleinlum</span><span class="o">*</span><span class="mi">0</span>
+    <span class="n">mylum_interp</span> <span class="o">=</span> <span class="n">kleinlum</span><span class="o">*</span><span class="mi">0</span>
+    <span class="n">nu</span> <span class="o">=</span> <span class="n">c</span><span class="o">*</span><span class="mf">1e4</span><span class="o">/</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">12.0</span><span class="p">,</span><span class="mf">25.0</span><span class="p">,</span><span class="mf">60.0</span><span class="p">,</span><span class="mf">100.0</span><span class="p">])</span>
+    <span class="n">dnu</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.53e13</span><span class="p">,</span><span class="mf">5.789e12</span><span class="p">,</span><span class="mf">3.75e12</span><span class="p">,</span> <span class="mf">1.114e12</span><span class="p">])</span>
+
+    <span class="n">mlarr</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mylum</span><span class="p">)):</span>
+        <span class="n">ml</span> <span class="o">=</span> <span class="n">luminosity</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span><span class="n">irasfluxes</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span><span class="n">dnu</span><span class="p">,</span><span class="n">dist_pc</span><span class="o">=</span><span class="n">dist</span><span class="p">[</span><span class="n">ind</span><span class="p">])</span>
+        <span class="n">mylum</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">ml</span><span class="o">.</span><span class="n">lbol_meas</span><span class="p">()</span>
+        <span class="n">mylum_interp</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">ml</span><span class="o">.</span><span class="n">lbol_interp</span><span class="p">(</span><span class="n">addpoint</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">extrap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">mlarr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ml</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">kleinlum</span><span class="p">,</span><span class="n">mylum</span><span class="p">,</span><span class="n">mylum_interp</span><span class="p">,</span><span class="n">mlarr</span>
+
+<span class="sd">&quot;&quot;&quot; </span></div>
+<span class="sd">Test case:</span>
+
+<span class="sd">nu = c/array([12e-4,25e-4,60e-4,100e-4,.12])</span>
+<span class="sd">fnu = [4.97,26.08,66.34,80.04,3.06]</span>
+
+<span class="sd"># G31.28</span>
+<span class="sd">nu = c/array([8.3e-4,12e-4,21.3e-4,25e-4,60e-4,100e-4,.045,.085,.12])</span>
+<span class="sd">fnu = array([2.4,4.85,34.9,89.33,1071,3693,160,19.5,5.4])</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

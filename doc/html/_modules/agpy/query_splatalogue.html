@@ -1,0 +1,200 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>agpy.query_splatalogue &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="agpy" href="../agpy.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for agpy.query_splatalogue</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">atpy</span>
+<span class="kn">import</span> <span class="nn">urllib</span><span class="o">,</span><span class="nn">urllib2</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module to search Splatalogue.net via splat, modeled loosely on</span>
+<span class="sd">ftp://ftp.cv.nrao.edu/NRAO-staff/bkent/slap/idl/</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">length_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;meters&#39;</span><span class="p">:</span><span class="mf">1.0</span><span class="p">,</span><span class="s">&#39;m&#39;</span><span class="p">:</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="s">&#39;centimeters&#39;</span><span class="p">:</span><span class="mf">1e-2</span><span class="p">,</span><span class="s">&#39;cm&#39;</span><span class="p">:</span><span class="mf">1e-2</span><span class="p">,</span>
+        <span class="s">&#39;millimeters&#39;</span><span class="p">:</span><span class="mf">1e-3</span><span class="p">,</span><span class="s">&#39;mm&#39;</span><span class="p">:</span><span class="mf">1e-3</span><span class="p">,</span>
+        <span class="s">&#39;nanometers&#39;</span><span class="p">:</span><span class="mf">1e-9</span><span class="p">,</span><span class="s">&#39;nm&#39;</span><span class="p">:</span><span class="mf">1e-9</span><span class="p">,</span>
+        <span class="s">&#39;micrometers&#39;</span><span class="p">:</span><span class="mf">1e-6</span><span class="p">,</span><span class="s">&#39;micron&#39;</span><span class="p">:</span><span class="mf">1e-6</span><span class="p">,</span><span class="s">&#39;microns&#39;</span><span class="p">:</span><span class="mf">1e-6</span><span class="p">,</span><span class="s">&#39;um&#39;</span><span class="p">:</span><span class="mf">1e-6</span><span class="p">,</span>
+        <span class="s">&#39;kilometers&#39;</span><span class="p">:</span><span class="mf">1e3</span><span class="p">,</span><span class="s">&#39;km&#39;</span><span class="p">:</span><span class="mf">1e3</span><span class="p">,</span>
+        <span class="s">&#39;angstroms&#39;</span><span class="p">:</span><span class="mf">1e-10</span><span class="p">,</span><span class="s">&#39;A&#39;</span><span class="p">:</span><span class="mf">1e-10</span><span class="p">,</span>
+        <span class="p">}</span>
+
+<span class="c"># example query of SPLATALOGUE directly:</span>
+<span class="c"># http://www.cv.nrao.edu/php/splat/c.php?sid%5B%5D=64&amp;sid%5B%5D=108&amp;calcIn=&amp;data_version=v2.0&amp;from=&amp;to=&amp;frequency_units=MHz&amp;energy_range_from=&amp;energy_range_to=&amp;lill=on&amp;tran=&amp;submit=Search&amp;no_atmospheric=no_atmospheric&amp;no_potential=no_potential&amp;no_probable=no_probable&amp;include_only_nrao=include_only_nrao&amp;displayLovas=displayLovas&amp;displaySLAIM=displaySLAIM&amp;displayJPL=displayJPL&amp;displayCDMS=displayCDMS&amp;displayToyaMA=displayToyaMA&amp;displayOSU=displayOSU&amp;displayRecomb=displayRecomb&amp;displayLisa=displayLisa&amp;displayRFI=displayRFI&amp;ls1=ls1&amp;ls5=ls5&amp;el1=el1</span>
+
+<div class="viewcode-block" id="query_splatalogue"><a class="viewcode-back" href="../../agpy.html#agpy.query_splatalogue.query_splatalogue">[docs]</a><span class="k">def</span> <span class="nf">query_splatalogue</span><span class="p">(</span><span class="n">minwav</span><span class="o">=</span><span class="mf">0.00260</span><span class="p">,</span><span class="n">maxwav</span><span class="o">=</span><span class="mf">0.00261</span><span class="p">,</span>
+        <span class="n">waveunits</span><span class="o">=</span><span class="s">&#39;m&#39;</span><span class="p">,</span><span class="n">root_url</span><span class="o">=</span><span class="s">&#39;http://find.nrao.edu/splata-slap/slap&#39;</span><span class="p">,</span>
+        <span class="n">chemical_element</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">NRAO_Recommended</span><span class="o">=</span><span class="bp">True</span><span class="p">,):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Acquire an atpy table of a splatalogue searched based on wavelength.</span>
+
+<span class="sd">    Future work will allow queries based on other parameters.  I&#39;m waiting on</span>
+<span class="sd">    development by the SPLATASLAP database folks to implement these.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">waveunits</span> <span class="ow">in</span> <span class="n">length_dict</span><span class="p">:</span>
+        <span class="n">minwav</span> <span class="o">=</span> <span class="n">minwav</span> <span class="o">*</span> <span class="n">length_dict</span><span class="p">[</span><span class="n">waveunits</span><span class="p">]</span>
+        <span class="n">maxwav</span> <span class="o">=</span> <span class="n">maxwav</span> <span class="o">*</span> <span class="n">length_dict</span><span class="p">[</span><span class="n">waveunits</span><span class="p">]</span>
+
+    <span class="c">#query_url = &quot;%s?REQUEST=queryData&amp;WAVELENGTH=%f/%f&quot; % (root_url,minwav,maxwav)</span>
+    <span class="c"># This is probably the more robust/pythonic way to do this sort of query:</span>
+    <span class="n">request_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;REQUEST&quot;</span><span class="p">:</span><span class="s">&quot;queryData&quot;</span><span class="p">,</span><span class="s">&quot;WAVELENGTH&quot;</span><span class="p">:</span><span class="s">&quot;</span><span class="si">%f</span><span class="s">/</span><span class="si">%f</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">minwav</span><span class="p">,</span><span class="n">maxwav</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="n">chemical_element</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="n">request_dict</span><span class="p">[</span><span class="s">&#39;CHEMICAL_ELEMENT&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chemical_element</span>
+    <span class="c">#if NRAO_Recommended: request_dict[&#39;include_only_nrao&#39;] = &quot;yes&quot;</span>
+    <span class="k">if</span> <span class="n">NRAO_Recommended</span><span class="p">:</span> <span class="n">request_dict</span><span class="p">[</span><span class="s">&#39;recommended&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;1&quot;</span>
+    <span class="c">#query_url = urllib2.Request(url=root_url,</span>
+    <span class="c">#        data=urllib.urlencode(request_dict))</span>
+    <span class="n">query_url</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">?</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">root_url</span><span class="p">,</span><span class="n">urllib</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">request_dict</span><span class="p">))</span>
+
+    <span class="n">U</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">query_url</span><span class="p">)</span>
+
+    <span class="c"># Normally it would be possible to do this:</span>
+    <span class="c"># t = atpy.Table(U,type=&#39;vo&#39;)</span>
+    <span class="c"># instead we have to write to a file and flush it. </span>
+    <span class="c"># (see the error message below)</span>
+
+    <span class="n">R</span> <span class="o">=</span> <span class="n">U</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">U</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">tf</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">()</span>
+    <span class="c">#for line in R:</span>
+    <span class="c">#    print &gt;&gt;tf,line.strip()</span>
+    <span class="k">print</span> <span class="o">&gt;&gt;</span><span class="n">tf</span><span class="p">,</span><span class="n">R</span>
+    <span class="k">print</span> <span class="n">tf</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">tf</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">atpy</span><span class="o">.</span><span class="n">Table</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="nb">type</span><span class="o">=</span><span class="s">&#39;vo&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">t</span>
+</div>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">U = urllib2.urlopen(query_url)</span>
+<span class="sd">t = atpy.Table(U,type=&#39;vo&#39;)</span>
+<span class="sd">None:9:0: W35: &#39;value&#39; attribute required for &#39;INFO&#39; elements</span>
+<span class="sd">None:18:0: W03: Implicitly generating an ID from a name &#39;catalog name&#39; -&gt; &#39;catalog_name&#39;</span>
+<span class="sd">None:27:0: W03: Implicitly generating an ID from a name &#39;molecular formula&#39; -&gt; &#39;molecular_formula&#39;</span>
+<span class="sd">None:33:0: W03: Implicitly generating an ID from a name &#39;molecule type&#39; -&gt; &#39;molecule_type&#39;</span>
+<span class="sd">None:54:0: W03: Implicitly generating an ID from a name &#39;frequency recommended&#39; -&gt; &#39;frequency_recommended&#39;</span>
+<span class="sd">None:57:0: W03: Implicitly generating an ID from a name &#39;quantum numbers&#39; -&gt; &#39;quantum_numbers&#39;</span>
+<span class="sd">------------------------------------------------------------</span>
+<span class="sd">Traceback (most recent call last):</span>
+<span class="sd">  File &quot;&lt;ipython console&gt;&quot;, line 1, in &lt;module&gt;</span>
+<span class="sd">  File &quot;/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/atpy/basetable.py&quot;, line 167, in __init__</span>
+<span class="sd">    self.read(*args, **kwargs)</span>
+<span class="sd">  File &quot;/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/atpy/basetable.py&quot;, line 213, in read</span>
+<span class="sd">    atpy._readers[table_type](self, *args, **kwargs)</span>
+<span class="sd">  File &quot;/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/atpy/votable.py&quot;, line 86, in read</span>
+<span class="sd">    votable = parse(filename, pedantic=pedantic)</span>
+<span class="sd">  File &quot;/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/vo/table.py&quot;, line 103, in parse</span>
+<span class="sd">    return tree.VOTableFile(config=config, pos=(1, 1)).parse(iterator, config)</span>
+<span class="sd">  File &quot;/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/vo/tree.py&quot;, line 2921, in parse</span>
+<span class="sd">    for start, tag, data, pos in iterator:</span>
+<span class="sd">ValueError: 1:0: no element found</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

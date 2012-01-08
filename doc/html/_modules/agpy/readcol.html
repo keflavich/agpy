@@ -1,0 +1,361 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>agpy.readcol &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="agpy" href="../agpy.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for agpy.readcol</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">readcol.py by Adam Ginsburg (keflavich@gmail.com)</span>
+
+<span class="sd">readcol is meant to emulate IDL&#39;s readcol.pro, but is more capable and</span>
+<span class="sd">flexible.  It is not a particularly &quot;pythonic&quot; program since it is not modular.</span>
+<span class="sd">For a modular ascii table reader, http://cxc.harvard.edu/contrib/asciitable/ is</span>
+<span class="sd">probably better.  This single-function code is probably more intuitive to an</span>
+<span class="sd">end-user, though.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">string</span><span class="o">,</span><span class="nn">re</span><span class="o">,</span><span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">mode</span>
+    <span class="n">hasmode</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="c">#print &quot;scipy could not be imported.  Your table must have full rows.&quot;</span>
+    <span class="n">hasmode</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+    <span class="c">#print &quot;error&quot;</span>
+    <span class="n">hasmode</span> <span class="o">=</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="readcol"><a class="viewcode-back" href="../../agpy.html#agpy.readcol.readcol">[docs]</a><span class="k">def</span> <span class="nf">readcol</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="n">skipline</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">skipafter</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">names</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">fsep</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">twod</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">fixedformat</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">asdict</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">comment</span><span class="o">=</span><span class="s">&#39;#&#39;</span><span class="p">,</span><span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">nullval</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">asStruct</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">namecomment</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">removeblanks</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">header_badchars</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The default return is a two dimensional float array.  If you want a list of</span>
+<span class="sd">    columns output instead of a 2D array, pass &#39;twod=False&#39;.  In this case,</span>
+<span class="sd">    each column&#39;s data type will be automatically detected.</span>
+<span class="sd">    </span>
+<span class="sd">    Example usage:</span>
+<span class="sd">    CASE 1) a table has the format:</span>
+<span class="sd">     X    Y    Z</span>
+<span class="sd">    0.0  2.4  8.2</span>
+<span class="sd">    1.0  3.4  5.6</span>
+<span class="sd">    0.7  3.2  2.1</span>
+<span class="sd">    ...</span>
+<span class="sd">    names,(x,y,z)=readcol(&quot;myfile.tbl&quot;,names=True,twod=False)</span>
+<span class="sd">    or</span>
+<span class="sd">    x,y,z=readcol(&quot;myfile.tbl&quot;,skipline=1,twod=False)</span>
+<span class="sd">    or </span>
+<span class="sd">    names,xx = readcol(&quot;myfile.tbl&quot;,names=True)</span>
+<span class="sd">    or</span>
+<span class="sd">    xxdict = readcol(&quot;myfile.tbl&quot;,asdict=True)</span>
+<span class="sd">    or</span>
+<span class="sd">    xxstruct = readcol(&quot;myfile.tbl&quot;,asStruct=True)</span>
+
+<span class="sd">    CASE 2) no title is contained into the table, then there is</span>
+<span class="sd">    no need to skipline:</span>
+<span class="sd">    x,y,z=readcol(&quot;myfile.tbl&quot;)</span>
+<span class="sd">    </span>
+<span class="sd">    CASE 3) there is a names column and then more descriptive text:</span>
+<span class="sd">     X      Y     Z</span>
+<span class="sd">    (deg) (deg) (km/s) </span>
+<span class="sd">    0.0    2.4   8.2</span>
+<span class="sd">    1.0    3.4.  5.6</span>
+<span class="sd">    ...</span>
+<span class="sd">    then use:</span>
+<span class="sd">    names,x,y,z=readcol(&quot;myfile.tbl&quot;,names=True,skipline=1,twod=False)</span>
+<span class="sd">    or</span>
+<span class="sd">    x,y,z=readcol(&quot;myfile.tbl&quot;,skipline=2,twod=False)</span>
+
+<span class="sd">    INPUTS:</span>
+<span class="sd">        fsep - field separator, e.g. for comma separated value (csv) files</span>
+<span class="sd">        skipline - number of lines to ignore at the start of the file</span>
+<span class="sd">        names - read / don&#39;t read in the first line as a list of column names</span>
+<span class="sd">                can specify an integer line number too, though it will be </span>
+<span class="sd">                the line number after skipping lines</span>
+<span class="sd">        twod - two dimensional or one dimensional output</span>
+<span class="sd">        nullval - if specified, all instances of this value will be replaced</span>
+<span class="sd">           with a floating NaN</span>
+<span class="sd">        asdict - zips names with data to create a dict with column headings </span>
+<span class="sd">            tied to column data.  If asdict=True, names will be set to True</span>
+<span class="sd">        asStruct - same as asdict, but returns a structure instead of a dictionary</span>
+<span class="sd">            (i.e. you call struct.key instead of struct[&#39;key&#39;])</span>
+<span class="sd">        fixedformat - if you have a fixed format file, this is a python list of </span>
+<span class="sd">            column lengths.  e.g. the first table above would be [3,5,5].  Note</span>
+<span class="sd">            that if you specify the wrong fixed format, you will get junk; if your</span>
+<span class="sd">            format total is greater than the line length, the last entries will all</span>
+<span class="sd">            be blank but readcol will not report an error.</span>
+<span class="sd">        namecomment - assumed that &quot;Name&quot; row is on a comment line.  If it is not - </span>
+<span class="sd">            e.g., it is the first non-comment line, change this to False</span>
+<span class="sd">        removeblanks - remove all blank entries from split lines.  This can cause lost</span>
+<span class="sd">            data if you have blank entries on some lines.</span>
+<span class="sd">        header_badchars - remove these characters from a header before parsing it</span>
+<span class="sd">            (helpful for IPAC tables that are delimited with | )</span>
+
+<span class="sd">    If you get this error: &quot;scipy could not be imported.  Your table must have</span>
+<span class="sd">    full rows.&quot; it means readcol cannot automatically guess which columns</span>
+<span class="sd">    contain data.  If you have scipy and columns of varying length, readcol will</span>
+<span class="sd">    read in all of the rows with length=mode(row lengths).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">f</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="s">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    
+    <span class="n">null</span><span class="o">=</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">skipline</span><span class="p">)]</span>
+
+    <span class="n">commentfilter</span> <span class="o">=</span> <span class="n">make_commentfilter</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">namecomment</span> <span class="ow">is</span> <span class="bp">False</span> <span class="ow">and</span> <span class="p">(</span><span class="n">names</span> <span class="ow">or</span> <span class="n">asdict</span> <span class="ow">or</span> <span class="n">asStruct</span><span class="p">):</span>
+        <span class="k">while</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">comment</span><span class="p">:</span>
+                <span class="n">nameline</span> <span class="o">=</span> <span class="n">line</span>
+                <span class="k">if</span> <span class="n">header_badchars</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header_badchars</span><span class="p">:</span>
+                        <span class="n">nameline</span> <span class="o">=</span> <span class="n">nameline</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">&#39; &#39;</span><span class="p">)</span>
+                <span class="n">nms</span><span class="o">=</span><span class="n">nameline</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">fsep</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;No uncommented lines found.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">names</span> <span class="ow">or</span> <span class="n">asdict</span> <span class="ow">or</span> <span class="n">asStruct</span><span class="p">:</span>
+            <span class="c"># can specify name line </span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">nameline</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">nameline</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nameline</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">comment</span><span class="p">:</span>
+                <span class="n">nameline</span> <span class="o">=</span> <span class="n">nameline</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">if</span> <span class="n">header_badchars</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header_badchars</span><span class="p">:</span>
+                    <span class="n">nameline</span> <span class="o">=</span> <span class="n">nameline</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">c</span><span class="p">,</span><span class="s">&#39; &#39;</span><span class="p">)</span>
+            <span class="n">nms</span><span class="o">=</span><span class="n">nameline</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">fsep</span><span class="p">)</span>
+
+    <span class="n">null</span><span class="o">=</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">skipafter</span><span class="p">)]</span>
+    
+    <span class="k">if</span> <span class="n">fixedformat</span><span class="p">:</span>
+        <span class="n">myreadff</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">(</span><span class="n">x</span><span class="p">):</span> <span class="n">readff</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">fixedformat</span><span class="p">)</span>
+        <span class="n">splitarr</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">myreadff</span><span class="p">,</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">splitarr</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">commentfilter</span><span class="p">,</span><span class="n">splitarr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fstrip</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">strip</span><span class="p">,</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">fseps</span> <span class="o">=</span> <span class="p">[</span> <span class="n">fsep</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">f</span><span class="p">))</span> <span class="p">]</span>
+        <span class="n">splitarr</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">,</span><span class="n">fstrip</span><span class="p">,</span><span class="n">fseps</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">removeblanks</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">splitarr</span><span class="o">.</span><span class="n">count</span><span class="p">([</span><span class="s">&#39;&#39;</span><span class="p">])):</span>
+                <span class="n">splitarr</span><span class="o">.</span><span class="n">remove</span><span class="p">([</span><span class="s">&#39;&#39;</span><span class="p">])</span>
+
+        <span class="n">splitarr</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">commentfilter</span><span class="p">,</span><span class="n">splitarr</span><span class="p">)</span>
+
+        <span class="c"># check to make sure each line has the same number of columns to avoid </span>
+        <span class="c"># &quot;ValueError: setting an array element with a sequence.&quot;</span>
+        <span class="n">nperline</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span><span class="n">splitarr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hasmode</span><span class="p">:</span>
+            <span class="n">ncols</span><span class="p">,</span><span class="n">nrows</span> <span class="o">=</span> <span class="n">mode</span><span class="p">(</span><span class="n">nperline</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nrows</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">splitarr</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="s">&quot;Removing </span><span class="si">%i</span><span class="s"> rows that don&#39;t match most common length </span><span class="si">%i</span><span class="s">.  </span><span class="se">\</span>
+<span class="s">                     </span><span class="se">\n</span><span class="si">%i</span><span class="s"> rows read into array.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">splitarr</span><span class="p">)</span> <span class="o">-</span> <span class="n">nrows</span><span class="p">,</span><span class="n">ncols</span><span class="p">,</span><span class="n">nrows</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">splitarr</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>  <span class="c"># need to go backwards</span>
+                    <span class="k">if</span> <span class="n">nperline</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">ncols</span><span class="p">:</span>
+                        <span class="n">splitarr</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span> <span class="n">splitarr</span> <span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;float&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="k">print</span> <span class="s">&quot;WARNING: reading as string array because </span><span class="si">%s</span><span class="s"> array failed&quot;</span> <span class="o">%</span> <span class="s">&#39;float&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span> <span class="n">splitarr</span> <span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;S&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">hasmode</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span> <span class="s">&quot;ValueError when converting data to array.&quot;</span> <span class="o">+</span> \
+                        <span class="s">&quot;  You have scipy.mode on your system, so this is &quot;</span> <span class="o">+</span> \
+                        <span class="s">&quot;probably not an issue of differing row lengths.&quot;</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span> <span class="s">&quot;Conversion to array error.  You probably &quot;</span> <span class="o">+</span> \
+                        <span class="s">&quot;have different row lengths and scipy.mode was not &quot;</span> <span class="o">+</span> \
+                        <span class="s">&quot;imported.&quot;</span> <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">nullval</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">x</span><span class="p">[</span><span class="n">x</span><span class="o">==</span><span class="n">nullval</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">get_autotype</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">asdict</span> <span class="ow">or</span> <span class="n">asStruct</span><span class="p">:</span>
+        <span class="n">mydict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">nms</span><span class="p">,</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">mydict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="n">mydict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_autotype</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">asdict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mydict</span>
+        <span class="k">elif</span> <span class="n">asStruct</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Struct</span><span class="p">(</span><span class="n">mydict</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">names</span> <span class="ow">and</span> <span class="n">twod</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">nms</span><span class="p">,</span><span class="n">x</span>
+    <span class="k">elif</span> <span class="n">names</span><span class="p">:</span>
+        <span class="c"># if not returning a twod array, try to return each vector as the spec. type</span>
+        <span class="k">return</span> <span class="n">nms</span><span class="p">,[</span> <span class="n">get_autotype</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">twod</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">x</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span> <span class="n">get_autotype</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">]</span>
+</div>
+<div class="viewcode-block" id="get_autotype"><a class="viewcode-back" href="../../agpy.html#agpy.readcol.get_autotype">[docs]</a><span class="k">def</span> <span class="nf">get_autotype</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attempts to return a numpy array converted to the most sensible dtype</span>
+<span class="sd">    Value errors will be caught and simply return the original array</span>
+<span class="sd">    Tries to make dtype int, then float, then no change</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">narr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;float&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">narr</span> <span class="o">&lt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">maxint</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">narr</span> <span class="o">%</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">narr</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;int&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">narr</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">arr</span>
+</div>
+<div class="viewcode-block" id="Struct"><a class="viewcode-back" href="../../agpy.html#agpy.readcol.Struct">[docs]</a><span class="k">class</span> <span class="nc">Struct</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple struct intended to take a dictionary of column names -&gt; columns</span>
+<span class="sd">    and turn it into a struct by removing special characters</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">namedict</span><span class="p">):</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&#39;\W&#39;</span><span class="p">)</span>  <span class="c"># find and remove all non-alphanumeric characters</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">namedict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">namedict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> 
+            <span class="k">if</span> <span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="s">&#39;n&#39;</span><span class="o">+</span><span class="n">k</span>
+            <span class="n">namedict</span><span class="p">[</span><span class="n">R</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,</span><span class="n">k</span><span class="p">)]</span> <span class="o">=</span> <span class="n">v</span>  
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span> <span class="o">=</span> <span class="n">namedict</span>
+
+<div class="viewcode-block" id="Struct.add_column"><a class="viewcode-back" href="../../agpy.html#agpy.readcol.Struct.add_column">[docs]</a>    <span class="k">def</span> <span class="nf">add_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a new column (attribute) to the struct</span>
+<span class="sd">        (will overwrite anything with the same name)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+</div></div>
+<div class="viewcode-block" id="readff"><a class="viewcode-back" href="../../agpy.html#agpy.readcol.readff">[docs]</a><span class="k">def</span> <span class="nf">readff</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">format</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fixed-format reader</span>
+<span class="sd">    Pass in a single line string (s) and a format list, </span>
+<span class="sd">    which needs to be a python list of string lengths </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">F</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">format</span><span class="p">)</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+    <span class="n">bothF</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">F</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">F</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="n">strarr</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="n">l</span><span class="p">:</span><span class="n">u</span><span class="p">]</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span><span class="n">u</span> <span class="ow">in</span> <span class="n">bothF</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">strarr</span>
+</div>
+<div class="viewcode-block" id="make_commentfilter"><a class="viewcode-back" href="../../agpy.html#agpy.readcol.make_commentfilter">[docs]</a><span class="k">def</span> <span class="nf">make_commentfilter</span><span class="p">(</span><span class="n">comment</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">comment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">commentfilter</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span> <span class="k">return</span> <span class="n">comment</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">return</span> <span class="n">commentfilter</span>
+    <span class="k">else</span><span class="p">:</span> <span class="c"># always return false </span>
+        <span class="k">return</span> <span class="k">lambda</span><span class="p">(</span><span class="n">x</span><span class="p">):</span> <span class="o">-</span><span class="mi">1</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>

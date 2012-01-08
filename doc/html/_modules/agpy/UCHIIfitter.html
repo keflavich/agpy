@@ -1,0 +1,297 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>agpy.UCHIIfitter &mdash; agpy 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="agpy" href="../agpy.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
+  </head>
+  <body>
+    <div class="header-wrapper">
+      <div class="header">
+        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="rel">
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=../../index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=../../search.html>Search </a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for agpy.UCHIIfitter</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">============</span>
+<span class="sd">UCHII Fitter</span>
+<span class="sd">============</span>
+
+<span class="sd">Fit a free-free spectrum to an SED.  </span>
+
+<span class="sd">.. moduleauthor:: Adam Ginsburg &lt;adam.g.ginsburg@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">pylab</span>
+<span class="kn">from</span> <span class="nn">pylab</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot;scipy not installed correctly: UCHIIfitter may fail&quot;</span>
+<span class="kn">from</span> <span class="nn">mpfit</span> <span class="kn">import</span> <span class="n">mpfit</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="n">kb</span> <span class="o">=</span> <span class="mf">1.38e-16</span>
+<span class="n">c</span><span class="o">=</span><span class="mf">3e10</span>
+<span class="n">mu</span> <span class="o">=</span> <span class="mf">1.4</span>
+<span class="n">mh</span> <span class="o">=</span> <span class="mf">1.67e-24</span>
+<span class="n">msun</span> <span class="o">=</span> <span class="mf">1.9889e33</span>
+<span class="n">pc</span> <span class="o">=</span> <span class="mf">3.08568e18</span>      <span class="c"># cm</span>
+<span class="n">au</span> <span class="o">=</span> <span class="mf">1.496e13</span>        <span class="c"># cm</span>
+<span class="n">msun</span> <span class="o">=</span> <span class="mf">1.99e33</span>       <span class="c"># g</span>
+
+<span class="n">unitfactor</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;mJy&#39;</span><span class="p">:</span><span class="mf">1e-26</span><span class="p">,</span><span class="s">&#39;Jy&#39;</span><span class="p">:</span><span class="mf">1e-23</span><span class="p">,</span><span class="s">&#39;cgs&#39;</span><span class="p">:</span><span class="mf">1.0</span><span class="p">}</span>
+<span class="n">freqfactor</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;GHz&#39;</span><span class="p">:</span><span class="mf">1e9</span><span class="p">,</span><span class="s">&#39;Hz&#39;</span><span class="p">:</span><span class="mf">1.0</span><span class="p">}</span>
+
+<div class="viewcode-block" id="tnu"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.tnu">[docs]</a><span class="k">def</span> <span class="nf">tnu</span><span class="p">(</span><span class="n">Te</span><span class="p">,</span><span class="n">nu</span><span class="p">,</span><span class="n">EM</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Te - excitation temperature</span>
+<span class="sd">    nu - frequency in GHz</span>
+<span class="sd">    EM - Emission Measure</span>
+
+<span class="sd">    Calculates optical depth as a function of temperature, frequency, and</span>
+<span class="sd">    emission measure from Rohlfs and Wilson 2000&#39;s eqns 9.33 and 9.34.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="c">#    nu0 = .3045 * Te**-.643 * EM**.476</span>
+    <span class="n">nu0</span> <span class="o">=</span> <span class="n">Te</span><span class="o">**</span><span class="mf">1.5</span> <span class="o">/</span> <span class="mi">1000</span>
+    <span class="n">answer_highnu</span> <span class="o">=</span> <span class="p">(</span><span class="n">nu</span> <span class="o">&gt;</span> <span class="n">nu0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">3.014e-2</span> <span class="o">*</span> <span class="n">Te</span><span class="o">**-</span><span class="mf">1.5</span> <span class="o">*</span> <span class="n">nu</span><span class="o">**-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">EM</span>  
+    <span class="n">gff_lownu</span> <span class="o">=</span> <span class="p">(</span> <span class="n">log</span><span class="p">(</span><span class="mf">4.955e-2</span> <span class="o">*</span> <span class="n">nu</span><span class="o">**-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="n">Te</span><span class="p">)</span> <span class="p">)</span>  <span class="c"># &lt;gff&gt; Gaunt factor for free-free</span>
+    <span class="n">answer_lownu</span>  <span class="o">=</span> <span class="p">(</span><span class="n">nu</span> <span class="o">&lt;</span> <span class="n">nu0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">3.014e-2</span> <span class="o">*</span> <span class="n">Te</span><span class="o">**-</span><span class="mf">1.5</span> <span class="o">*</span> <span class="n">nu</span><span class="o">**-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">EM</span> <span class="o">*</span> <span class="n">gff_lownu</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">answer_lownu</span><span class="o">+</span><span class="n">answer_highnu</span>
+    <span class="k">return</span> <span class="n">tau</span>
+</div>
+<div class="viewcode-block" id="Inu"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.Inu">[docs]</a><span class="k">def</span> <span class="nf">Inu</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span><span class="n">tau</span><span class="p">,</span><span class="n">Te</span><span class="p">,</span><span class="n">I0</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates flux for a given optical depth, frequency, and temperature</span>
+<span class="sd">    assuming Rayleigh-Jeans</span>
+
+<span class="sd">    nu - frequency in Hz</span>
+<span class="sd">    tau - optical depth</span>
+<span class="sd">    Te - excitation temperature (K)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">I0</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">whtau1</span> <span class="o">=</span> <span class="n">argmin</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">tau</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">nutau1</span> <span class="o">=</span> <span class="n">nu</span><span class="p">[</span><span class="n">whtau1</span><span class="p">]</span>
+        <span class="n">taufactor</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">nutau1</span> <span class="o">=</span> <span class="n">nu</span>
+        <span class="n">taufactor</span> <span class="o">=</span> <span class="n">tau</span>
+        <span class="sd">&quot;&quot;&quot; assumes I0 is set&quot;&quot;&quot;</span>
+    <span class="n">I0</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">kb</span> <span class="o">*</span> <span class="n">Te</span> <span class="o">*</span> <span class="n">nutau1</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">taufactor</span>
+    <span class="n">thin</span> <span class="o">=</span> <span class="p">(</span><span class="n">tau</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="n">I0</span>
+    <span class="n">thick</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">kb</span> <span class="o">*</span> <span class="n">Te</span> <span class="o">*</span> <span class="p">(</span><span class="n">nu</span> <span class="o">*</span> <span class="p">(</span><span class="n">tau</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="n">thin</span><span class="o">+</span><span class="n">thick</span>
+</div>
+<div class="viewcode-block" id="inufit"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.inufit">[docs]</a><span class="k">def</span> <span class="nf">inufit</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span><span class="n">em</span><span class="p">,</span><span class="n">normfac</span><span class="p">,</span><span class="n">Te</span><span class="o">=</span><span class="mi">8500</span><span class="p">,</span><span class="n">unit</span><span class="o">=</span><span class="s">&#39;mJy&#39;</span><span class="p">,</span><span class="n">frequnit</span><span class="o">=</span><span class="s">&#39;GHz&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes the expected intensity as a function of frequency</span>
+<span class="sd">    for a given emission measure and normalization factor</span>
+<span class="sd">    nu - array of frequencies (array)</span>
+<span class="sd">    em - emission measure (float)</span>
+<span class="sd">    normfac - normalization factor (float)</span>
+<span class="sd">            - 1/solid angle of source.  1000 AU at 1 kpc = 206265.</span>
+
+<span class="sd">    Units: mJy</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_nu</span> <span class="o">=</span> <span class="n">nu</span><span class="o">*</span><span class="n">freqfactor</span><span class="p">[</span><span class="n">frequnit</span><span class="p">]</span>
+    <span class="n">I0</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">kb</span> <span class="o">*</span> <span class="n">Te</span> <span class="o">*</span> <span class="n">_nu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">model_intensity</span> <span class="o">=</span> <span class="n">Inu</span><span class="p">(</span><span class="n">_nu</span><span class="p">,</span><span class="n">tnu</span><span class="p">(</span><span class="n">Te</span><span class="p">,</span><span class="n">_nu</span><span class="o">/</span><span class="mf">1e9</span><span class="p">,</span><span class="n">em</span><span class="p">),</span><span class="n">Te</span><span class="p">,</span><span class="n">I0</span><span class="o">=</span><span class="n">I0</span><span class="p">)</span>  <span class="c"># tnu takes GHz</span>
+    <span class="n">model_norm</span> <span class="o">=</span> <span class="n">normfac</span> <span class="o">*</span> <span class="n">model_intensity</span> <span class="o">/</span> <span class="n">unitfactor</span><span class="p">[</span><span class="n">unit</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">model_norm</span>
+</div>
+<div class="viewcode-block" id="mpfitfun"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.mpfitfun">[docs]</a><span class="k">def</span> <span class="nf">mpfitfun</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span><span class="n">flux</span><span class="p">,</span><span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; wrapper around inufit to be passed into mpfit &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,(</span><span class="n">flux</span><span class="o">-</span><span class="n">inufit</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span><span class="o">*</span><span class="n">p</span><span class="p">))]</span>
+    <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">fjac</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,(</span><span class="n">flux</span><span class="o">-</span><span class="n">inufit</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span><span class="o">*</span><span class="n">p</span><span class="p">))</span><span class="o">/</span><span class="n">err</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">f</span>
+</div>
+<div class="viewcode-block" id="emtau"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.emtau">[docs]</a><span class="k">def</span> <span class="nf">emtau</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span><span class="n">flux</span><span class="p">,</span><span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">EMguess</span><span class="o">=</span><span class="mf">1e7</span><span class="p">,</span><span class="n">Te</span><span class="o">=</span><span class="mi">8500</span><span class="p">,</span><span class="n">normfac</span><span class="o">=</span><span class="mf">5e-6</span><span class="p">,</span><span class="n">quiet</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns emission measure &amp; optical depth given </span>
+<span class="sd">    radio continuum data points at frequency freq with flux</span>
+<span class="sd">    density flux.</span>
+
+<span class="sd">    return bestEM,nu(tau=1),chi^2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mp</span> <span class="o">=</span> <span class="n">mpfit</span><span class="p">(</span><span class="n">mpfitfun</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span><span class="n">flux</span><span class="p">,</span><span class="n">err</span><span class="p">),</span><span class="n">xall</span><span class="o">=</span><span class="p">[</span><span class="n">EMguess</span><span class="p">,</span><span class="n">normfac</span><span class="p">],</span><span class="n">quiet</span><span class="o">=</span><span class="n">quiet</span><span class="p">)</span>
+    <span class="n">mpp</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">params</span>
+    <span class="n">mpperr</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">perror</span>
+    <span class="n">chi2</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">fnorm</span>
+    <span class="n">bestEM</span> <span class="o">=</span> <span class="n">mpp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">normfac</span> <span class="o">=</span> <span class="n">mpp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">nu_tau</span> <span class="o">=</span> <span class="p">(</span> <span class="n">Te</span><span class="o">**</span><span class="mf">1.35</span> <span class="o">/</span> <span class="n">bestEM</span> <span class="o">/</span> <span class="mf">8.235e-2</span> <span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="mf">2.1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">bestEM</span><span class="p">,</span><span class="n">nu_tau</span><span class="p">,</span><span class="n">normfac</span><span class="p">,</span><span class="n">chi2</span>
+</div>
+<div class="viewcode-block" id="HIIregion"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.HIIregion">[docs]</a><span class="k">class</span> <span class="nc">HIIregion</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An HII region has properties frequency, flux, and error, which must be</span>
+<span class="sd">    numpy ndarrays of the same length</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">nu</span><span class="p">,</span><span class="n">flux</span><span class="p">,</span><span class="n">fluxerr</span><span class="p">,</span><span class="n">fluxunit</span><span class="o">=</span><span class="s">&#39;mJy&#39;</span><span class="p">,</span><span class="n">frequnit</span><span class="o">=</span><span class="s">&#39;GHz&#39;</span><span class="p">,</span><span class="n">beamsize_as2</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span><span class="n">dist_kpc</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">resolved</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">Te</span><span class="o">=</span><span class="mi">8500</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">argsort</span><span class="p">(</span><span class="n">asarray</span><span class="p">(</span><span class="n">nu</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span>           <span class="o">=</span> <span class="n">asarray</span><span class="p">(</span><span class="n">nu</span><span class="p">)[</span><span class="n">order</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flux</span>         <span class="o">=</span> <span class="n">asarray</span><span class="p">(</span><span class="n">flux</span><span class="p">)[</span><span class="n">order</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fluxerr</span>      <span class="o">=</span> <span class="n">asarray</span><span class="p">(</span><span class="n">fluxerr</span><span class="p">)[</span><span class="n">order</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequnit</span>     <span class="o">=</span> <span class="n">frequnit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fluxunit</span>     <span class="o">=</span> <span class="n">fluxunit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beamsize_as2</span> <span class="o">=</span> <span class="n">beamsize_as2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dist_kpc</span> <span class="o">=</span> <span class="n">dist_kpc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolved</span> <span class="o">=</span> <span class="n">resolved</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Te</span> <span class="o">=</span> <span class="n">Te</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">em</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nutau</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">normfac</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">chi2</span> <span class="o">=</span> <span class="n">emtau</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">fluxerr</span><span class="p">,</span><span class="n">Te</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Te</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="HIIregion.refit"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.HIIregion.refit">[docs]</a>    <span class="k">def</span> <span class="nf">refit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; refit, presumably using different inputs to emtau &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">em</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nutau</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">normfac</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">chi2</span> <span class="o">=</span> <span class="n">emtau</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">fluxerr</span><span class="p">,</span><span class="n">Te</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Te</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">loglogplot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">numin</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span><span class="n">numax</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span><span class="n">plottitle</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span><span class="n">do_annotations</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">linspace</span><span class="p">(</span><span class="n">numin</span><span class="p">,</span><span class="n">numax</span><span class="p">,</span><span class="mi">500</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">inufit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">em</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">normfac</span><span class="p">)</span>
+        <span class="n">loglog</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Frequency (GHz)&#39;</span><span class="p">)</span>
+        <span class="n">ylabel</span><span class="p">(</span><span class="s">&#39;Flux Density (mJy)&#39;</span><span class="p">)</span>
+        <span class="n">title</span><span class="p">(</span><span class="n">plottitle</span><span class="p">)</span>
+
+        <span class="n">errorbar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">,</span><span class="n">yerr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fluxerr</span><span class="p">,</span><span class="n">fmt</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">physprops</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">do_annotations</span><span class="p">:</span>
+            <span class="n">annotate</span><span class="p">(</span><span class="s">&quot;size (as): </span><span class="si">%0.2g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span><span class="o">/</span><span class="n">au</span><span class="p">),</span> <span class="p">[</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="o">.</span><span class="mi">3</span><span class="p">],</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">,</span><span class="n">xycoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">)</span>
+            <span class="n">annotate</span><span class="p">(</span><span class="s">&quot;size (au): </span><span class="si">%0.2g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span><span class="o">/</span><span class="n">au</span><span class="p">),</span> <span class="p">[</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="o">.</span><span class="mi">3</span><span class="p">],</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">,</span><span class="n">xycoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">)</span>
+            <span class="n">annotate</span><span class="p">(</span><span class="s">&quot;mass (msun): </span><span class="si">%0.2g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="o">.</span><span class="mi">25</span><span class="p">],</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">,</span><span class="n">xycoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">)</span>
+            <span class="n">annotate</span><span class="p">(</span><span class="s">&quot;EM: </span><span class="si">%0.2g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">em</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="o">.</span><span class="mi">2</span><span class="p">],</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">,</span><span class="n">xycoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">)</span>
+            <span class="n">annotate</span><span class="p">(</span><span class="s">&quot;Nu(Tau=1): </span><span class="si">%0.2g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nutau</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span> <span class="o">.</span><span class="mi">15</span><span class="p">],</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">,</span><span class="n">xycoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">)</span>
+            <span class="n">annotate</span><span class="p">(</span><span class="s">&quot;N(lyc): </span><span class="si">%0.2g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">Nlyc</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span><span class="o">.</span><span class="mi">1</span><span class="p">],</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">,</span><span class="n">xycoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">)</span>
+            <span class="n">annotate</span><span class="p">(</span><span class="s">&quot;dens: </span><span class="si">%0.2g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">dens</span><span class="p">,</span> <span class="p">[</span><span class="o">.</span><span class="mi">8</span><span class="p">,</span><span class="o">.</span><span class="mo">05</span><span class="p">],</span><span class="n">textcoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">,</span><span class="n">xycoords</span><span class="o">=</span><span class="s">&#39;axes fraction&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="HIIregion.physprops"><a class="viewcode-back" href="../../agpy.html#agpy.UCHIIfitter.HIIregion.physprops">[docs]</a>    <span class="k">def</span> <span class="nf">physprops</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the source size (au), density (cm^-3), </span>
+<span class="sd">        mass (msun), and Nlyc of the UCHII</span>
+
+<span class="sd">        Also return EM and nutau</span>
+
+<span class="sd">        ERROR IN CURRENT VERSION</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolved</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beamsize_as2</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dist_kpc</span><span class="o">*</span><span class="mf">1000.0</span><span class="o">*</span><span class="n">au</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flux</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">unitfactor</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fluxunit</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">kb</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Te</span><span class="p">)</span> <span class="o">*</span> \
+                    <span class="p">(</span><span class="n">c</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">freqfactor</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frequnit</span><span class="p">]))</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dist_kpc</span><span class="o">*</span><span class="mf">1e3</span><span class="o">*</span><span class="n">pc</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">pi</span><span class="p">)</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">dens</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">em</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span><span class="o">/</span><span class="n">pc</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dens</span> <span class="o">*</span> <span class="mf">4.0</span><span class="o">/</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">mh</span> <span class="o">/</span> <span class="n">msun</span>
+
+        <span class="n">U</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dens</span><span class="o">**</span><span class="p">(</span><span class="mi">2</span><span class="o">/</span><span class="mf">3.</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span><span class="o">/</span><span class="n">pc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Nlyc</span> <span class="o">=</span> <span class="mf">8.04e46</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">Te</span><span class="o">**-.</span><span class="mi">85</span> <span class="o">*</span> <span class="n">U</span><span class="o">**</span><span class="mi">3</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">srcsize</span><span class="o">/</span><span class="n">au</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">dens</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">Nlyc</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">em</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nutau</span>
+
+
+
+    <span class="c"># Cara test data:</span>
+    <span class="c"># nu = array([1.4,5,8.33]); flux=array([4.7,9.2,9.1]); err=array([.52,.24,.07])</span>
+    <span class="c"># em,nutau,normfac,chi2 = UCHIIfitter.emtau(nu,flux,err)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table Of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../agpy.html">Adam Ginsburg&#8217;s Python Code (agpy)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../image_tools.html">Image Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fft_tools.html">AG_fft_tools Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plfit.html">plfit Package</a></li>
+</ul>
+
+          <h3 style="margin-top: 1.5em;">Search</h3>
+          <form class="search" action="../../search.html" method="get">
+            <input type="text" name="q" />
+            <input type="submit" value="Go" />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+          </form>
+          <p class="searchtip" style="font-size: 90%">
+            Enter search terms or a module, class or function name.
+          </p>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      &copy; Copyright 2011, Adam Ginsburg.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
+  </body>
+</html>
