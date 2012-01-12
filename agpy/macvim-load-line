@@ -1,0 +1,28 @@
+#!/bin/bash
+
+file="$1"
+line="$2"
+
+[ "${file:0:1}" == "/" ] || file="${PWD}/$file"
+
+# Use Applescript to activate VIM, find file, and load it
+# the 'delay' command is needed to prevent command/control/shift from sticking when this
+# is activated (e.g., from Skim, where the command is command-shift-click)
+#
+# key code 53 is "escape" to escape to command mode in VIM
+exec osascript \
+  -e "delay 0.2" \
+  -e "tell application \"MacVim\" to activate" \
+  -e "tell application \"System Events\"" \
+  -e "  tell process \"MacVim\"" \
+  -e "    key code 53 "\
+  -e "    keystroke \":set hidden\" & return " \
+  -e "    keystroke \":if bufexists(bufname('$file'))\" & return " \
+  -e "    keystroke \":exe \\\":buffer \\\" . bufnr(bufname('$file'))\"  & return " \
+  -e "    keystroke \":else \" & return " \
+  -e "    keystroke \":echo \\\"Could not load file\\\" \" & return " \
+  -e "    keystroke \":endif\" & return " \
+  -e "    keystroke \":$line\" & return " \
+  -e "  end tell" \
+  -e "end tell"
+

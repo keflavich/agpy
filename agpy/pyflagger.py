@@ -367,7 +367,8 @@ class Flagger:
 
         datums=['astrosignal','atmosphere','ac_bolos','atmo_one','noise','scalearr','weight','mapped_astrosignal']
         for d in datums:
-            setattr(self.__class__, d, lazydata(d,flag=flag))
+            if hasattr(self.bgps,d): # for version one, may not have some...
+                setattr(self.__class__, d, lazydata(d,flag=flag))
             #self.__dict__[d] = lazydata(d)
             #if self.__dict__.has_key(d):
             #    self.__dict__[d][self.whempty,:] = NaN
@@ -398,7 +399,15 @@ class Flagger:
         #setattr(self.__class__, 'tstomap', lazydata('ts',reshape=True, structname='mapstr'))
         #self.tstomap  = lazydata('ts',reshape=True) # 
 
-        self.mapped_timestream = self.atmo_one - self.atmosphere + self.astrosignal
+        if not hasattr(self.bgps,'atmo_one'):
+            print "Reading file as a v1.0.2 sav file"
+            self.atmo_one = self.ac_bolos - self.astrosignal
+            self.mapped_timestream = self.ac_bolos - self.atmosphere # apparently?
+            self.scalearr = numpy.ones(self.datashape[1])[newaxis,:,newaxis]*self.scale_coeffs.swapaxes(0,1)[:,newaxis,:]
+            self.version = 'v1.0'
+        else:
+            self.mapped_timestream = self.atmo_one - self.atmosphere + self.astrosignal
+            self.version = 'v2.0'
 
         if self.map.sum() == 0:
             self.map  = nantomask( self.mapstr['rawmap'][0] )
@@ -430,6 +439,7 @@ class Flagger:
         'atmosphere': lambda:self.atmosphere,
         'skysub_noscale': lambda:self.atmo_one - self.atmosphere,
         'new_astro': lambda: self.atmo_one - self.atmosphere,
+        'new_astro_v1': lambda: self.lookup('PCA_astro_v1'),
         'residual': lambda:self.atmo_one - self.atmosphere - self.noise,
         'skysub': lambda:self.atmo_one - self.atmosphere + self.astrosignal,
         'default': lambda:self.atmo_one - self.atmosphere + self.astrosignal,
@@ -452,9 +462,13 @@ class Flagger:
         'atmo_one_itermedian': lambda: itermedian(self.atmo_one),
         #'expsub': lambda: exponent_sub(self.lookup('atmo_one_itermedian')),
         'atmos_remainder': lambda: self.lookup('atmo_one_itermedian'),#self.lookup('expsub'),
+        'atmos_remainder_v1': lambda: itermedian(self.atmo_one,scale=1.0,niter=1),
         'expmodel': lambda: self.lookup('atmo_one_itermedian') - self.lookup('expsub'),
         'first_sky': lambda: self.atmo_one - self.lookup('atmos_remainder'),
+        'first_sky_v1': lambda: self.atmo_one - self.lookup('atmos_remainder_v1'),
         'astrosignal_premap': lambda: self.lookup('PCA_astro')+self.astrosignal,
+        'PCA_atmo_v1':     lambda: reshape(unpca_subtract(numpy.nan_to_num(reshape(self.lookup('atmos_remainder_v1'),self.tsshape)),self.npca),self.datashape),
+        'PCA_astro_v1':     lambda: reshape(pca_subtract(numpy.nan_to_num(reshape(self.lookup('atmos_remainder_v1'),self.tsshape)),self.npca),self.datashape),
         'PCA_atmo':     lambda: reshape(unpca_subtract(numpy.nan_to_num(reshape(self.lookup('atmos_remainder'),self.tsshape)),self.npca),self.datashape),
         'PCA_astro':     lambda: reshape(pca_subtract(numpy.nan_to_num(reshape(self.lookup('atmos_remainder'),self.tsshape)),self.npca),self.datashape),
         'PCA_astrosignal':   lambda: reshape(efuncs(reshape(self.astrosignal,self.tsshape)),self.datashape) / self.nbolos**0.5,
@@ -1107,6 +1121,10 @@ class Flagger:
                  self.flagfig.clf()
 
     def writeflags(self):
+        flagged_scans = np.array([ii for ii in xrange(self.nscans) if all(self.flags[ii,:,:])])
+        flagged_bolos = np.array([ii for ii in xrange(self.nbolos) if all(self.flags[:,:,ii])])
+        flagged_scans.tofile(self.pathprefix+self.fileprefix+"_flagged_scans.txt"," ")
+        flagged_bolos.tofile(self.pathprefix+self.fileprefix+"_flagged_bolos.txt"," ")
         tempdata = self.data
         if self.tsfile:
             self.tsfile[0].data = asarray(self.flags,dtype='int')
@@ -1662,13 +1680,19 @@ class Flagger:
         self.powerspec_plotted = False
 
     def histograms(self, fignum=8, clear=True, hrange=[0,2], nbins=21, dolegend=True,
-            loc='best', **kwargs):
+            loc='best', ignore_zeros=True, **kwargs):
 
         self.histfig = figure(fignum)
         if clear: self.histfig.clear()
 
-        hist(self.scale_coeffs.ravel(),histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
-        hist(self.weight_by_bolo,histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Weights',color='r',linewidth=2)
+        if ignore_zeros:
+            OKscale = self.scale_coeffs != 0
+            OKweight = self.weight_by_bolo != 0
+        else:
+            OKscale = OKweight = self.scale_coeffs*0+True
+
+        hist(self.scale_coeffs[OKscale],histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
+        hist(self.weight_by_bolo[OKweight],histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Weights',color='r',linewidth=2)
         
         if dolegend: legend(loc=loc)
 
@@ -1892,8 +1916,8 @@ if __name__ == "__main__":
 
           if options.timestreams:
               figure(6)
-              title("ac_bolos scaled")
               clf()
+              title("ac_bolos scaled")
               for ii in range(f.nbolos):
                   f.timestream_whole(ii,timestream='acbolos',clear=False,fignum=6)
               savefig('%s_acbolos_scaled.png' % prefix)
