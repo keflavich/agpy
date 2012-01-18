@@ -84,7 +84,7 @@ class plfit:
     
 
     # should probably use a decorator here
-    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=usefortran,usecy=False,
+    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=False,usecy=False,
             xmin=None):
         """
         A Python implementation of the Matlab code http://www.santafe.edu/~aaronc/powerlaws/plfit.m

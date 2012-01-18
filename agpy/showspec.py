@@ -26,6 +26,10 @@ import math
 
 import pylab
 from pylab import *
+for k,v in pylab.__dict__.iteritems():  
+    if hasattr(v,'__module__'):
+        if v.__module__ is None:
+            locals()[k].__module__ = 'pylab'
 import matplotlib
 
 from mpfit import mpfit

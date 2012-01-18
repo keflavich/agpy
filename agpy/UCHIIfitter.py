@@ -10,6 +10,10 @@ Fit a free-free spectrum to an SED.
 """
 import pylab
 from pylab import *
+for k,v in pylab.__dict__.iteritems():  
+    if hasattr(v,'__module__'):
+        if v.__module__ is None:
+            locals()[k].__module__ = 'pylab'
 try:
     from scipy import optimize
 except ImportError:

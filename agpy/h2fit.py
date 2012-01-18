@@ -1,4 +1,8 @@
 from pylab import *
+for k,v in pylab.__dict__.iteritems():  
+    if hasattr(v,'__module__'):
+        if v.__module__ is None:
+            locals()[k].__module__ = 'pylab'
 from numpy import *
 import agpy
 from agpy import readcol

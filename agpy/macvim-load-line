@@ -9,6 +9,11 @@
 
 file="$1"
 line="$2"
+debug="$3"
+
+echo file: $file
+echo line: $line
+echo debug: $debug
 
 for server in `mvim --serverlist` 
 do
@@ -16,7 +21,9 @@ do
     if [[ $foundfile > 0 ]]
     then
         mvim --servername $server --remote-expr "foreground()" 
+        if [[ $debug ]] ; then echo mvim --servername $server --remote-send ":exec \"tabnext $foundfile\" <CR>"; fi
         mvim --servername $server --remote-send ":exec \"tabnext $foundfile\" <CR>"
+        if [[ $debug ]] ; then echo mvim --servername $server --remote-send ":$line <CR>"; fi
         mvim --servername $server --remote-send ":$line <CR>"
     fi
 done

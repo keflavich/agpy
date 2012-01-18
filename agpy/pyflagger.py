@@ -5,6 +5,10 @@ import warnings
 warnings.filterwarnings('ignore','masked')
 import pylab
 from pylab import *
+for k,v in pylab.__dict__.iteritems():  
+    if hasattr(v,'__module__'):
+        if v.__module__ is None:
+            locals()[k].__module__ = 'pylab'
 import matplotlib
 import pyfits
 import numpy 

@@ -8,6 +8,10 @@ except ImportError:
     print "aplpy is required for collapseplot"
 import pyfits
 from pylab import *
+for k,v in pylab.__dict__.iteritems():  
+    if hasattr(v,'__module__'):
+        if v.__module__ is None:
+            locals()[k].__module__ = 'pylab'
 
 def collapseplot(filename, vrange=[0,10], outfilename=None, contourfile=None,
         xrange=None, yrange=None, imfile=None, clobber=True, swapcontour=False, 
