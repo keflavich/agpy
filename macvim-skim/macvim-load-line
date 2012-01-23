@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# Install directions:
-# Put this file somewhere in your path and make it executable
-# To set up in Skim, go to Preferences:Sync
-# Change Preset: to Custom
-# Change Command: to macvim-load-line
-# Change Arguments: to "%file" %line
-
 file="$1"
 line="$2"
 debug="$3"
@@ -17,6 +10,7 @@ echo debug: $debug
 
 for server in `mvim --serverlist` 
 do
+    if [[ $debug ]] ; then echo mvim --servername $server --remote-expr "WhichTab('$file')"; fi
     foundfile=`mvim --servername $server --remote-expr "WhichTab('$file')"`
     if [[ $foundfile > 0 ]]
     then
