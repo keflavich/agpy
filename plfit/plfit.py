@@ -198,7 +198,7 @@ class plfit:
             print "n(>xmin): %i" % n,
             if verbose: print "\nThe derived power-law alpha (p(x)~x^-alpha) with MLE-derived error, ",
             print "alpha: %g +/- %g  " % (alpha,self._alphaerr), 
-            if verbose: print "\nThe log of the Likelihood (the maximized parameter), ",
+            if verbose: print "\nThe log of the Likelihood (the maximized parameter; you minimized the negative log likelihood), ",
             print "Log-Likelihood: %g  " % L,
             if verbose: print "\nThe KS-test statistic between the best-fit power-law and the data, ",
             print "ks: %g" % (ks),
@@ -439,7 +439,8 @@ class plfit:
             fitpars = scipy.stats.lognorm.fit(self.data)
             self.lognormal_dist = scipy.stats.lognorm(*fitpars)
             self.lognormal_ksD,self.lognormal_ksP = scipy.stats.kstest(self.data,self.lognormal_dist.cdf)
-            self.lognormal_likelihood = scipy.stats.lognorm.nnlf(fitpars,self.data)
+            # nnlf = NEGATIVE log likelihood
+            self.lognormal_likelihood = -1*scipy.stats.lognorm.nnlf(fitpars,self.data)
 
             # Is this the right likelihood ratio?
             # Definition of L from eqn. B3 of Clauset et al 2009:
@@ -450,13 +451,19 @@ class plfit:
             # like the _nnlf and L have opposite signs, which would explain the
             # likelihood ratio I've used here:
             self.power_lognorm_likelihood = (self._likelihood + self.lognormal_likelihood)
-            # a previous version had 2*(above).  I don't know why; it seems
-            # likely that it was a typo or carryover from an incorrectly
-            # translated formula
+            # a previous version had 2*(above).  That is the correct form if you want the likelihood ratio
+            # statistic "D": http://en.wikipedia.org/wiki/Likelihood-ratio_test
+            # The above explanation makes sense, since nnlf is the *negative* log likelihood function:
+            ## nnlf  -- negative log likelihood function (to minimize)
+            #
+            # Assuming we want the ratio between the POSITIVE likelihoods, the D statistic is:
+            # D = -2 log( L_power / L_lognormal )
+            self.likelihood_ratio_D = -2 * (log(self._likelihood/self.lognormal_likelihood))
             
             if doprint: 
                 print "Lognormal KS D: %g  p(D): %g" % (self.lognormal_ksD,self.lognormal_ksP),
-                print "  Likelihood Ratio (<0 implies power law better than lognormal): %g" % self.power_lognorm_likelihood
+                print "  Likelihood Ratio Statistic (powerlaw/lognormal): %g" % self.likelihood_ratio_D
+                print "At this point, have a look at Clauset et al 2009 Appendix C: determining sigma(likelihood_ratio)"
 
     def plot_lognormal_pdf(self,**kwargs):
         """
