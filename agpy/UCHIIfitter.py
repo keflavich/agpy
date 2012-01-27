@@ -20,18 +20,20 @@ except ImportError:
     print "scipy not installed correctly: UCHIIfitter may fail"
 from mpfit import mpfit
 import numpy
+from agpy.constants import *
 
-kb = 1.38e-16
-c=3e10
-mu = 1.4
-mh = 1.67e-24
-msun = 1.9889e33
-pc = 3.08568e18      # cm
-au = 1.496e13        # cm
-msun = 1.99e33       # g
+#kb = 1.38e-16
+#c=3e10
+#mu = 1.4
+#mh = 1.67e-24
+#msun = 1.9889e33
+#pc = 3.08568e18      # cm
+#au = 1.496e13        # cm
+#msun = 1.99e33       # g
 
 unitfactor={'mJy':1e-26,'Jy':1e-23,'cgs':1.0}
 freqfactor={'GHz':1e9,'Hz':1.0}
+
 
 def tnu(Te,nu,EM):
     """
@@ -49,6 +51,8 @@ def tnu(Te,nu,EM):
     gff_lownu = ( log(4.955e-2 * nu**-1) + 1.5 * log(Te) )  # <gff> Gaunt factor for free-free
     answer_lownu  = (nu < nu0) * 3.014e-2 * Te**-1.5 * nu**-2 * EM * gff_lownu
     tau = answer_lownu+answer_highnu
+    ## altenhoff version
+    #tau = 8.235e-2 * Te**-1.35 * nu**-2.1 * EM
     return tau
 
 def Inu(nu,tau,Te,I0=0):
@@ -90,13 +94,54 @@ def inufit(nu,em,normfac,Te=8500,unit='mJy',frequnit='GHz'):
     model_norm = normfac * model_intensity / unitfactor[unit]
     return model_norm
 
-def mpfitfun(freq,flux,err=None):
+
+def inorm(em,nu=freq[1],nu0=freq[0],intens0=flux[0],Te=8500):
+    """
+    Not used?
+    """
+    I0 = 2 * kb * Te * nu0**2 / c**2
+    model_intensity0 = Inu(nu0,tnu(Te,nu0,em),Te,I0=I0)
+    model_intensity = Inu(nu,tnu(Te,nu,em),Te,I0=I0)
+    model_norm = intens0/model_intensity0 * model_intensity
+    return model_norm
+
+def inufit_dust(nu,em,normfac,alpha,normfac2,Te=8500):
+    """
+    inufit with dust added
+    """
+    I0 = 2 * kb * Te * nu[0]**2 / c**2
+    model_intensity = Inu(nu,tnu(Te,nu,em),Te,I0=I0) 
+    model_norm = normfac * model_intensity + normfac2*nu**alpha
+    return model_norm
+
+def inufit_dustT(nu,em,normfac,beta,normfac2,dustT,Te=8500):
+    I0 = 2 * kb * Te * nu[0]**2 / c**2
+    model_intensity = Inu(nu,tnu(Te,nu,em),Te,I0=I0) 
+    dustem = 2*hplanck*(nu)**(3+beta) / c**2 * (exp(hplanck*nu*1e9/(kb*abs(dustT))) - 1)**-1
+    model_norm = normfac * model_intensity + normfac2/abs(dustT)*dustem
+    return model_norm
+
+
+def mpfitfun(freq,flux,err=None,dust=False,dustT=False):
     """ wrapper around inufit to be passed into mpfit """
-    if err == None:
-            def f(p,fjac=None): return [0,(flux-inufit(freq,*p))]
+    if dust:
+        if err == None:
+            def f(p,fjac=None): return [0,(flux-inufit_dust(freq,*p))]
+        else:
+            def f(p,fjac=None): return [0,(flux-inufit_dust(freq,*p))/err]
+        return f
+    elif dustT:
+        if err == None:
+            def f(p,fjac=None): return [0,(flux-inufit_dustT(freq,*p))]
+        else:
+            def f(p,fjac=None): return [0,(flux-inufit_dustT(freq,*p))/err]
+        return f
     else:
+        if err == None:
+            def f(p,fjac=None): return [0,(flux-inufit(freq,*p))]
+        else:
             def f(p,fjac=None): return [0,(flux-inufit(freq,*p))/err]
-    return f
+        return f
 
 def emtau(freq,flux,err=None,EMguess=1e7,Te=8500,normfac=5e-6,quiet=1):
     """
@@ -187,3 +232,5 @@ class HIIregion:
     # Cara test data:
     # nu = array([1.4,5,8.33]); flux=array([4.7,9.2,9.1]); err=array([.52,.24,.07])
     # em,nutau,normfac,chi2 = UCHIIfitter.emtau(nu,flux,err)
+
+__all__ = [tnu,Inu,unitfactor,freqfactor,inufit,emtau,mpfitfun,HIIregion]

@@ -50,3 +50,23 @@ def LofMdot(logdmom, x=1.51, D0=20.69, alphaP=0.66):
 
     L = ( (logdmom-D0) / x )
     return L
+
+def SnuOfMdot(nu, dkpc, mdot=1e-5, mu=1.2, vwind=1e3, Zbar=1, Te=1e4): 
+    """
+    Panagia and Felli 1975 equation 24
+
+    [nu] = GHz
+    [Te] = K
+    [mdot] = msun/yr
+    [vwind] = km/s
+    mu = mean particle mass in AMU (presumably)
+    Zbar = average ionic charge (assumed 1, but not sure that's good)
+    dkpc = distance in kpc
+    """
+
+    snu = 5.12 * ( (nu/10.)**0.6 * (Te/1e4)**0.1 * (mdot/1e-5)**(4/3.) *
+            (mu/1.2)**(-4/3.) * (vwind/1e3)**(-4/3.) * (Zbar)**(2/3.) *
+            (dkpc)**-2.)
+
+    # 1 mfu = 1 milli-flux-unit = 10^-29 W m^-2 Hz ^-1 = 1 mJy
+    return snu
