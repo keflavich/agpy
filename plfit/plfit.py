@@ -129,6 +129,11 @@ class plfit:
                 sigma = ((av-1)/numpy.sqrt(len(z)-numpy.arange(len(z))))[argxmins]
                 dat = dat[goodvals]
                 av = av[goodvals]
+                if nosmall:
+                    # data, av a;ready treated for this.  sigma, xmins not
+                    nmax = argmin(sigma<0.1)
+                    xmins = xmins[:nmax]
+                    sigma = sigma[:nmax]
                 if not quiet: print "FORTRAN plfit executed in %f seconds" % (time.time()-t)
             elif usecy and cyOK:
                 dat,av = cplfit.plfit_loop(z,nosmall=nosmall,zunique=xmins,argunique=argxmins)
@@ -150,6 +155,7 @@ class plfit:
                         dat = dat[:nmax]
                         xmins = xmins[:nmax]
                         av = av[:nmax]
+                        sigma = sigma[:nmax]
                     else:
                         print "Not enough data left after flagging - using all positive data."
                 if not quiet: 
@@ -212,19 +218,19 @@ class plfit:
 
     def xminvsks(self, **kwargs):
         """
-        Plot alpha versus the ks value for derived alpha.  This plot can be used
+        Plot xmin versus the ks value for derived alpha.  This plot can be used
         as a diagnostic of whether you have derived the 'best' fit: if there are 
         multiple local minima, your data set may be well suited to a broken 
         powerlaw or a different function.
         """
         
-        pylab.plot(self._xmin_kstest,self._xmins,'.')
-        pylab.plot(self._ks,self._xmin,'s')
+        pylab.plot(self._xmins,self._xmin_kstest,'.')
+        pylab.plot(self._xmin,self._ks,'s')
         #pylab.errorbar([self._ks],self._alpha,yerr=self._alphaerr,fmt='+')
 
         ax=pylab.gca()
-        ax.set_xlabel("KS statistic")
-        ax.set_ylabel("min(x)")
+        ax.set_ylabel("KS statistic")
+        ax.set_xlabel("min(x)")
         pylab.draw()
 
         return ax
@@ -237,15 +243,15 @@ class plfit:
         powerlaw or a different function.
         """
         
-        pylab.plot(self._xmin_kstest,1+self._av,'.')
-        pylab.errorbar([self._ks],self._alpha,yerr=self._alphaerr,fmt='+')
+        pylab.plot(1+self._av,self._xmin_kstest,'.')
+        pylab.errorbar(self._alpha,[self._ks],xerr=self._alphaerr,fmt='+')
 
         ax=pylab.gca()
         if autozoom:
-            ax.set_xlim(0.8*(self._ks),3*(self._ks))
-            ax.set_ylim((self._alpha)-5*self._alphaerr,(self._alpha)+5*self._alphaerr)
-        ax.set_xlabel("KS statistic")
-        ax.set_ylabel(r'$\alpha$')
+            ax.set_ylim(0.8*(self._ks),3*(self._ks))
+            ax.set_xlim((self._alpha)-5*self._alphaerr,(self._alpha)+5*self._alphaerr)
+        ax.set_ylabel("KS statistic")
+        ax.set_xlabel(r'$\alpha$')
         pylab.draw()
 
         return ax
@@ -405,7 +411,11 @@ class plfit:
             fakedata = numpy.concatenate([fakenonpl,fakepl])
             if print_timing: t0 = time.time()
             # second, fit to powerlaw
-            TEST = plfit(fakedata,quiet=True,silent=True,nosmall=True,**kwargs)
+            # (add some silencing kwargs optionally)
+            for k,v in {'quiet':True,'silent':True,'nosmall':True}.iteritems():
+                if k not in kwargs:
+                    kwargs[k] = v
+            TEST = plfit(fakedata,**kwargs)
             ksv.append(TEST._ks)
             if print_timing: 
                 deltat.append( time.time() - t0 )

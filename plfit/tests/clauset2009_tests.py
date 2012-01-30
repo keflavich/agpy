@@ -1,6 +1,7 @@
 # coding: utf-8
 from agpy import readcol
 import plfit
+from pylab import *
 
 blackouts = readcol('blackouts.txt')
 cities = readcol('cities.txt')
@@ -16,6 +17,15 @@ terrorism = readcol('terrorism.txt')
 pl = plfit.plfit(cities.ravel() / 1e3, usefortran=True)
 print "Cities (me)     : n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f ntail: %10i p: %5.2f" % (pl.data.shape[0], pl.data.mean(), pl.data.std(), pl.data.max(), pl._xmin, pl._alpha, pl._ngtx, pl._ks_prob)
 print "Cities (Clauset): n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f ntail: %10i p: %5.2f" % (19447,9.00,77.83,8009,52.46,2.37,580,0.76)
+figure(1)
+clf()
+title("Cities")
+subplot(131)
+pl.plotpdf()
+subplot(132)
+pl.xminvsks()
+subplot(133)
+pl.alphavsks()
 
 pl = plfit.plfit(melville.ravel())
 p,sims = pl.test_pl(usefortran=True, niter=100)
@@ -23,16 +33,45 @@ print "Melville (me)     : n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f al
 print "Melville (Clauset): n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f ntail: %10i p: %5.2f" % (18855,11.14,148.33,14086,7,1.95,2958,0.49)
 # count of word use 18 855 11.14 148.33 14 086 7 ± 2 1.95(2) 2958 ± 987 0.49
 # words 0.49 4.43 0.00 0.395 0.69 9.09 0.00 4.13 0.00 −0.899 0.18 goo
-#
+figure(2)
+clf()
+title("Melville")
+subplot(131)
+pl.plotpdf()
+subplot(132)
+pl.xminvsks()
+subplot(133)
+pl.alphavsks()
+
+
 pl = plfit.plfit(solarflares.ravel())
 p,sims = pl.test_pl(usefortran=True, niter=100)
 print "Solarflares (me)     : n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f ntail: %10i p: %5.2f" % (pl.data.shape[0], pl.data.mean(), pl.data.std(), pl.data.max(), pl._xmin, pl._alpha, pl._ngtx, p)
 print "Solarflares (Clauset): n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f ntail: %10i p: %5.2f" % (12773, 689.41, 6520.59, 231300, 323, 1.79, 1711, 1.00)
+figure(3)
+clf()
+title("Solar Flares")
+subplot(131)
+pl.plotpdf()
+subplot(132)
+pl.xminvsks()
+subplot(133)
+pl.alphavsks()
 
 pl = plfit.plfit(terrorism.ravel())
-p,sims = pl.test_pl(usefortran=True, niter=100)
+p,sims = pl.test_pl(usefortran=True, niter=100, nosmall=False)
 print "Terrorism (me)     : n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f ntail: %10i p: %5.2f" % (pl.data.shape[0], pl.data.mean(), pl.data.std(), pl.data.max(), pl._xmin, pl._alpha, pl._ngtx, p)
 print "Terrorism (Clauset): n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f ntail: %10i p: %5.2f" % (9101, 4.35, 31.58, 2749, 12, 2.4, 547, 0.68)
+figure(4)
+clf()
+title("Terrorism")
+subplot(131)
+pl.plotpdf()
+subplot(132)
+pl.xminvsks()
+subplot(133)
+pl.alphavsks()
+
 
 
 # """
