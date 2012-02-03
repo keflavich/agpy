@@ -72,9 +72,14 @@ class plfit:
             """
             given a sorted data set and a minimum, returns power law MLE fit
             data is passed as a keyword parameter so that it can be vectorized
+
+            if there is only one element, return alpha=0
             """
-            x = x[x>=xmin]
-            n = sum(x>=xmin)
+            gexmin = x>=xmin
+            n = gexmin.sum()
+            if n < 2:
+                return 0
+            x = x[gexmin]
             a = float(n) / sum(log(x/xmin))
             return a
         return alpha
@@ -157,7 +162,8 @@ class plfit:
                         av = av[:nmax]
                         sigma = sigma[:nmax]
                     else:
-                        print "Not enough data left after flagging - using all positive data."
+                        if not silent: 
+                            print "Not enough data left after flagging - using all positive data."
                 if not quiet: 
                     print "PYTHON plfit executed in %f seconds" % (time.time()-t)
                     if usefortran: print "fortran fplfit did not load"
@@ -171,15 +177,6 @@ class plfit:
         alpha = 1 + n / sum( log(z/xmin) )
         if finite:
             alpha = alpha*(n-1.)/n+1./n
-        if n == 1 and not silent:
-            print "Failure: only 1 point kept.  Probably not a power-law distribution."
-            self._alpha = 0
-            self._alphaerr = 0
-            self._likelihood = 0
-            self._ks = 0
-            self._ks_prob = 0
-            self._xmin = xmin
-            return xmin,0
         if n < 50 and not finite and not silent:
             print '(PLFIT) Warning: finite-size bias may be present. n=%i' % n
         ks = max(abs( numpy.arange(n)/float(n) - (1-(xmin/z)**(alpha-1)) ))
@@ -194,6 +191,16 @@ class plfit:
         self._ks = ks  # this ks statistic may not have the same value as min(dat) because of unique()
         if scipyOK: self._ks_prob = scipy.stats.kstwobign.sf(ks*numpy.sqrt(n))
         self._ngtx = n
+        if n == 1:
+            if not silent:
+                print "Failure: only 1 point kept.  Probably not a power-law distribution."
+            self._alpha = alpha = 0
+            self._alphaerr = 0
+            self._likelihood = L = 0
+            self._ks = 0
+            self._ks_prob = 0
+            self._xmin = xmin
+            return xmin,0
         if numpy.isnan(L) or numpy.isnan(xmin) or numpy.isnan(alpha):
             raise ValueError("plfit failed; returned a nan")
 

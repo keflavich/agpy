@@ -27,6 +27,8 @@ if len(sys.argv) > 1:
     else: 
         nel = 1000
 else:
+    nel = 1000
+    xmin = 0.5
     ntests = 10000
 
 a=zeros(ntests)
@@ -38,7 +40,7 @@ for i in range(ntests):
 h,b = hist(a,bins=30)[:2]
 bx = (b[1:]+b[:-1])/2.0
 
-import gaussfitter
+from agpy import gaussfitter
 p,m,pe,chi2 = gaussfitter.onedgaussfit(bx,h,params=[0,ntests/10.0,2.5,0.05],fixed=[1,0,0,0])
 
 plot(bx,m)
