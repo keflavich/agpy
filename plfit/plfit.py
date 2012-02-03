@@ -1,3 +1,5 @@
+# -*- coding: latin-1 -*-
+# 
 # intended to implement a power-law fitting routine as specified in.....
 # http://www.santafe.edu/~aaronc/powerlaws/
 #
@@ -103,8 +105,9 @@ class plfit:
         return kstest
     
 
-    def plfit(self,nosmall=True,finite=False,quiet=False,silent=False,usefortran=False,usecy=False,
-            xmin=None, verbose=False):
+    def plfit(self, nosmall=True, finite=False, quiet=False, silent=False,
+            usefortran=False, usecy=False, xmin=None, verbose=False, 
+            discrete=None, discrete_approx=True, discrete_n_alpha=1000):
         """
         A Python implementation of the Matlab code http://www.santafe.edu/~aaronc/powerlaws/plfit.m
         from http://www.santafe.edu/~aaronc/powerlaws/
@@ -113,22 +116,59 @@ class plfit:
         in empirical data" SIAM Review, 51, 661-703 (2009). (arXiv:0706.1062)
         http://arxiv.org/abs/0706.1062
 
-        nosmall is on by default; it rejects low s/n points
-        can specify xmin to skip xmin estimation
-
         There are 3 implementations of xmin estimation.  The fortran version is fastest, the C (cython)
         version is ~10% slower, and the python version is ~3x slower than the fortran version.
         Also, the cython code suffers ~2% numerical error relative to the fortran and python for unknown
         reasons.
+
+        There is also a discrete version implemented in python - it is different from the continous version!
+        *discrete* [ bool | None ]
+            If *discrete* is None, the code will try to determine whether the
+            data set is discrete or continous based on the uniqueness of the
+            data.  If *discrete* is True or False, the distcrete or continuous
+            fitter will be used, respectively.
+
+        *xmin* [ float / int ]
+            If you specify xmin, the fitter will only determine alpha assuming
+            the given xmin; the rest of the code (and most of the complexity)
+            is determining an estimate for xmin and alpha.
+
+        *nosmall* [ bool (True) ]
+            When on, the code rejects low s/n points
+
+        *finite* [ bool (False) ]
+            There is a 'finite-size bias' to the estimator.  The "alpha" the code measures
+            is "alpha-hat" s.t. ᾶ = (nα-1)/(n-1), or α = (1 + ᾶ (n-1)) / n
+
+        *quiet* [ bool (False) ]
+            If False, delivers messages about what fitter is used and the fit results
+
+        *verbose* [ bool (False) ] 
+            Deliver descriptive messages about the fit parameters (only if *quiet*==False)
+
+        *silent* [ bool (False) ] 
+            If True, will print NO messages
         """
         x = self.data
         z = numpy.sort(x)
         t = time.time()
         xmins,argxmins = numpy.unique(z,return_index=True)#[:-1]
         self._nunique = len(xmins)
+        
+        if self._nunique == len(x) and discrete is None:
+            if verbose: print "Using CONTINUOUS fitter"
+            discrete = False
+        elif self._nunique < len(x) and discrete is None:
+            if verbose: print "Using DISCRETE fitter"
+            discrete = True
+
         t = time.time()
         if xmin is None:
-            if usefortran and fortranOK:
+            if discrete:
+                self.discrete_best_alpha( approximate=discrete_approx,
+                        n_alpha=discrete_n_alpha, verbose=verbose, finite=finite)
+                return self._xmin,self._alpha
+            elif usefortran and fortranOK:
                 dat,av = fplfit.plfit(z,int(nosmall))
                 goodvals=dat>0
                 sigma = ((av-1)/numpy.sqrt(len(z)-numpy.arange(len(z))))[argxmins]
@@ -164,10 +204,10 @@ class plfit:
                     else:
                         if not silent: 
                             print "Not enough data left after flagging - using all positive data."
-                if not quiet: 
-                    print "PYTHON plfit executed in %f seconds" % (time.time()-t)
-                    if usefortran: print "fortran fplfit did not load"
-                    if usecy: print "cython cplfit did not load"
+            if not quiet: 
+                print "PYTHON plfit executed in %f seconds" % (time.time()-t)
+                if usefortran: print "fortran fplfit did not load"
+                if usecy: print "cython cplfit did not load"
             self._av = av
             self._xmin_kstest = dat
             self._sigma = sigma
@@ -223,6 +263,51 @@ class plfit:
 
         return xmin,alpha
 
+
+    def discrete_best_alpha(self, alpharangemults=(0.9,1.1), n_alpha=201, approximate=True, verbose=True, finite=True):
+        """
+        Use the maximum L to determine the most likely value of alpha
+
+        *alpharangemults* [ 2-tuple ]
+            Pair of values indicating multiplicative factors above and below the
+            approximate alpha from the MLE alpha to use when determining the
+            "exact" alpha (by directly maximizing the likelihood function)
+        """
+
+        data = self.data
+        self._xmins = xmins = numpy.unique(data)
+        if approximate:
+            alpha_of_xmin = [ discrete_alpha_mle(data,xmin) for xmin in xmins ]
+        else:
+            alpha_approx = [ discrete_alpha_mle(data,xmin) for xmin in xmins ]
+            alpharanges = [(0.9*a,1.1*a) for a in alpha_approx]
+            alpha_of_xmin = [ most_likely_alpha(data,xmin,alpharange=ar,n_alpha=n_alpha) for xmin,ar in zip(xmins,alpharanges) ]
+        ksvalues = numpy.array([ discrete_ksD(data, xmin, alpha) for xmin,alpha in zip(xmins,alpha_of_xmin) ])
+        self._av = numpy.array(alpha_of_xmin)
+        self._xmin_kstest = ksvalues
+        
+        ksvalues[numpy.isnan(ksvalues)] = numpy.inf
+
+        best_index = argmin(ksvalues)
+        self._alpha = best_alpha = alpha_of_xmin[best_index]
+        self._xmin = best_xmin = xmins[best_index]
+        self._ks = best_ks = ksvalues[best_index]
+        best_likelihood = discrete_likelihood(data, best_xmin, best_alpha)
+
+        if finite:
+            self._alpha = self._alpha*(n-1.)/n+1./n
+
+        if verbose:
+            print "alpha = %f   xmin = %f   ksD = %f   L = %f   (n<x) = %i  (n>=x) = %i" % (
+                    best_alpha, best_xmin, best_ks, best_likelihood,
+                    (data<best_xmin).sum(), (data>=best_xmin).sum())
+
+
+        self._ngtx = n = (self.data>=self._xmin).sum()
+        self._alphaerr = (self._alpha-1.0)/numpy.sqrt(n)
+        if scipyOK: self._ks_prob = scipy.stats.kstwobign.sf(self._ks*numpy.sqrt(n))
+
+        return best_alpha,best_xmin,best_ks,best_likelihood
 
     def xminvsks(self, **kwargs):
         """
@@ -618,8 +703,13 @@ def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000,invcdf=plexp_inv):
 
 def discrete_likelihood(data, xmin, alpha):
     """
-    Equation B.8
+    Equation B.8 in Clauset
+
+    Given a data set, an xmin value, and an alpha "scaling parameter", computes
+    the log-likelihood (the value to be maximized) 
     """
+    if not scipyOK:
+        raise ImportError("Can't import scipy.  Need scipy for zeta function.")
     from scipy.special import zeta as zeta
 
     zz = data[data>=xmin]
@@ -702,7 +792,7 @@ def discrete_alpha_mle(data, xmin):
     alpha = 1.0 + float(nn) * ( sum(log(xx/(xmin-0.5))) )**-1
     return alpha
 
-def discrete_best_alpha(data, alpharangemults=(0.9,1.1), n_alpha=201, approximate=True):
+def discrete_best_alpha(data, alpharangemults=(0.9,1.1), n_alpha=201, approximate=True, verbose=True):
     """
     Use the maximum L to determine the most likely value of alpha
 
@@ -727,16 +817,24 @@ def discrete_best_alpha(data, alpharangemults=(0.9,1.1), n_alpha=201, approximat
     best_ks = ksvalues[best_index]
     best_likelihood = discrete_likelihood(data, best_xmin, best_alpha)
 
-    print "alpha = %f   xmin = %f   ksD = %f   L = %f   (n<x) = %i  (n>=x) = %i" % (best_alpha, best_xmin, best_ks, best_likelihood,
-            (data<best_xmin).sum(), (data>=best_xmin).sum())
+    if verbose:
+        print "alpha = %f   xmin = %f   ksD = %f   L = %f   (n<x) = %i  (n>=x) = %i" % (
+                best_alpha, best_xmin, best_ks, best_likelihood,
+                (data<best_xmin).sum(), (data>=best_xmin).sum())
+
+    return best_alpha,best_xmin,best_ks,best_likelihood
 
 
 def discrete_ksD(data, xmin, alpha):
     """
-    given a sorted data set, a minimum, and an alpha, returns power law ks-test
-    w/data
+    given a sorted data set, a minimum, and an alpha, returns the power law ks-test
+    D value w/data
 
     The returned value is the "D" parameter in the ks test
+    
+    (this is implemented differently from the continuous version because there
+    are potentially multiple identical points that need comparison to the power
+    law)
     """
     zz = numpy.sort(data[data>=xmin])
     nn = float(len(zz))
