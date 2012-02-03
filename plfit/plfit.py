@@ -616,16 +616,34 @@ def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000,invcdf=plexp_inv):
 
 
 
-def discrete_likelihood(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
+def discrete_likelihood(data, xmin, alpha):
+    """
+    Equation B.8
+    """
+    from scipy.special import zeta as zeta
+
+    zz = data[data>=xmin]
+    nn = len(zz)
+
+    sum_log_data = numpy.log(zz).sum()
+
+    zeta = zeta(alpha, xmin)
+
+    L_of_alpha = -1*nn*log(zeta) - alpha * sum_log_data
+
+    return L_of_alpha
+
+def discrete_likelihood_vector(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
     """
     Compute the likelihood for all "scaling parameters" in the range (alpharange)
     for a given xmin.  This is only part of the discrete value likelihood
     maximization problem as described in Clauset et al
+    (Equation B.8)
 
     *alpharange* [ 2-tuple ] 
         Two floats specifying the upper and lower limits of the power law alpha to test
     """
-    from scipy.special import zetac as zeta
+    from scipy.special import zeta as zeta
 
     zz = data[data>=xmin]
     nn = len(zz)
@@ -633,20 +651,32 @@ def discrete_likelihood(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
     alpha_vector = numpy.linspace(alpharange[0],alpharange[1],n_alpha)
     sum_log_data = numpy.log(zz).sum()
 
-    zeta_vector = zeta(alpha_vector)
+    # alpha_vector is a vector, xmin is a scalar
+    zeta_vector = zeta(alpha_vector, xmin)
 
-    xminvec = numpy.arange(1.0,xmin)
+    #xminvec = numpy.arange(1.0,xmin)
 
-    L = -1*alpha_vector*sum_log_data - nn*log(zeta_vector) - (xminvec**(-alpha_vector))
+    #xminalphasum = numpy.sum([xm**(-alpha_vector) for xm in xminvec])
+    #L = -1*alpha_vector*sum_log_data - nn*log(zeta_vector) - xminalphasum
 
-    return L
+    L_of_alpha = -1*nn*log(zeta_vector) - alpha_vector * sum_log_data
+
+    return L_of_alpha
+
+def discrete_max_likelihood_arg(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
+    """
+    Returns the *argument* of the max of the likelihood of the data given an input xmin
+    """
+    likelihoods = discrete_likelihood_vector(data, xmin, alpharange=alpharange, n_alpha=n_alpha)
+    Largmax = numpy.argmax(likelihoods)
+    return Largmax
 
 def discrete_max_likelihood(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
     """
     Returns the *argument* of the max of the likelihood of the data given an input xmin
     """
-    likelihoods = discrete_likelihood(data, xmin, alpharange=alpharange, n_alpha=n_alpha)
-    Lmax = numpy.argmax(likelihoods)
+    likelihoods = discrete_likelihood_vector(data, xmin, alpharange=alpharange, n_alpha=n_alpha)
+    Lmax = numpy.max(likelihoods)
     return Lmax
 
 def most_likely_alpha(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
@@ -654,16 +684,51 @@ def most_likely_alpha(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
     Return the most likely alpha for the data given an xmin
     """
     alpha_vector = numpy.linspace(alpharange[0],alpharange[1],n_alpha)
-    return alpha_vector[discrete_max_likelihood(data, xmin, alpharange=alpharange, n_alpha=n_alpha)]
+    return alpha_vector[discrete_max_likelihood_arg(data, xmin, alpharange=alpharange, n_alpha=n_alpha)]
 
-def discrete_best_alpha(data, xmin, alpharange=(1.5,3.5), n_alpha=2-1):
+def discrete_alpha_mle(data, xmin): 
+    """
+    Equation B.17 of Clauset et al 2009
+
+    The Maximum Likelihood Estimator of the "scaling parameter" alpha in the
+    discrete case is similar to that in the continuous case
+    """
+    # boolean indices of positive data
+    gexmin = (data>=xmin)
+    nn = gexmin.sum()
+    if nn < 2:
+        return 0
+    xx = data[gexmin]
+    alpha = 1.0 + float(nn) * ( sum(log(xx/(xmin-0.5))) )**-1
+    return alpha
+
+def discrete_best_alpha(data, alpharangemults=(0.9,1.1), n_alpha=201, approximate=True):
     """
     Use the maximum L to determine the most likely value of alpha
+
+    *alpharangemults* [ 2-tuple ]
+        Pair of values indicating multiplicative factors above and below the
+        approximate alpha from the MLE alpha to use when determining the
+        "exact" alpha (by directly maximizing the likelihood function)
     """
 
-    xmins = np.unique(data)
-    alpha_of_xmin = [most_likely_alpha(data,xmin) for xmin in xmins]
+    xmins = numpy.unique(data)
+    if approximate:
+        alpha_of_xmin = [ discrete_alpha_mle(data,xmin) for xmin in xmins ]
+    else:
+        alpha_approx = [ discrete_alpha_mle(data,xmin) for xmin in xmins ]
+        alpharanges = [(0.9*a,1.1*a) for a in alpha_approx]
+        alpha_of_xmin = [ most_likely_alpha(data,xmin,alpharange=ar,n_alpha=n_alpha) for xmin,ar in zip(xmins,alpharanges) ]
     ksvalues = [ discrete_ksD(data, xmin, alpha) for xmin,alpha in zip(xmins,alpha_of_xmin) ]
+    
+    best_index = argmin(ksvalues)
+    best_alpha = alpha_of_xmin[best_index]
+    best_xmin = xmins[best_index]
+    best_ks = ksvalues[best_index]
+    best_likelihood = discrete_likelihood(data, best_xmin, best_alpha)
+
+    print "alpha = %f   xmin = %f   ksD = %f   L = %f   (n<x) = %i  (n>=x) = %i" % (best_alpha, best_xmin, best_ks, best_likelihood,
+            (data<best_xmin).sum(), (data>=best_xmin).sum())
 
 
 def discrete_ksD(data, xmin, alpha):
@@ -673,11 +738,13 @@ def discrete_ksD(data, xmin, alpha):
 
     The returned value is the "D" parameter in the ks test
     """
-    zz = data[data>=xmin]
+    zz = numpy.sort(data[data>=xmin])
     nn = float(len(zz))
-    if nn == 0: return numpy.inf
-    cx = numpy.arange(nn,dtype='float')/float(nn)
-    cf = 1.0-(xmin/zz)**aa
-    ks = max(abs(cf-cx))
-    return ks
+    if nn < 2: return numpy.inf
+    #cx = numpy.arange(nn,dtype='float')/float(nn)
+    #cf = 1.0-(zz/xmin)**(1.0-alpha)
+    model_cdf = 1.0-(zz/xmin)**(1.0-alpha)
+    data_cdf  = numpy.searchsorted(zz,zz,side='left')/(float(nn))
 
+    ks = max(abs(model_cdf-data_cdf))
+    return ks
