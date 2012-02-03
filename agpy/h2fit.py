@@ -1,4 +1,5 @@
 from pylab import *
+import pylab
 for k,v in pylab.__dict__.iteritems():  
     if hasattr(v,'__module__'):
         if v.__module__ is None:
