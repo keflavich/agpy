@@ -223,6 +223,7 @@ class plfit:
 
         return xmin,alpha
 
+
     def xminvsks(self, **kwargs):
         """
         Plot xmin versus the ks value for derived alpha.  This plot can be used
@@ -614,4 +615,69 @@ def test_fitter(xmin=1.0,alpha=2.5,niter=500,npts=1000,invcdf=plexp_inv):
 
 
 
+
+def discrete_likelihood(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
+    """
+    Compute the likelihood for all "scaling parameters" in the range (alpharange)
+    for a given xmin.  This is only part of the discrete value likelihood
+    maximization problem as described in Clauset et al
+
+    *alpharange* [ 2-tuple ] 
+        Two floats specifying the upper and lower limits of the power law alpha to test
+    """
+    from scipy.special import zetac as zeta
+
+    zz = data[data>=xmin]
+    nn = len(zz)
+
+    alpha_vector = numpy.linspace(alpharange[0],alpharange[1],n_alpha)
+    sum_log_data = numpy.log(zz).sum()
+
+    zeta_vector = zeta(alpha_vector)
+
+    xminvec = numpy.arange(1.0,xmin)
+
+    L = -1*alpha_vector*sum_log_data - nn*log(zeta_vector) - (xminvec**(-alpha_vector))
+
+    return L
+
+def discrete_max_likelihood(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
+    """
+    Returns the *argument* of the max of the likelihood of the data given an input xmin
+    """
+    likelihoods = discrete_likelihood(data, xmin, alpharange=alpharange, n_alpha=n_alpha)
+    Lmax = numpy.argmax(likelihoods)
+    return Lmax
+
+def most_likely_alpha(data, xmin, alpharange=(1.5,3.5), n_alpha=201):
+    """
+    Return the most likely alpha for the data given an xmin
+    """
+    alpha_vector = numpy.linspace(alpharange[0],alpharange[1],n_alpha)
+    return alpha_vector[discrete_max_likelihood(data, xmin, alpharange=alpharange, n_alpha=n_alpha)]
+
+def discrete_best_alpha(data, xmin, alpharange=(1.5,3.5), n_alpha=2-1):
+    """
+    Use the maximum L to determine the most likely value of alpha
+    """
+
+    xmins = np.unique(data)
+    alpha_of_xmin = [most_likely_alpha(data,xmin) for xmin in xmins]
+    ksvalues = [ discrete_ksD(data, xmin, alpha) for xmin,alpha in zip(xmins,alpha_of_xmin) ]
+
+
+def discrete_ksD(data, xmin, alpha):
+    """
+    given a sorted data set, a minimum, and an alpha, returns power law ks-test
+    w/data
+
+    The returned value is the "D" parameter in the ks test
+    """
+    zz = data[data>=xmin]
+    nn = float(len(zz))
+    if nn == 0: return numpy.inf
+    cx = numpy.arange(nn,dtype='float')/float(nn)
+    cf = 1.0-(xmin/zz)**aa
+    ks = max(abs(cf-cx))
+    return ks
 
