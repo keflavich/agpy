@@ -58,7 +58,7 @@ pl.plotcdf()
 savefig("figures/Melville_cdf.png")
 
 
-pl = plfit.plfit(solarflares.ravel())
+pl = plfit.plfit(solarflares.ravel(), verbose=True)
 p,sims = pl.test_pl(usefortran=True, niter=100)
 print "Solarflares (me)     : n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f (%8.2f) ntail: %10i p: %5.2f" % (pl.data.shape[0], pl.data.mean(), pl.data.std(), pl.data.max(), pl._xmin, pl._alpha, pl._alphaerr, pl._ngtx, p)
 print "Solarflares (Clauset): n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f (%8.2f) ntail: %10i p: %5.2f" % (12773, 689.41, 6520.59, 231300, 323, 1.79, 0.02, 1711, 1.00)
@@ -80,7 +80,7 @@ pl.plotcdf()
 savefig("figures/SolarFlares_cdf.png")
 
 
-pl = plfit.plfit(terrorism.ravel())
+pl = plfit.plfit(terrorism.ravel(), verbose=True)
 p,sims = pl.test_pl(usefortran=True, niter=100, nosmall=False)
 print "Terrorism (me)     : n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f (%8.2f) ntail: %10i p: %5.2f" % (pl.data.shape[0], pl.data.mean(), pl.data.std(), pl.data.max(), pl._xmin, pl._alpha, pl._alphaerr, pl._ngtx, p)
 print "Terrorism (Clauset): n:%10i mean,std,max: %8.2f,%8.2f,%8.2f xmin: %8.2f alpha: %8.2f (%8.2f) ntail: %10i p: %5.2f" % (9101, 4.35, 31.58, 2749, 12, 2.4, 0.2, 547, 0.68)
