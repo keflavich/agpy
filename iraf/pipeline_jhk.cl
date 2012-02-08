@@ -13,6 +13,9 @@ bool background=yes             {prompt="Run background subtraction?"}
 bool calibrate=no               {prompt="Calibrate?"}
 bool interactive_background=no  {prompt="Do background subtraction interactively?"}
 bool calibrator=no              {prompt="Is the source a calibrator?"}
+bool clobber=no                 {prompt="Overwrite existing files?"}
+bool caleach=no                 {prompt="Calibrate EACH file? (requires pre-existing calibrator data)"}
+string sample="*"               {prompt="Selection region for background task"}
 real magJ=0.0                   {prompt="J Magnitude of calibrator star"}
 real magH=0.0                   {prompt="H Magnitude of calibrator star"}
 real magK=0.0                   {prompt="K Magnitude of calibrator star"}
@@ -32,6 +35,12 @@ begin
     print ( "", > filename+"J" )
     print ( "", > filename+"H" )
     print ( "", > filename+"K" )
+
+    onedspec
+    twodspec
+    apextract
+    longslit
+
     if (recrop) {
         while(fscan(flist,line)!=EOF) {
 #            imarith (line ,'*', "bmask", line )
@@ -60,12 +69,60 @@ begin
                 transform ( input=procdir+filenameJ , output=procdir+filenameJ+"t", fitnames="skylinesJ,starsJ" )
                 transform ( input=procdir+filenameH , output=procdir+filenameH+"t", fitnames="skylinesH,starsH" )
                 transform ( input=procdir+filenameK , output=procdir+filenameK+"t", fitnames="skylinesK,starsK" )
-                imcopy (procdir+filenameJ+"t[*,53:137]", procdir+filenameJ+"tc.fits", verbose="yes")
-                imcopy (procdir+filenameH+"t[*,18:118]", procdir+filenameH+"tc.fits", verbose="yes")
-                imcopy (procdir+filenameK+"t[*,7:99]",   procdir+filenameK+"tc.fits", verbose="yes")
+                imcopy (procdir+filenameJ+"t[*,53:137]", procdir+filenameJ+"tc.fits", verbose="yes" )
+                imcopy (procdir+filenameH+"t[*,18:118]", procdir+filenameH+"tc.fits", verbose="yes" )
+                imcopy (procdir+filenameK+"t[*,7:99]",   procdir+filenameK+"tc.fits", verbose="yes" )
                 print ( procdir+filenameJ+"tc", >> filename+"J" )
                 print ( procdir+filenameH+"tc", >> filename+"H" )
                 print ( procdir+filenameK+"tc", >> filename+"K" )
+            }
+
+        }
+    }
+
+    # calibrate using some sort of standard/sensfunc (I used blackbodies)
+    if (caleach) {
+        while(fscan(flist,line)!=EOF) {
+            filenameJ = line+"_J"
+            filenameH = line+"_H"
+            filenameK = line+"_K"
+
+            if (clobber) {
+                delete ( procdir+filenameJ+"tc_cal.fits" )
+                delete ( procdir+filenameH+"tc_cal.fits" )
+                delete ( procdir+filenameK+"tc_cal.fits" )
+            }
+
+            calibrate ( procdir+filenameJ+"tc" , procdir+filenameJ+"tc_cal" , sens="sensJ" , ignoreaps+)
+            calibrate ( procdir+filenameH+"tc" , procdir+filenameH+"tc_cal" , sens="sensH" , ignoreaps+)
+            calibrate ( procdir+filenameK+"tc" , procdir+filenameK+"tc_cal" , sens="sensK" , ignoreaps+)
+            imgets ( procdir+filenameK+"tc_cal" , "CD1_1")
+            KdeltaL = imgets.value
+            imgets ( procdir+filenameJ+"tc_cal" , "CD1_1")
+            JdeltaL = imgets.value
+            imgets ( procdir+filenameH+"tc_cal" , "CD1_1")
+            HdeltaL = imgets.value
+            imgets ( procdir+filenameK+"tc_cal" , "CD2_2")
+            KdeltaP = imgets.value
+            imgets ( procdir+filenameJ+"tc_cal" , "CD2_2")
+            JdeltaP = imgets.value
+            imgets ( procdir+filenameH+"tc_cal" , "CD2_2")
+            HdeltaP = imgets.value
+
+            if (clobber) {
+                delete ( procdir+filenameJ+"tc_cal_m.fits" )
+                delete ( procdir+filenameH+"tc_cal_m.fits" )
+                delete ( procdir+filename+"_JHK_cal.fits"  )
+            }
+
+            magnify ( procdir+filenameJ+"tc_cal" , procdir+filenameJ+"tc_cal_m" , JdeltaL/KdeltaL , JdeltaP/KdeltaP )
+            magnify ( procdir+filenameH+"tc_cal" , procdir+filenameH+"tc_cal_m" , HdeltaL/KdeltaL , HdeltaP/KdeltaP )
+            imcombine ( procdir+filenameK+"tc_cal,"+procdir+filenameH+"tc_cal_m,"+procdir+filenameJ+"tc_cal_m" , procdir+line+"_JHK_cal" , combine="sum" , offset="wcs" )
+            if (background) {
+                if (clobber) {
+                    delete ( procdir+line+"_JHK_cal_backsub.fits" )
+                }
+                background ( procdir+line+"_JHK_cal" , procdir+line+"_JHK_cal_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background, sample=sample )
             }
         }
     }
@@ -99,7 +156,7 @@ begin
         magnify ( procdir+outname+"_H_cal" , procdir+outname+"_H_cal_m" , HdeltaL/KdeltaL , HdeltaP/KdeltaP )
         imcombine ( procdir+outname+"_K_cal,"+procdir+outname+"_H_cal_m,"+procdir+outname+"_J_cal_m" , procdir+outname+"_JHK_cal" , combine="sum" , offset="wcs" )
         if (background) {
-            background ( procdir+outname+"_JHK_cal" , procdir+outname+"_JHK_cal_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background )
+            background ( procdir+outname+"_JHK_cal" , procdir+outname+"_JHK_cal_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background, sample=sample )
         }
     }
     # background subtract to remove night sky lines
@@ -120,9 +177,9 @@ begin
             magnify ( procdir+outname+"_J_combine" , procdir+outname+"_J_combine_m" , JdeltaL/KdeltaL , JdeltaP/KdeltaP )
             magnify ( procdir+outname+"_H_combine" , procdir+outname+"_H_combine_m" , HdeltaL/KdeltaL , HdeltaP/KdeltaP )
             if (calibrator) {
-                background ( procdir+outname+"_J_combine" , procdir+outname+"_J_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background )
-                background ( procdir+outname+"_H_combine" , procdir+outname+"_H_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background )
-                background ( procdir+outname+"_K_combine" , procdir+outname+"_K_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background )
+                background ( procdir+outname+"_J_combine" , procdir+outname+"_J_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background, sample=sample )
+                background ( procdir+outname+"_H_combine" , procdir+outname+"_H_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background, sample=sample )
+                background ( procdir+outname+"_K_combine" , procdir+outname+"_K_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background, sample=sample )
                 apall ( procdir+outname+"_J_backsub" , interactive="no" )
                 apall ( procdir+outname+"_H_backsub" , interactive="no" )
                 apall ( procdir+outname+"_K_backsub" , interactive="no" )
@@ -134,7 +191,7 @@ begin
                 sensfunc ( "stdK" , "sensK" , answer="YES" )
             }
             imcombine ( procdir+outname+"_K_combine,"+procdir+outname+"_H_combine_m,"+procdir+outname+"_J_combine_m" , procdir+outname+"_JHK_combine" , combine="sum" , offset="wcs" )
-            background ( procdir+outname+"_JHK_combine" , procdir+outname+"_JHK_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background )
+            background ( procdir+outname+"_JHK_combine" , procdir+outname+"_JHK_backsub" , axis=2 , naverage=2 , order=2 , high=2 , low=2 , niter=3 , interactive=interactive_background, sample=sample )
         }
     }
 

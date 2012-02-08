@@ -95,15 +95,15 @@ def inufit(nu,em,normfac,Te=8500,unit='mJy',frequnit='GHz'):
     return model_norm
 
 
-def inorm(em,nu=freq[1],nu0=freq[0],intens0=flux[0],Te=8500):
-    """
-    Not used?
-    """
-    I0 = 2 * kb * Te * nu0**2 / c**2
-    model_intensity0 = Inu(nu0,tnu(Te,nu0,em),Te,I0=I0)
-    model_intensity = Inu(nu,tnu(Te,nu,em),Te,I0=I0)
-    model_norm = intens0/model_intensity0 * model_intensity
-    return model_norm
+#def inorm(em,nu=freq[1],nu0=freq[0],intens0=flux[0],Te=8500):
+#    """
+#    Not used?
+#    """
+#    I0 = 2 * kb * Te * nu0**2 / c**2
+#    model_intensity0 = Inu(nu0,tnu(Te,nu0,em),Te,I0=I0)
+#    model_intensity = Inu(nu,tnu(Te,nu,em),Te,I0=I0)
+#    model_norm = intens0/model_intensity0 * model_intensity
+#    return model_norm
 
 def inufit_dust(nu,em,normfac,alpha,normfac2,Te=8500):
     """
@@ -220,7 +220,7 @@ class HIIregion:
             self.srcsize = sqrt(self.flux[0]*unitfactor[self.fluxunit]/(2*kb*self.Te) * \
                     (c/(self.nu[0]*freqfactor[self.frequnit]))**2 * (self.dist_kpc*1e3*pc)**2 / pi) 
         self.dens = sqrt(self.em/(self.srcsize/pc))
-        self.mass = self.dens * 4.0/3.0 * pi * self.srcsize**3 * mu * mh / msun
+        self.mass = self.dens * 4.0/3.0 * pi * self.srcsize**3 * muh * mh / msun
 
         U = self.dens**(2/3.) * self.srcsize/pc
         self.Nlyc = 8.04e46*self.Te**-.85 * U**3

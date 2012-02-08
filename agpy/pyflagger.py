@@ -301,6 +301,11 @@ class Flagger:
         self.ncfilename = savfile
         self.tsfile = None
 
+        fnsearch = re.compile(
+                '([0-9]{6}_o[0-9b][0-9]_raw_ds[125].nc)(_indiv[0-9]{1,2}pca)').search(savfile)
+        self.fileprefix = fnsearch.group()
+        self.pathprefix = savfile[:fnsearch.start()]
+
         self.ncscans = self.bgps['scans_info'][0]
         self.sample_interval = self.bgps['sample_interval'][0]
         if len(self.ncscans.shape) == 1: self.ncscans.shape = [1,2]

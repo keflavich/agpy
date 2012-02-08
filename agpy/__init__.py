@@ -39,6 +39,9 @@ from AG_fft_tools import *
 import AG_image_tools
 from AG_image_tools import *
 
+import cutout
+import get_cutouts
+
 # import all of the functions but not the modules...
 __all__ = ['readcol', 'gaussfitter', 'kdist', 'reg_gal2cel', 'posang',
     'densitymap', 'downsample', 'correlate2d', 'psds', 'convolve', 'radialprofile',
