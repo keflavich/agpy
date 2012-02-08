@@ -69,6 +69,7 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     """
     
     # replace fft2 if has_fftw so that nthreads can be passed
+    global fft2,ifft2
     if has_fftw:
         def fft2(*args, **kwargs):
             return fftw2(*args, nthreads=nthreads, **kwargs)
