@@ -6,7 +6,7 @@ except ImportError:
     from distutils.core import setup
 
 setup(name='agpy',
-      version='0.1',
+      version='0.1.1',
       description='agpy, Adam Ginsburg\'s Python Code (in 0.1 for perpetuity - it won\'t bump up until I release something)',
       author='Adam Ginsburg',
       author_email='adam.ginsburg@colorado.edu',
