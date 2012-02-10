@@ -1,5 +1,6 @@
 import numpy as np
 import types
+from AG_image_tools import downsample as downsample_2d
 
 try: 
     import fftw3
@@ -165,7 +166,8 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
 
 def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         silent=True, psf_pad=True, interp_nan=False, nwidths='max',
-        min_nwidths=6, return_kernel=False, normalize_kernel=np.sum, **kwargs):
+        min_nwidths=6, return_kernel=False, normalize_kernel=np.sum,
+        downsample=False, downsample_factor=None, **kwargs):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
@@ -196,6 +198,8 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         normalize_kernel - Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
             or the kernel peak (i.e. kernel.max() = 1) ?  Must be a *function* that can
             operate on a numpy array
+        downsample - downsample after smoothing?
+        downsample_factor - if None, default to kernelwidth
 
     Note that the kernel is forced to be even sized on each axis to assure no
     offset when smoothing.
@@ -267,6 +271,11 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     if temp.shape != image.shape:
         raise ValueError("Output image changed size; this is completely impossible.")
 
-    if return_kernel: return temp,kernel
-    else: return temp
+    if downsample:
+        if downsample_factor is None: downsample_factor = kernelwidth
+        if return_kernel: return downsample_2d(temp,downsample_factor),downsample_2d(kernel,downsample_factor)
+        else: return downsample_2d(temp,downsample_factor)
+    else:
+        if return_kernel: return temp,kernel
+        else: return temp
 

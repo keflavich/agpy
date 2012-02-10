@@ -7,3 +7,8 @@ Region Photometry Key
 *
 bind p
 ds9_phot $xpa_method | $text
+
+Region Photometry Key
+*
+bind a
+ds9_phot $xpa_method | $text

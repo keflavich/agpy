@@ -20,6 +20,10 @@ from matplotlib.widgets import Cursor, MultiCursor
 import matplotlib.cm as cm
 #from Scientific.IO import NetCDF
 #from scipy.io import netcdf
+try:
+    import scipy.optimize
+except ImportError:
+    pass # let the error get picked up down the line
 import time
 import re
 import os
@@ -469,7 +473,7 @@ class Flagger:
         'itermedian': lambda: itermedian(self.ac_bolos * self.scalearr),
         'zeromedian': lambda: self.atmo_one,
         'atmo_one_itermedian': lambda: itermedian(self.atmo_one),
-        #'expsub': lambda: exponent_sub(self.lookup('atmo_one_itermedian')),
+        'expsub': lambda: exponent_sub(self.lookup('atmo_one_itermedian')),
         'atmos_remainder': lambda: self.lookup('atmo_one_itermedian'),#self.lookup('expsub'),
         'atmos_remainder_v1': lambda: itermedian(self.atmo_one,scale=1.0,niter=1),
         'expmodel': lambda: self.lookup('atmo_one_itermedian') - self.lookup('expsub'),
@@ -1854,16 +1858,23 @@ def boloexp(xax,height,amp,fjac=None):
     model = amp * expterm + height
     return model
 
-def boloexp_resids(xax,data):
+def boloexp_resids(xax,data,mpfit=False):
     def f(p,fjac=None):
         model = boloexp(xax,p[0],p[1])
-        return [0,(data-model)]
+        if mpfit:
+            return [0,(data-model)]
+        else:
+            return (data-model)
     return f
 
 def expsub_line(ts, sampleinterval=0.04, quiet=True, **kwargs):
     xax = arange(ts.shape[0]) * sampleinterval/0.02
-    mp = mpfit.mpfit(boloexp_resids(xax,ts),[0,median(ts)],quiet=quiet,**kwargs)
-    model = boloexp(xax,*mp.params)
+    if mpfit:
+        mp = mpfit.mpfit(boloexp_resids(xax,ts,mpfit=True),[0,median(ts)],quiet=quiet,**kwargs)
+        params = mp.params
+    else:
+        params = scipy.optimize.leastsq(boloexp_resids(xax,ts),[0,median(ts)])
+    model = boloexp(xax,*params)
     return ts-model
 
 def exponent_sub(arr, **kwargs):
