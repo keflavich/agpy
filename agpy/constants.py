@@ -26,6 +26,7 @@ muh2=2.8                      # Mass conversion factor for H2 (see Kauffman 2009
 yr = year = 86400*365.        # 1 year in seconds
 amu = mh = 1.66053886e-24     # 1 atomic mass unit (1 hydrogen atom) in grams
 alphab = 2.6e-13              # Case B recombination coefficient for H
+pcperau = 206264.806
 pi = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679 # why not?
 #                                            ^
 # According to wikipedia, we only need accuracy to the 39th digit to make a
