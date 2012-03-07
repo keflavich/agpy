@@ -14,7 +14,7 @@ except ImportError:
 import timeit
 import re
 # use pylab's copy instead import copy
-from mpfit import mpfit
+from agpy.mpfit import mpfit
 import gaussfitter
 
 # define physical constants to high precision

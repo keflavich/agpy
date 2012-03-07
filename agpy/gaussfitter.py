@@ -11,7 +11,7 @@ import numpy
 from numpy.ma import median
 from numpy import pi
 #from scipy import optimize,stats,pi
-from mpfit import mpfit
+from agpy.mpfit import mpfit
 """ 
 Note about mpfit/leastsq: 
 I switched everything over to the Markwardt mpfit routine for a few reasons,

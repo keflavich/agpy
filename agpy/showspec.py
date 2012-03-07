@@ -32,7 +32,7 @@ for k,v in pylab.__dict__.iteritems():
             locals()[k].__module__ = 'pylab'
 import matplotlib
 
-from mpfit import mpfit
+from agpy.mpfit import mpfit
 
 from collapse_gaussfit import *
 from ratosexagesimal import *

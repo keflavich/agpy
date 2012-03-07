@@ -31,7 +31,7 @@ import subprocess
 import copy
 import idlsave
 import gaussfitter
-import mpfit
+import agpy.mpfit as mpfit
 from PCA_tools import *
 from AG_image_tools.drizzle import drizzle
 from agpy import smooth

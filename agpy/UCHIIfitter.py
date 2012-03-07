@@ -18,7 +18,7 @@ try:
     from scipy import optimize
 except ImportError:
     print "scipy not installed correctly: UCHIIfitter may fail"
-from mpfit import mpfit
+from agpy.mpfit import mpfit
 import numpy
 from agpy.constants import *
 

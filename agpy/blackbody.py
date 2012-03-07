@@ -155,7 +155,7 @@ def modified_blackbody_wavelength(lam, temperature, beta=1.75, logscale=0.0,
 
 
 try:
-    import mpfit
+    import agpy.mpfit as mpfit
 
     def fit_blackbody(xdata, flux, guesses=(0,0), err=None, blackbody_function=blackbody, quiet=True, **kwargs):
         """

@@ -3,7 +3,7 @@ from gaussfitter import twodgaussian,moments
 import numpy
 import scipy
 from numpy import pi
-from mpfit import mpfit
+from agpy.mpfit import mpfit
 
 def _airy_func(rr, amplitude=1.0, width=1.0):
     """

@@ -1,4 +1,4 @@
-import mpfit
+import agpy.mpfit as mpfit
 import numpy as np
 
 def powerfit(xax,data,err=None,alphaguess=-2.0,scaleguess=1.0,quiet=True):

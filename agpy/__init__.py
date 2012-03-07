@@ -21,7 +21,7 @@ from reg_gal2cel import gal2cel
 from posang import posang
 #import densitymap
 #import downsample as downsample_mod
-from downsample import downsample,downsample_cube
+from AG_image_tools import downsample,downsample_cube
 
 #from asinh_norm import AsinhNorm
 #import showspec # imports matplotlib = BAD
