@@ -5,9 +5,16 @@ try:
 except ImportError:
     from distutils.core import setup
 
+with open('README.txt') as file:
+    long_description = file.read()
+
+with open('CHANGES') as file:
+    long_description += file.read()
+
 setup(name='agpy',
-      version='0.1.1',
+      version='0.1.2',
       description='agpy, Adam Ginsburg\'s Python Code (in 0.1 for perpetuity - it won\'t bump up until I release something)',
+      long_description=long_description,
       author='Adam Ginsburg',
       author_email='adam.ginsburg@colorado.edu',
       data_files=[('h2fit',['h2fit_support/atran.txt',
