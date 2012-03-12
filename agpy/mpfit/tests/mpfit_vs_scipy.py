@@ -23,7 +23,8 @@ def gaussian(x,A,dx,w, return_components=False):
     return A*np.exp(-(x-dx)**2/(2.0*w**2))
 
 
-def error_function_generator(xdata, ydata, error=None, model=gaussian, mpfit=False, sumsquares=False, **kwargs):
+def error_function_generator(xdata, ydata, error=None, model=gaussian,
+        mpfit=False, lmfit=False, sumsquares=False, **kwargs):
     """
     Return a function that generates the errors given input parameters
     """
@@ -32,6 +33,8 @@ def error_function_generator(xdata, ydata, error=None, model=gaussian, mpfit=Fal
         error = np.ones(ydata.shape)
 
     def error_function(params, **kwargs):
+        if lmfit:
+            params = [p.value for p in params.values()]
         err = (ydata - model(xdata, *params)) / error
         if sumsquares:
             return (err**2).sum()
@@ -89,6 +92,16 @@ def fminfitter(xdata, ydata, params=None, error=None, model=gaussian, disp=False
 def lmfitter(xdata, ydata, params=None, error=None, model=gaussian):
     import lmfit
 
+    errfunc = error_function_generator(xdata,ydata,error=error,model=model,lmfit=True)
+
+    parin = lmfit.Parameters()
+    parin.add('amplitude',value=params[0])
+    parin.add('shift',value=params[1])
+    parin.add('width',value=params[2])
+
+    result = lmfit.minimize(errfunc, parin)
+
+    return [r.value for r in parin.values()],[r.error for r in parin.values()]
 
 if __name__ == "__main__":
     #do some timing
@@ -102,8 +115,9 @@ if __name__ == "__main__":
     print lsfitter(xarr,yarr+noise,[1,0,1],err)
     print annealfitter(xarr,yarr+noise,[1,0,1],err)
     print fminfitter(xarr,yarr+noise,[1,0,1],err)
+    print lmfitter(xarr,yarr+noise,[1,0,1],err)
 
-    function_names = ['mpfitter','lsfitter','fminfitter']#,'annealfitter']
+    function_names = ['mpfitter','lsfitter','fminfitter','lmfitter']#,'annealfitter']
 
     A,dx,s,n = 0.75,-0.25,2.2,0.25
 
@@ -126,10 +140,12 @@ if __name__ == "__main__":
     mpmins = array([mins[n][0] for n in nels],dtype='float')
     lsmins = array([mins[n][1] for n in nels],dtype='float')
     fmmins = array([mins[n][2] for n in nels],dtype='float')
+    lmfits = array([mins[n][3] for n in nels],dtype='float')
     
     loglog(nels,mpmins,label='mpfit')
     loglog(nels,lsmins,label='leastsq')
     loglog(nels,fmmins,label='fmin')
+    loglog(nels,lmfits,label='lmfit')
     xlabel("Number of Elements")
     ylabel("Evaluation Time for %i fits (seconds)" % nfits)
     legend(loc='best')
@@ -138,6 +154,7 @@ if __name__ == "__main__":
     clf()
     semilogx(nels,mpmins/lsmins,label='mpfit/leastsq')
     semilogx(nels,fmmins/lsmins,label='fmin/leastsq')
+    semilogx(nels,lmfits/lsmins,label='lmfit/leastsq')
     xlabel("Number of Elements")
     ylabel("Ratio to leastsq (which is generally the fastest)")
     legend(loc='best')
