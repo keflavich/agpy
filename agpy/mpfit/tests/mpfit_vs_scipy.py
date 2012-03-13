@@ -101,7 +101,7 @@ def lmfitter(xdata, ydata, params=None, error=None, model=gaussian):
 
     result = lmfit.minimize(errfunc, parin)
 
-    return [r.value for r in parin.values()],[r.error for r in parin.values()]
+    return [r.value for r in parin.values()],[r.stderr for r in parin.values()]
 
 if __name__ == "__main__":
     #do some timing

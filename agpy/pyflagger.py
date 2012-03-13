@@ -304,6 +304,8 @@ class Flagger:
 
         self.ncfilename = savfile
         self.tsfile = None
+        self.ncdf_filename = self.needed_once_struct.filenames[0]
+        self.outfile_prefix = self.mapstr.outmap[0]
 
         fnsearch = re.compile(
                 '([0-9]{6}_o[0-9b][0-9]_raw_ds[125].nc)(_indiv[0-9]{1,2}pca)').search(savfile)
@@ -1149,8 +1151,20 @@ class Flagger:
             print "flags_to_ncdf,'%s','%s'" % (self.flagfn,self.filename)
             self.idl_writeflags()
 
-    def idl_writeflags(self):
+    def idl_clearflags(self):
+        clearcmd = ("clearflags,'%s' & " % (self.needed_once_struct.filenames[0]))
+        idlcmd = "/Applications/itt/idl/idl/bin/idl"
+        cmd = '%s -e "%s"' % (idlcmd,clearcmd)
+        os.environ.update({"IDL_STARTUP":"/Users/adam/work/bolocam/.idl_startup_bgps.pro"})
+        print cmd
+        output = os.popen(cmd)
+        print "".join(output.readlines())
+        output.close()
+
+    def idl_writeflags(self, clearflags=False, override_whgood=False):
         flagcmd = "flags_to_ncdf,'%s','%s'" % (self.flagfn,self.filename)
+        if clearflags: flagcmd = ("clearflags,'%s' & " % (self.needed_once_struct.filenames[0])) + flagcmd
+        if override_whgood: flagcmd+=",bolo_indices=%s" % ("["+",".join(["%i" % bi for bi in self.bolo_indices])+"]")
         idlcmd = "/Applications/itt/idl/idl/bin/idl"
         cmd = '%s -e "%s"' % (idlcmd,flagcmd)
         os.environ.update({"IDL_STARTUP":"/Users/adam/work/bolocam/.idl_startup_bgps.pro"})
@@ -1322,6 +1336,8 @@ class Flagger:
             if hasattr(self.plane,'mask'):
                 if self.plane.mask[:,ii].sum() < self.plane.shape[0] - 2:
                     self.plane[:,ii] = expsub_line(self.plane[:,ii])
+            else:
+                self.plane[:,ii] = expsub_line(self.plane[:,ii])
         self.plotscan(self.scannum, data=self.plane, flag=False)
 
     def hist_all_points(self,x,y,clear=True,timestream='mapped_timestream'):
@@ -1704,8 +1720,10 @@ class Flagger:
         else:
             OKscale = OKweight = self.scale_coeffs*0+True
 
+        subplot(211)
         hist(self.scale_coeffs[OKscale],histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
-        hist(self.weight_by_bolo[OKweight],histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Weights',color='r',linewidth=2)
+        subplot(212)
+        hist(self.weight_by_bolo[OKweight],histtype='step',bins=nbins,label='Weights',color='r',linewidth=2)
         
         if dolegend: legend(loc=loc)
 
@@ -1776,6 +1794,17 @@ class Flagger:
         self.map = drizzle(self.tstomap,ts,self.map.shape,weights*(True-self.flags))
         print "Computing map took %f seconds" % (time.time() - t0)
         if showmap: self.showmap(**kwargs)
+
+    def print_mem_iter(self):
+
+        outfilename = self.mapstr.outmap[0]
+        infilename = self.needed_once_struct.filenames[0]
+
+        command = "mem_iter,'{infile}','{outfile}',/no_offsets,/pointing_model,niter=[13,13],dosave=2".format(outfile=outfilename,infile=infilename)
+
+        print command
+        return command
+
 
 def nantomask(arr):
       mask = (arr != arr)
