@@ -19,5 +19,5 @@ def correlate2d(im1,im2,**kwargs):
     WARNING: Normalization may be arbitrary if you use the PSD
     """
 
-    return convolve.convolve(im1,im2[::-1,::-1],normalize_kernel=False,**kwargs)
+    return convolve.convolve(im1,im2[::-1,::-1],normalize_kernel=False,ignore_zeros=False,**kwargs)
 

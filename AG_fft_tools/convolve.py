@@ -150,6 +150,9 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
                     " imgquarter1x,3x,1y,3y:",imgquarter1x,imgquarter3x,imgquarter1y,imgquarter3y, \
                     " kernelquarter1x,3x,1y,3y:",kernelquarter1x,kernelquarter3x,kernelquarter1y,kernelquarter3y  
 
+    if np.isnan(fftmult).any():
+            raise ValueError("Encountered NaNs in convolve.  This is disallowed.")
+
     if return_fft: 
         if fftshift: # default on 
             if crop:

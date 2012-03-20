@@ -1,7 +1,7 @@
 from AG_fft_tools import correlate2d
 import numpy as np
 
-def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, **kwargs):
+def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=False, quiet=True, sigma_cut=False, **kwargs):
     """
     Determine the shift between two FITS images using the cross-correlation
     technique.  Requires montage.
@@ -16,7 +16,7 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, **kwargs):
     header.toTxtFile(temp_headerfile.name)
 
     outfile = tempfile.NamedTemporaryFile()
-    montage.wrappers.reproject(fitsfile2, outfile.name, temp_headerfile.name, exact_size=True)
+    montage.wrappers.reproject(fitsfile2, outfile.name, temp_headerfile.name, exact_size=True, silent_cleanup=quiet)
     image2_projected = pyfits.getdata(outfile.name)
     image1 = pyfits.getdata(fitsfile1)
     
@@ -26,20 +26,39 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, **kwargs):
     if image1.shape != image2_projected.shape:
         raise ValueError("montage failed to reproject images to same shape.")
 
-    xoff,yoff = cross_correlation_shifts(image1,image2_projected)
+    if sigma_cut:
+        corr_image1 = image1*(image1 > image1.std()*sigma_cut)
+        corr_image2 = image2_projected*(image2_projected > image2_projected.std()*sigma_cut)
+        OK = (corr_image1==corr_image1)*(corr_image2==corr_image2) 
+        if (corr_image1[OK]*corr_image2[OK]).sum() == 0:
+            print "Could not use sigma_cut of %f because it excluded all valid data" % sigma_cut
+            corr_image1 = image1
+            corr_image2 = image2_projected
+    else:
+        corr_image1 = image1
+        corr_image2 = image2_projected
+
+    verbose = kwargs.pop('verbose') if 'verbose' in kwargs else not quiet
+    xoff,yoff = cross_correlation_shifts(corr_image1, corr_image2, verbose=verbose,**kwargs)
     
     wcs = pywcs.WCS(header)
     xoff_wcs,yoff_wcs = np.inner( np.array([[xoff,0],[0,yoff]]), wcs.wcs.cd )[[0,1],[0,1]]
 
-    return xoff,yoff,xoff_wcs,yoff_wcs
+    if return_cropped_images:
+        return xoff,yoff,xoff_wcs,yoff_wcs,image1,image2_projected
+    else:
+        return xoff,yoff,xoff_wcs,yoff_wcs
     
 
-def cross_correlation_shifts(image1, image2, **kwargs):
+def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwargs):
     """
     From http://solarmuri.ssl.berkeley.edu/~welsch/public/software/cross_cor_taylor.pro
 
     Given two images, calculate the amount image2 is offset from image1 to
     sub-pixel accuracy using 2nd order taylor expansion.
+
+    :maxoff: Maximum allowed offset (in pixels).  Useful for low s/n images that you know
+    are reasonably well-aligned, but might find incorrect offsets
 
     **kwargs are passed to correlate2d, which in turn passes them to convolve.
     The available options include image padding for speed and ignoring NaNs.
@@ -49,15 +68,25 @@ def cross_correlation_shifts(image1, image2, **kwargs):
     if not image1.shape == image2.shape:
         raise ValueError("Images must have same shape.")
 
-    ccorr = correlate2d(image1,image2,**kwargs)
+    quiet = kwargs.pop('quiet') if 'quiet' in kwargs else not verbose
+    ccorr = correlate2d(image1,image2,quiet=quiet,**kwargs)
+    # allow for NaNs set by convolve (i.e., ignored pixels)
+    ccorr[ccorr!=ccorr] = 0
     if ccorr.shape != image1.shape:
         raise ValueError("Cross-correlation image must have same shape as input images.  This can only be violated if you pass a strange kwarg to correlate2d.")
-
-    ymax,xmax = np.where(ccorr == ccorr.max())
 
     ylen,xlen = image1.shape
     xcen = xlen/2-1 
     ycen = ylen/2-1 
+
+    if maxoff is not None:
+        if verbose: print "Limiting maximum offset to %i" % maxoff
+        subccorr = ccorr[ycen-maxoff:ycen+maxoff+1,xcen-maxoff:xcen+maxoff+1]
+        ymax,xmax = np.nonzero(subccorr == subccorr.max())
+        xmax = xmax+xcen-maxoff
+        ymax = ymax+ycen-maxoff
+    else:
+        ymax,xmax = np.nonzero(ccorr == ccorr.max())
 
     xshift_int = xmax-xcen
     yshift_int = ymax-ycen
