@@ -84,11 +84,17 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         mask = img.mask
         img = np.array(img)
         img[mask] = np.nan
+    if hasattr(kernel,'mask'):
+        mask = kernel.mask
+        kernel = np.array(kernel)
+        kernel[mask] = np.nan
 
     # NAN catching
     nanmaskimg = img!=img
     img[nanmaskimg] = 0
-    if nanmaskimg.sum() > 0 and not ignore_nan and not quiet:
+    nanmaskkernel = kernel!=kernel
+    kernel[nanmaskkernel] = 0
+    if (nanmaskimg.sum() > 0 or nanmaskkernel.sum() > 0) and not ignore_nan and not quiet:
         print "Warning: NOT ignoring nan values even though they are present (they are treated as 0)"
 
     if (psf_pad or fft_pad) and not ignore_zeros and not force_ignore_zeros_off and not quiet:

@@ -192,33 +192,71 @@ def unpca_subtract(arr,ncomps):
     efuncarr[:,ncomps:] = 0
     return numpy.inner(efuncarr,evects)
 
+def pymc_linear_fit(data1, data2, print_results=False, intercept=True):
+    import pymc
+
+    def f(x=data1,slope=0.0,intercept=0.0):
+        return x*slope+intercept
+
+    d={'slope':pymc.distributions.Uninformative(name='slope',value=0),
+       'intercept':pymc.distributions.Uninformative(name='intercept',value=0),
+       }
+
+    funcdet = pymc.Deterministic(name='f',eval=f,parents=d,doc="FunctionModel1D function")
+    d['f'] = funcdet
+
+    datamodel = pymc.distributions.Normal('y',mu=funcdet,observed=True,value=data2,tau=1)
+    d['y'] = datamodel
+    
+    MC = pymc.MCMC(d)
+    MC.sample(5000,burn=1000,thin=10)
+
+    MCs = MC.stats()
+    m,b = MCs['slope']['mean'],MCs['intercept']['mean']
+    em,eb = MCs['slope']['standard deviation'],MCs['intercept']['standard deviation']
+
+    if print_results:
+        print "MCMC Best fit y = %g x + %g" % (m,b)
+        print "m = %g +/- %g" % (m,em)
+        print "b = %g +/- %g" % (b,eb)
+        print "Chi^2 = %g, N = %i" % (((data2-(data1*m))**2).sum(),data1.shape[0]-1)
+
+    return m,b
+        
+
 if __name__ == "__main__":
 
     from pylab import *
 
     xvals = numpy.linspace(0,100,100)
     yvals = numpy.linspace(0,100,100)
-    print "First test: m=1, b=0.  Polyfit: ",polyfit(xvals,yvals,1)
+    print "\nFirst test: m=1, b=0.  Polyfit: ",polyfit(xvals,yvals,1)
     m,b = PCA_linear_fit(xvals,yvals,print_results=True)
     m,b = total_least_squares(xvals,yvals,print_results=True)
+    m,b = pymc_linear_fit(xvals,yvals,print_results=True)
 
-    print "Second test: m=-1, b=0. Polyfit: ",polyfit(xvals,yvals*-1,1)
+    print "\nSecond test: m=-1, b=0. Polyfit: ",polyfit(xvals,yvals*-1,1)
     m,b = PCA_linear_fit(xvals,yvals*-1,print_results=True)
     m,b = total_least_squares(xvals,yvals*-1,print_results=True)
+    m,b = pymc_linear_fit(xvals,yvals*-1,print_results=True)
 
-    print "Third test: m=1, b=1. Polyfit: ",polyfit(xvals,yvals+1,1)
+    print "\nThird test: m=1, b=1. Polyfit: ",polyfit(xvals,yvals+1,1)
     m,b = PCA_linear_fit(xvals,yvals+1,print_results=True)
     m,b = total_least_squares(xvals,yvals+1,print_results=True)
+    m,b = pymc_linear_fit(xvals,yvals+1,print_results=True)
 
-    print "Fourth test: m~1, b~0. Polyfit: ",polyfit(xvals,yvals+random(100),1)
+    print "\nFourth test: m~1, b~0. Polyfit: ",polyfit(xvals,yvals+random(100),1)
     m,b = PCA_linear_fit(xvals,yvals+random(100),print_results=True)
     m,b = total_least_squares(xvals,yvals+random(100),print_results=True)
+    m,b = pymc_linear_fit(xvals,yvals+random(100),print_results=True)
 
-    print "Fourth test: m~~1, b~~0. Polyfit: ",polyfit(xvals,yvals+random(100)*50,1)
+    print "\nFourth test: m~~1, b~~0. Polyfit: ",polyfit(xvals,yvals+random(100)*50,1)
     m,b = PCA_linear_fit(xvals,yvals+random(100)*50,print_results=True)
     m,b = total_least_squares(xvals,yvals+random(100)*50,print_results=True)
+    m,b = pymc_linear_fit(xvals,yvals+random(100)*50,print_results=True)
 
     xr,yr = random(100),random(100)
-    print "Fifth test: no linear fit. Polyfit: ",polyfit(xr,yr,1)
+    print "\nFifth test: no linear fit. Polyfit: ",polyfit(xr,yr,1)
     m,b = PCA_linear_fit(xr,yr,print_results=True)
     m,b = total_least_squares(xr,yr,print_results=True)
+    m,b = pymc_linear_fit(xr,yr,print_results=True)

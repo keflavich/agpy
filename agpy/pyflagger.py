@@ -1708,8 +1708,26 @@ class Flagger:
         self.PCAflag = False
         self.powerspec_plotted = False
 
+    def weightgrid(self, fignum=10, clear=True):
+        self.wgfig = figure(fignum)
+        if clear: self.wgfig.clear()
+
+        subplot(211)
+        title("Weights")
+        imshow(f.weight.mean(axis=1))
+        colorbar()
+        xlabel("Bolometer #")
+        ylabel("Scan #")
+
+        subplot(212)
+        title("Scales")
+        imshow(f.scalearr.mean(axis=1))
+        colorbar()
+        xlabel("Bolometer #")
+        ylabel("Scan #")
+
     def histograms(self, fignum=8, clear=True, hrange=[0,2], nbins=21, dolegend=True,
-            loc='best', ignore_zeros=True, **kwargs):
+            loc='best', ignore_zeros=True, flag=True, **kwargs):
 
         self.histfig = figure(fignum)
         if clear: self.histfig.clear()
@@ -1720,10 +1738,18 @@ class Flagger:
         else:
             OKscale = OKweight = self.scale_coeffs*0+True
 
+        if flag:
+            # lowest flag for a bolometer 
+            OKflags = f.flags.min(axis=0).min(axis=0) == 0
+            OKscale *= OKflags
+            OKweight *= OKflags
+
         subplot(211)
         hist(self.scale_coeffs[OKscale],histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
         subplot(212)
-        hist(self.weight_by_bolo[OKweight],histtype='step',bins=nbins,label='Weights',color='r',linewidth=2)
+        n1,l1,h1 =hist(self.weight_by_bolo[OKweight],histtype='step',bins=nbins,label='Weights',color='r',linewidth=2)
+        n2,l2,h2 =hist(self.weight[:,:,OKweight].mean(axis=1).ravel(),weights=ones((self.nscans,OKweight.sum())).ravel()/self.nscans,histtype='step',bins=nbins,label='Weights (not avgd. over scans)',color='g',linewidth=2)
+        gca().set_ylim(0,max([max(n1),max(n2)])+1)
         
         if dolegend: legend(loc=loc)
 
@@ -1931,12 +1957,15 @@ if __name__ == "__main__":
 
       parser=optparse.OptionParser()
       parser.add_option("--timestreams","-t",help="Plot all timestreams scaled and unscaled as a diagnostic tool.  Default False",action="store_true",dest="timestreams",default=False)
+      parser.add_option("--histograms",help="Plot all weight/scale histograms.  Default False",action="store_true",dest="histograms",default=False)
+      parser.add_option("--weightgrid",help="Plot all weight/scale grids.  Default False",action="store_true",default=False)
       parser.add_option("--plotscan","-p",help="Scan number to plot at the start.  Default to 0.  Set to -1 to turn off.",default=0)
       parser.add_option("--interactive","-i",help="Start in ipython mode?  Default True",action='store_false',default=True)
       #parser.add_option("--debug","-d",help="Debug in ipython mode?",action='store_true',default=False)
       parser.add_option("--no_interactive","-n",help="Turn off ipython (interactive) mode",action='store_false',dest="interactive")
       parser.add_option("--close","-c",help="Close after plotting?  Useful if interactive=False",action='store_true',default=False)
       parser.add_option("--noflag",help="Disable flagging?",action='store_true',default=False)
+      parser.add_option("--flag_weights_over",help="*WARNING* This can be dangerous!  Flag all weights over this value.",default=None)
       parser.add_option("--compute_expfit",help="Do exponential fits to the powerspectra for all bolometers?",action='store_true',default=False)
       parser.add_option("--compute_powerfit",help="Do power-law fits to the powerspectra for all bolometers?",action='store_true',default=False)
       parser.set_usage("%prog savename.sav [options]")
@@ -1952,6 +1981,7 @@ if __name__ == "__main__":
       plotnum = options.plotscan
 
       flist = []
+      fdict = {}
       for ii,filename in enumerate(args):
           prefix = filename.replace("_preiter.sav","").replace("_postiter.sav","").replace("_save_iter0.sav","")
 
@@ -1977,6 +2007,23 @@ if __name__ == "__main__":
               for ii in range(f.nbolos):
                   f.timestream_whole(ii,timestream='acbolos_noscale',clear=False,fignum=5)
               savefig('%s_acbolos_noscale.png' % prefix)
+
+          if options.weightgrid:
+              figure(10)
+              clf()
+              f.weightgrid()
+              savefig('%s_weightscalegrid.png' % prefix)
+
+          if options.histograms:
+              figure(8)
+              clf()
+              f.histograms()
+              savefig('%s_weightscalehistograms.png' % prefix)
+
+          if options.flag_weights_over is not None:
+              if options.flag_weights_over >= 200:
+                  f.flags[f.weight > options.flag_weights_over] = True
+                  f.writeflags()
 
           if options.compute_powerfit:
               ppars0 = zeros([2,f.nbolos])
@@ -2014,9 +2061,10 @@ if __name__ == "__main__":
               print "WARNING! This likely only applies to astrosignal, NOT ac_bolos!"
 
           if options.close or not options.interactive:
-              f.close()
+              f.close(write=False)
           else:
               flist.append(f)
+              fdict[f.filename] = f
 
 
       if options.interactive:
