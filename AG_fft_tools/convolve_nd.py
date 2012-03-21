@@ -175,6 +175,10 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
     if np.isnan(fftmult).any():
             raise ValueError("Encountered NaNs in convolve.  This is disallowed.")
 
+    # restore nans in original image 
+    img[nanmaskimg] = np.nan
+    kernel[nanmaskkernel] = np.nan
+
     if return_fft: 
         if fftshift: # default on 
             if crop:
