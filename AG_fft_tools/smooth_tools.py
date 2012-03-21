@@ -80,6 +80,9 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     elif kerneltype == 'boxcar':
         if not silent: print "Using boxcar kernel size %i" % np.ceil(kernelwidth)
         kernel = np.ones([np.ceil(kernelwidth),np.ceil(kernelwidth)],dtype='float64') / kernelwidth**2
+        kernel = np.zeros(shape,dtype='float64')
+        kernel[((xx-szX/2.)<=kernelwidth)*((yy<=szY/2.)<=kernelwidth)] = 1.0
+        kernel /= normalize_kernel(kernel)
     elif kerneltype == 'tophat':
         kernel = np.zeros(shape,dtype='float64')
         kernel[rr<kernelwidth] = 1.0
