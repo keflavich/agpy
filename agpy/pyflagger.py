@@ -304,7 +304,8 @@ class Flagger:
 
         self.ncfilename = savfile
         self.tsfile = None
-        self.ncdf_filename = self.needed_once_struct.filenames[0]
+        if self.needed_once_struct is not None:
+            self.ncdf_filename = self.needed_once_struct.filenames[0]
         self.outfile_prefix = self.mapstr.outmap[0]
 
         fnsearch = re.compile(
@@ -1152,18 +1153,20 @@ class Flagger:
             self.idl_writeflags()
 
     def idl_clearflags(self):
-        clearcmd = ("clearflags,'%s' & " % (self.needed_once_struct.filenames[0]))
-        idlcmd = "/Applications/itt/idl/idl/bin/idl"
-        cmd = '%s -e "%s"' % (idlcmd,clearcmd)
-        os.environ.update({"IDL_STARTUP":"/Users/adam/work/bolocam/.idl_startup_bgps.pro"})
-        print cmd
-        output = os.popen(cmd)
-        print "".join(output.readlines())
-        output.close()
+        if self.needed_once_struct is not None:
+            clearcmd = ("clearflags,'%s' & " % (self.needed_once_struct.filenames[0]))
+            idlcmd = "/Applications/itt/idl/idl/bin/idl"
+            cmd = '%s -e "%s"' % (idlcmd,clearcmd)
+            os.environ.update({"IDL_STARTUP":"/Users/adam/work/bolocam/.idl_startup_bgps.pro"})
+            print cmd
+            output = os.popen(cmd)
+            print "".join(output.readlines())
+            output.close()
 
     def idl_writeflags(self, clearflags=False, override_whgood=False):
         flagcmd = "flags_to_ncdf,'%s','%s'" % (self.flagfn,self.filename)
-        if clearflags: flagcmd = ("clearflags,'%s' & " % (self.needed_once_struct.filenames[0])) + flagcmd
+        if self.needed_once_struct is not None:
+            if clearflags: flagcmd = ("clearflags,'%s' & " % (self.needed_once_struct.filenames[0])) + flagcmd
         if override_whgood: flagcmd+=",bolo_indices=%s" % ("["+",".join(["%i" % bi for bi in self.bolo_indices])+"]")
         idlcmd = "/Applications/itt/idl/idl/bin/idl"
         cmd = '%s -e "%s"' % (idlcmd,flagcmd)
@@ -1823,13 +1826,14 @@ class Flagger:
 
     def print_mem_iter(self):
 
-        outfilename = self.mapstr.outmap[0]
-        infilename = self.needed_once_struct.filenames[0]
+        if self.needed_once_struct is not None:
+            outfilename = self.mapstr.outmap[0]
+            infilename = self.needed_once_struct.filenames[0]
 
-        command = "mem_iter,'{infile}','{outfile}',/no_offsets,/pointing_model,niter=[13,13],dosave=2".format(outfile=outfilename,infile=infilename)
+            command = "mem_iter,'{infile}','{outfile}',/no_offsets,/pointing_model,niter=[13,13],dosave=2".format(outfile=outfilename,infile=infilename)
 
-        print command
-        return command
+            print command
+            return command
 
 
 def nantomask(arr):

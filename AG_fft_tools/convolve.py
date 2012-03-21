@@ -41,31 +41,31 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     Convolve an image with a kernel.  Returns something the size of an image.
     Assumes image & kernel are centered
 
-    *NOTE* Order matters; the kernel should be second.
+    .. note:: Order matters; the kernel should be second.
 
     Options:
-    fft_pad - Default on.  Zero-pad image to the nearest 2^n
-    psf_pad - Default off.  Zero-pad image to be at least the sum of the image
+    :fft_pad:  Default on.  Zero-pad image to the nearest 2^n
+    :psf_pad:  Default off.  Zero-pad image to be at least the sum of the image
         sizes (in order to avoid edge-wrapping when smoothing)
-    crop - Default on.  Return an image of the size of the largest input image.
+    :crop:  Default on.  Return an image of the size of the largest input image.
         If the images are asymmetric in opposite directions, will return the
         largest image in both directions.
-    return_fft - Return the FFT instead of the convolution.  Useful for making
+    :return_fft:  Return the FFT instead of the convolution.  Useful for making
         PSDs.
-    fftshift - If return_fft on, will shift & crop image to appropriate
+    :fftshift:  If return_fft on, will shift & crop image to appropriate
         dimensions
-    ignore_nan - attempts to re-weight assuming NAN values are meant to be
+    :ignore_nan:  attempts to re-weight assuming NAN values are meant to be
         ignored, not treated as zero.  
-    ignore_zeros - Ignore the zero-pad-created zeros.  Desirable if you have
+    :ignore_zeros:  Ignore the zero-pad-created zeros.  Desirable if you have
         periodic boundaries on a non-2^n grid
-    force_ignore_zeros_off - You can choose to turn off the ignore-zeros when padding,
+    :force_ignore_zeros_off:  You can choose to turn off the ignore-zeros when padding,
         but this is only recommended for purely debug purposes
-    min_wt - If ignoring nans/zeros, force all grid points with a weight less
+    :min_wt:  If ignoring nans/zeros, force all grid points with a weight less
         than this value to NAN (the weight of a grid point with *no* ignored
         neighbors is 1.0)
-    normalize_kernel - if specified, function to divide kernel by to normalize it
+    :normalize_kernel:  if specified, function to divide kernel by to normalize it
 
-    nthreads - if fftw3 is installed, can specify the number of threads to
+    :nthreads:  if fftw3 is installed, can specify the number of threads to
         allow FFTs to use.  Probably only helpful for large arrays
     """
     
