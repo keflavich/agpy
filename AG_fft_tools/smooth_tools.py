@@ -131,3 +131,46 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         if return_kernel: return temp,kernel
         else: return temp
 
+"""
+def make_kernel(kernelshape, kernelwidth=3, kerneltype='gaussian', silent=True):
+    yy,xx = np.indices(kernelshape)
+    szY,szX = kernelshape
+    if not silent: print "Kernel size set to ",kernelshape
+    rr = np.sqrt((xx-szX/2.)**2+(yy-szY/2.)**2)
+
+    if kerneltype == 'gaussian':
+        kernel = np.exp(-(rr**2)/(2.*kernelwidth**2))
+        kernel /= normalize_kernel(kernel) #/ (kernelwidth**2 * (2*np.pi))
+#        if kernelwidth != np.round(kernelwidth):
+#            print "Rounding kernel width to %i pixels" % np.round(kernelwidth)
+#            kernelwidth = np.round(kernelwidth)
+
+    elif kerneltype == 'boxcar':
+        if not silent: print "Using boxcar kernel size %i" % np.ceil(kernelwidth)
+        kernel = np.ones([np.ceil(kernelwidth),np.ceil(kernelwidth)],dtype='float64') / kernelwidth**2
+        kernel = np.zeros(shape,dtype='float64')
+        kernel[((xx-szX/2.)<=kernelwidth)*((yy<=szY/2.)<=kernelwidth)] = 1.0
+        kernel /= normalize_kernel(kernel)
+    elif kerneltype == 'tophat':
+        kernel = np.zeros(shape,dtype='float64')
+        kernel[rr<kernelwidth] = 1.0
+        # normalize
+        kernel /= normalize_kernel(kernel)
+    elif kerneltype == 'brickwall':
+        if not silent: print "Smoothing with a %i pixel airy function" % kernelwidth
+        # airy function is first bessel(x) / x  [like the sinc]
+        print "WARNING: I think the Airy should be (2*Besel(x)/x)^2?" # http://en.wikipedia.org/wiki/Airy_disk
+        kernel = j1(rr/kernelwidth) / (rr/kernelwidth) 
+        # fix NAN @ center
+        kernel[rr==0] = 0.5
+        # normalize - technically, this should work, but practically, flux is GAINED in some images.  
+        kernel /= normalize_kernel(kernel)
+    elif kerneltype == 'trapezoid':
+        if trapslope:
+            zz = rr.max()-(rr*trapslope)
+            zz[zz<0] = 0
+            zz[rr<kernelwidth] = 1.0
+            kernel = zz/zz.sum()
+        else:
+            if not silent: print "trapezoid function requires a slope"
+"""
