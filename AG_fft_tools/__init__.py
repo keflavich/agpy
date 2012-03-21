@@ -12,3 +12,4 @@ spectra and PSDs.
 from correlate2d import correlate2d
 from psds import PSD2
 from convolve import convolve,smooth
+from convolve_nd import convolvend

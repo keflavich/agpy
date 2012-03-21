@@ -24,7 +24,7 @@ except ImportError:
     # I performed some fft speed tests and found that scipy is slower than numpy
     # http://code.google.com/p/agpy/source/browse/trunk/tests/test_ffts.py
 
-def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
+def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
         fft_pad=True, psf_pad=False, ignore_nan=False, quiet=False,
         ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False,
         normalize_kernel=np.sum, debug=False, nthreads=1):
@@ -127,6 +127,9 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
 
     imgshape = img.shape
     kernshape = kernel.shape
+    ndim = len(img.shape)
+    if ndim != len(kernshape):
+        raise ValueError("Image and kernel must have same number of dimensions")
     # find ideal size (power of 2) for fft.  Can add shapes because they are tuples
     if fft_pad:
         if psf_pad: 
@@ -135,7 +138,7 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         else: 
             # add the shape lists (max of a list of length 4) (smaller)
             fsize = 2**np.ceil(np.log2(np.max(imgshape+kernshape)))
-        newshape = np.array([fsize,fsize])
+        newshape = np.array([fsize for ii in range(ndim)])
     else:
         if psf_pad:
             newshape = np.array(imgshape)+np.array(kernshape) # just add the biggest dimensions
@@ -147,7 +150,7 @@ def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
     imgslices = []
     kernslices = []
     for ii,(newdimsize,imgdimsize,kerndimsize) in enumerate(zip(newshape,imgshape,kernshape)):
-        center = dimsize/2.
+        center = newdimsize/2.
         imgslices += [slice(center - imgdimsize/2., center + imgdimsize/2.)]
         kernslices += [slice(center - kerndimsize/2., center + kerndimsize/2.)]
 
