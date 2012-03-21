@@ -1,5 +1,5 @@
 import numpy
-import convolve
+from convolve_nd import convolvend as convolve
 
 def correlate2d(im1,im2,**kwargs):
     """
@@ -19,5 +19,5 @@ def correlate2d(im1,im2,**kwargs):
     WARNING: Normalization may be arbitrary if you use the PSD
     """
 
-    return convolve.convolve(im1,im2[::-1,::-1],normalize_kernel=False,ignore_zeros=False,**kwargs)
+    return convolve(im1,im2[::-1,::-1],normalize_kernel=False,ignore_zeros=False,**kwargs)
 

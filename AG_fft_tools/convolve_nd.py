@@ -234,23 +234,27 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
 
 
 import pytest
-def test_3d(debug=False):
+import itertools 
+params = list(itertools.product((True,False),(True,False),(True,False)))
+@pytest.mark.parametrize(('psf_pad','use_numpy_fft','force_ignore_zeros_off'),params)
+def test_3d(psf_pad, use_numpy_fft, force_ignore_zeros_off, debug=False, tolerance=1e-17):
     img = np.zeros([32,32,32])
     img[15,15,15]=1
     img[15,0,15]=1
     kern = np.zeros([32,32,32])
     kern[14:19,14:19,14:19] = 1
 
-    for psf_pad in (True,False):
-        conv1 = convolvend(img, kern, psf_pad=psf_pad, debug=debug)
-        conv2 = convolvend(img, kern, psf_pad=psf_pad, use_numpy_fft=True, debug=debug)
-        conv4 = convolvend(img, kern, psf_pad=psf_pad, use_numpy_fft=True, force_ignore_zeros_off=True, debug=debug)
-        conv3 = convolvend(img, kern, psf_pad=psf_pad, force_ignore_zeros_off=True, debug=debug)
+    conv1 = convolvend(img, kern, psf_pad=psf_pad, force_ignore_zeros_off=force_ignore_zeros_off, debug=debug)
 
-        print "psf_pad=%s" % psf_pad
-        print "FFTW, ignore_zeros: %g,%g" % (conv1[15,0,15],conv1[15,15,15])
-        print "numpy, ignore_zeros: %g,%g" % (conv2[15,0,15],conv2[15,15,15])
-        print "FFTW, no ignore_zeros: %g,%g" % (conv3[15,0,15],conv3[15,15,15])
-        print "numpy, no ignore_zeros: %g,%g" % (conv4[15,0,15],conv4[15,15,15])
+    print "psf_pad=%s use_numpy=%s force_ignore_zeros_off=%s" % (psf_pad, use_numpy_fft, force_ignore_zeros_off)
+    print "side,center: %g,%g" % (conv1[15,0,15],conv1[15,15,15])
+    if force_ignore_zeros_off or not psf_pad:
+        assert(np.abs(conv1[15,0,15] - 1./125.) < tolerance)
+        assert(np.abs(conv1[15,1,15] - 1./125.) < tolerance)
+        assert(np.abs(conv1[15,15,15] - 1./125.) < tolerance)
+    else:
+        assert(np.abs(conv1[15,0,15] - 1./75.) < tolerance)
+        assert(np.abs(conv1[15,1,15] - 1./100.) < tolerance)
+        assert(np.abs(conv1[15,15,15] - 1./125.) < tolerance)
 
-        
+    
