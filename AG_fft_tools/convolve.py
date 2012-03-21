@@ -23,50 +23,67 @@ except ImportError:
     has_fftw = False
     # I performed some fft speed tests and found that scipy is slower than numpy
     # http://code.google.com/p/agpy/source/browse/trunk/tests/test_ffts.py
-    # try:
-    #     #print "Attempting to import scipy.  If you experience a bus error at this step, it is likely because of a bad scipy install"
-    #     import scipy
-    #     import scipy.fftpack
-    #     fft2 = scipy.fftpack.fft2
-    #     ifft2 = scipy.fftpack.ifft2
-    #     from scipy.special import j1
-
-    # except ImportError:
 
 def convolve(img, kernel, crop=True, return_fft=False, fftshift=True,
         fft_pad=True, psf_pad=False, ignore_nan=False, quiet=False,
         ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False,
         normalize_kernel=np.sum, debug=False, nthreads=1):
     """
-    Convolve an image with a kernel.  Returns something the size of an image.
-    Assumes image & kernel are centered
+    Convolve an image with a kernel.  Returns a convolved image with shape =
+    img.shape.  Assumes image & kernel are centered.
 
     .. note:: Order matters; the kernel should be second.
 
-    Options:
-    :fft_pad:  Default on.  Zero-pad image to the nearest 2^n
-    :psf_pad:  Default off.  Zero-pad image to be at least the sum of the image
-        sizes (in order to avoid edge-wrapping when smoothing)
-    :crop:  Default on.  Return an image of the size of the largest input image.
+    Parameters
+    ----------
+    - *img* : A two-dimensional `~np.ndarray` object.  Will be convolved
+      with *kernel*
+    - *kernel* : A two-dimensional `~np.ndarray` object.  Will be normalized
+      if *normalize_kernel* is set.  Assumed to be centered (i.e., shifts
+      may result if your kernel is asymmetric)
+
+    Options
+    -------
+    - *fft_pad* :  
+        Default on.  Zero-pad image to the nearest 2^n
+    - *psf_pad* :  
+        Default off.  Zero-pad image to be at least the sum of the image sizes
+        (in order to avoid edge-wrapping when smoothing)
+    - *crop* :  
+        Default on.  Return an image of the size of the largest input image.
         If the images are asymmetric in opposite directions, will return the
         largest image in both directions.
-    :return_fft:  Return the FFT instead of the convolution.  Useful for making
-        PSDs.
-    :fftshift:  If return_fft on, will shift & crop image to appropriate
-        dimensions
-    :ignore_nan:  attempts to re-weight assuming NAN values are meant to be
-        ignored, not treated as zero.  
-    :ignore_zeros:  Ignore the zero-pad-created zeros.  Desirable if you have
-        periodic boundaries on a non-2^n grid
-    :force_ignore_zeros_off:  You can choose to turn off the ignore-zeros when padding,
-        but this is only recommended for purely debug purposes
-    :min_wt:  If ignoring nans/zeros, force all grid points with a weight less
-        than this value to NAN (the weight of a grid point with *no* ignored
+    - *return_fft* : 
+        Return the FFT instead of the convolution.  Useful for making PSDs.
+    - *fftshift* :
+        If return_fft on, will shift & crop image to appropriate dimensions
+    - *ignore_nan* :
+        attempts to re-weight assuming NAN values are meant to be ignored, not
+        treated as zero.  
+    - *ignore_zeros* :
+        Ignore the zero-pad-created zeros.  Desirable if you have periodic
+        boundaries on a non-2^n grid
+    - *force_ignore_zeros_off* :
+        You can choose to turn off the ignore-zeros when padding, but this is
+        only recommended for purely debug purposes
+    - *min_wt* :  
+        If ignoring nans/zeros, force all grid points with a weight less than
+        this value to NAN (the weight of a grid point with *no* ignored
         neighbors is 1.0)
-    :normalize_kernel:  if specified, function to divide kernel by to normalize it
+    - *normalize_kernel* : 
+        if specified, function to divide kernel by to normalize it
+    - *nthreads* :
+        if fftw3 is installed, can specify the number of threads to allow FFTs
+        to use.  Probably only helpful for large arrays
 
-    :nthreads:  if fftw3 is installed, can specify the number of threads to
-        allow FFTs to use.  Probably only helpful for large arrays
+    Returns
+    -------
+    *default* : *img* convolved with *kernel*
+    if *return_fft* : fft(*img*) * fft(*kernel*)
+      - if *fftshift* : Determines whether the fft will be shifted before returning
+    if *crop* == False : Returns the image, but with the fft-padded size
+      instead of the input size
+
     """
     
     # replace fft2 if has_fftw so that nthreads can be passed
@@ -181,34 +198,44 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
     Options: 
-    kernelwidth - width of kernel in pixels  (see definitions below)
-    kerneltype - gaussian, boxcar, or tophat.  
+    - *kernelwidth* :
+        width of kernel in pixels  (see definitions below)
+    - *kerneltype* :
+        gaussian, boxcar, or tophat.  
         For a gaussian, uses a gaussian with sigma = kernelwidth (in pixels)
             out to [nwidths]-sigma
         A boxcar is a kernelwidth x kernelwidth square 
         A tophat is a flat circle with radius = kernelwidth
     Default options:
-        psf_pad = True - will pad the input image to be the image size + PSF.
+        - *psf_pad* : [True]
+            will pad the input image to be the image size + PSF.
             Slows things down but removes edge-wrapping effects (see convolve)
             This option should be set to false if the edges of your image are
             symmetric.
-        interp_nan = False - Will replace NaN points in an image with the
+        - *interp_nan* : [False]
+            Will replace NaN points in an image with the
             smoothed average of its neighbors (you can still simply ignore NaN 
             values by setting ignore_nan=True but leaving interp_nan=False)
-        silent = True - turn it off to get verbose statements about kernel
-            types
-        return_kernel = False - If set to true, will return the kernel as the
+        - *silent* : [True]
+            turn it off to get verbose statements about kernel types
+        - *return_kernel* : [False]
+            If set to true, will return the kernel as the
             second return value
-        nwidths = 'max' - number of kernel widths wide to make the kernel.  Set to
-            'max' to match the image shape, otherwise use any integer 
-        min_nwidths = 6 - minimum number of gaussian widths to make the kernel
+        - *nwidths* : ['max']
+            number of kernel widths wide to make the kernel.  Set to 'max' to
+            match the image shape, otherwise use any integer 
+        - *min_nwidths* : [6]
+            minimum number of gaussian widths to make the kernel
             (the kernel will be larger than the image if the image size is <
             min_widths*kernelsize)
-        normalize_kernel - Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
+        - *normalize_kernel* :
+            Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
             or the kernel peak (i.e. kernel.max() = 1) ?  Must be a *function* that can
             operate on a numpy array
-        downsample - downsample after smoothing?
-        downsample_factor - if None, default to kernelwidth
+        - *downsample* :
+            downsample after smoothing?
+        - *downsample_factor* :
+            if None, default to kernelwidth
 
     Note that the kernel is forced to be even sized on each axis to assure no
     offset when smoothing.

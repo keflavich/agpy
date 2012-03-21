@@ -44,25 +44,28 @@ def h2level_energy(V,J):
 
     return h * c * (We*(V+0.5) + Be*(J*(J+1)) - WeXe*(V+.5)**2 - De*J**2*(J+1)**2 - Ae*(V+.5)*(J+1)*J)
 
-# read in rest energies before calling function
-resten = readcol(tablepath+'dalgarno1984_table5.txt',verbose=0)
+try:
+    # read in rest energies before calling function
+    resten = readcol(tablepath+'dalgarno1984_table5.txt',verbose=0)
 
-def restwl(vu,vl,ju,jl,calc=False):
-    """ Uses energy levels measured by Dabrowski & Herzberg, Can J. Physics, 62,1639,1984 
-    vu,vl - upper and lower vibrational states
-    ju,jl - upper and lower rotational states 
-    returns wavelength in microns
-    online versions of this table:
-    http://www.astronomy.ohio-state.edu/~depoy/research/observing/molhyd.htm
-    http://www.jach.hawaii.edu/UKIRT/astronomy/calib/spec_cal/h2_s.html
-    """
-    if calc:
-        return 1e4*h*c / (h2level_energy(vu,ju) - h2level_energy(vl,jl))
-    else:
-        if ju >= resten.shape[0] or vu >= resten.shape[1]:
-            return 0
-        dl = .01/(resten[ju][vu]-resten[jl][vl])
-        return dl * 1e6
+    def restwl(vu,vl,ju,jl,calc=False):
+        """ Uses energy levels measured by Dabrowski & Herzberg, Can J. Physics, 62,1639,1984 
+        vu,vl - upper and lower vibrational states
+        ju,jl - upper and lower rotational states 
+        returns wavelength in microns
+        online versions of this table:
+        http://www.astronomy.ohio-state.edu/~depoy/research/observing/molhyd.htm
+        http://www.jach.hawaii.edu/UKIRT/astronomy/calib/spec_cal/h2_s.html
+        """
+        if calc:
+            return 1e4*h*c / (h2level_energy(vu,ju) - h2level_energy(vl,jl))
+        else:
+            if ju >= resten.shape[0] or vu >= resten.shape[1]:
+                return 0
+            dl = .01/(resten[ju][vu]-resten[jl][vl])
+            return dl * 1e6
+except IOError:
+    print "Could not find dalgarno1984_table5.txt.  H2 rest energies not available."
 
 def linename_to_restwl(linelistfile = tablepath+'linelist.txt',outfile=tablepath+'newlinelist.txt'):
 
@@ -136,30 +139,33 @@ def aval(v,ju,jl):
 
 aval_vect=vectorize(aval)
 
-# atran = pyfits.open('/Users/adam/observations/triplespec/Spextool2/data/atran2000.fits')
-atran = readcol(tablepath+'atran.txt')
-atran_wl = atran[:,0]*1e4
-atran_tr = atran[:,1]
-atran_arc = readcol(tablepath+'atran_arcturus.txt')
-ARCSORT = argsort(atran_arc[:,0])
-atran_arcwl = atran_arc[ARCSORT,0]*1e4
-atran_arctr = atran_arc[ARCSORT,1]
-def atmotrans(x):
-    """ returns the atmospheric transmission at the given wavelength (in angstroms) """
-    closest = argmin(abs(atran_wl-x))
-    if atran_wl[closest] < x:
-        m = (atran_tr[closest+1]-atran_tr[closest])/(atran_wl[closest+1]-atran_wl[closest])
-        b = atran_tr[closest]
-        y = m * (x-atran_wl[closest]) + b
-    elif atran_wl[closest] > x:
-        m = (atran_tr[closest]-atran_tr[closest-1])/(atran_wl[closest]-atran_wl[closest-1])
-        b = atran_tr[closest-1]
-        y = m * (x-atran_wl[closest-1]) + b
-    else:
-        y = atran_tr[closest]
-    return y
+try:
+    # atran = pyfits.open('/Users/adam/observations/triplespec/Spextool2/data/atran2000.fits')
+    atran = readcol(tablepath+'atran.txt')
+    atran_wl = atran[:,0]*1e4
+    atran_tr = atran[:,1]
+    atran_arc = readcol(tablepath+'atran_arcturus.txt')
+    ARCSORT = argsort(atran_arc[:,0])
+    atran_arcwl = atran_arc[ARCSORT,0]*1e4
+    atran_arctr = atran_arc[ARCSORT,1]
+    def atmotrans(x):
+        """ returns the atmospheric transmission at the given wavelength (in angstroms) """
+        closest = argmin(abs(atran_wl-x))
+        if atran_wl[closest] < x:
+            m = (atran_tr[closest+1]-atran_tr[closest])/(atran_wl[closest+1]-atran_wl[closest])
+            b = atran_tr[closest]
+            y = m * (x-atran_wl[closest]) + b
+        elif atran_wl[closest] > x:
+            m = (atran_tr[closest]-atran_tr[closest-1])/(atran_wl[closest]-atran_wl[closest-1])
+            b = atran_tr[closest-1]
+            y = m * (x-atran_wl[closest-1]) + b
+        else:
+            y = atran_tr[closest]
+        return y
 
-atmotrans_vect = vectorize(atmotrans)
+    atmotrans_vect = vectorize(atmotrans)
+except IOError:
+    print "Could not find atran.txt.  atran atmospheric transition model will not be available"
 
 def readspexspec(image,
     linelistfile = '/Users/adam/work/IRAS05358/code/linelist.txt',
