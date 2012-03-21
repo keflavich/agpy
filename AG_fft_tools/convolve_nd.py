@@ -6,17 +6,17 @@ try:
     import fftw3
     has_fftw = True
     def fftwn(array,nthreads=1):
-        array = array.astype('complex')
+        array = array.astype('complex').copy()
         outarray = array.copy()
         fft_forward = fftw3.Plan(array,outarray, direction='forward', flags=['estimate'],nthreads=nthreads)
-        fft_forward()
+        fft_forward.execute()
         return outarray
     def ifftwn(array,nthreads=1):
-        array = array.astype('complex')
+        array = array.astype('complex').copy()
         outarray = array.copy()
         fft_backward = fftw3.Plan(array,outarray, direction='backward', flags=['estimate'],nthreads=nthreads)
-        fft_backward()
-        return outarray
+        fft_backward.execute()
+        return outarray / np.size(array)
 except ImportError:
     fftn = np.fft.fftn
     ifftn = np.fft.ifftn
@@ -27,7 +27,8 @@ except ImportError:
 def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
         fft_pad=True, psf_pad=False, ignore_nan=False, quiet=False,
         ignore_zeros=True, min_wt=1e-8, force_ignore_zeros_off=False,
-        normalize_kernel=np.sum, debug=False, nthreads=1):
+        normalize_kernel=np.sum, debug=False, use_numpy_fft=not has_fftw,
+        nthreads=1):
     """
     Convolve an image with a kernel.  Returns a convolved image with shape =
     img.shape.  Assumes image & kernel are centered.
@@ -88,12 +89,17 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
     
     # replace fftn if has_fftw so that nthreads can be passed
     global fftn,ifftn
-    if has_fftw:
+    if has_fftw and not use_numpy_fft:
+        if debug: print "Using FFTW"
         def fftn(*args, **kwargs):
             return fftwn(*args, nthreads=nthreads, **kwargs)
 
         def ifftn(*args, **kwargs):
             return ifftwn(*args, nthreads=nthreads, **kwargs)
+    elif use_numpy_fft:
+        if debug: print "Using numpy"
+        fftn = np.fft.fftn
+        ifftn = np.fft.ifftn
 
 
     # mask catching
@@ -113,6 +119,8 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
     kernel[nanmaskkernel] = 0
     if (nanmaskimg.sum() > 0 or nanmaskkernel.sum() > 0) and not ignore_nan and not quiet:
         print "Warning: NOT ignoring nan values even though they are present (they are treated as 0)"
+    if debug:
+        print "nanmasked in image: %i kernel: %i" % (nanmaskimg.sum(), nanmaskkernel.sum())
 
     if (psf_pad or fft_pad) and not ignore_zeros and not force_ignore_zeros_off and not quiet:
         print "Warning: when psf_pad or fft_pad are enabled, ignore_zeros is forced on"
@@ -123,7 +131,7 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
     if normalize_kernel: # try this.  If a function is not passed, the code will just crash... I think type checking would be better but PEPs say otherwise...
         kernel = kernel / normalize_kernel(kernel)
 
-    if debug: print "Status: ignore_zeros=",ignore_zeros," force_ignore_zeros_off=",force_ignore_zeros_off," psf_pad=",psf_pad," fft_pad=",fft_pad," normalize_kernel=",normalize_kernel
+    if debug: print "Status: ignore_zeros=",ignore_zeros," force_ignore_zeros_off=",force_ignore_zeros_off," psf_pad=",psf_pad," fft_pad=",fft_pad," normalize_kernel=",normalize_kernel," return_fft=",return_fft
 
     imgshape = img.shape
     kernshape = kernel.shape
@@ -145,6 +153,9 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
         else:
             newshape = np.array([np.max([imsh,kernsh]) for imsh,kernsh in zip(imgshape,kernshape)]) 
 
+    if debug: 
+        print "newshape: ",newshape," imgshape: ",imgshape," kernshape: ",kernshape
+
     # separate each dimension by the padding size...
     # this is to determine the appropriate slice size to get back to the input dimensions
     imgslices = []
@@ -154,6 +165,9 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
         imgslices += [slice(center - imgdimsize/2., center + imgdimsize/2.)]
         kernslices += [slice(center - kerndimsize/2., center + kerndimsize/2.)]
 
+    if debug: 
+        print "imgslices: ",imgslices," kernel slices: ",kernslices
+
     bigimg = np.zeros(newshape,dtype=np.complex128)
     bigkernel = np.zeros(newshape,dtype=np.complex128)
     bigimg[imgslices] = img
@@ -161,16 +175,24 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
     imgfft = fftn(bigimg)
     kernfft = fftn(bigkernel)
     fftmult = imgfft*kernfft
-    if debug: print "Kernel sum: %g  Bigkernel sum: %g" % (kernel.sum(), bigkernel.sum())
+    if debug: 
+        print "Kernel sum: %g  Bigkernel sum: %g image sum: %g bigimg sum: %g" % (kernel.sum(), bigkernel.sum(), img.sum(), bigimg.sum())
+        print "fft(img) sum: %g  fft(kernel) sum: %g fft(img)*fft(kernel) sum: %g" % (imgfft.sum(), kernfft.sum(), fftmult.sum())
     if ignore_nan or ignore_zeros:
-        bigimwt = np.ones(newshape,dtype=np.complex128)
-        if ignore_zeros: bigimwt[:] = 0.0
+        if ignore_zeros: 
+            bigimwt = np.zeros(newshape,dtype=np.complex128)
+        else:
+            bigimwt = np.ones(newshape,dtype=np.complex128)
         bigimwt[imgslices] = 1.0-nanmaskimg*ignore_nan
+        if debug: print "bigimwt.sum: %g" % (bigimwt.sum())
         wtfft = fftn(bigimwt)
-        wtfftmult = wtfft*kernfft/kernel.sum()
-        wtfftsm   = ifftn(wtfftmult)
-        pixel_weight = np.fft.fftshift(wtfftsm).real
-        if debug: print "Pixel weight: %g  bigimwt: %g wtfft sum: %g kernfft sum: %g wtfftsm sum: %g" % (pixel_weight.sum(), bigimwt.sum(), wtfft.sum(), kernfft.sum(), wtfftsm.sum())
+        wtfftmult = wtfft*kernfft/kernel.sum() # I think this one HAS to be normalized
+        wtsm   = ifftn(wtfftmult)
+        # need to re-zero weights outside of the image (if it is padded, we still don't weight those regions)
+        bigimwt[imgslices] = np.fft.fftshift(wtsm).real[imgslices]
+        if debug:
+            print "Pixel weight: %g  bigimwt: %g wtfft sum: %g kernfft sum: %g wtsm sum: %g " % (bigimwt.sum(), bigimwt.sum(), wtfft.sum(), kernfft.sum(), wtsm.sum())
+            print "Nonzero weights: bigimwt %i, wtsm %i" % ((bigimwt>0).sum(), (wtsm>0).sum())
 
     if np.isnan(fftmult).any():
             raise ValueError("Encountered NaNs in convolve.  This is disallowed.")
@@ -189,12 +211,46 @@ def convolvend(img, kernel, crop=True, return_fft=False, fftshift=True,
             return fftmult
 
     if ignore_nan or ignore_zeros:
-        rifft = np.fft.fftshift( ifftn( fftmult ) ) / pixel_weight
-        rifft[pixel_weight < min_wt] = np.nan
+        rifft = np.fft.fftshift( ifftn( fftmult ) ) / bigimwt
+        if debug:
+            print "%i weights < min_wt = %g" % ((bigimwt < min_wt).sum(), min_wt)
+            print "%i VALID weights < min_wt = %g" % ((bigimwt[imgslices] < min_wt).sum(), min_wt)
+            print "total weights > min_wt: %g" % (bigimwt[bigimwt>=min_wt].sum())
+            print "total VALID weights > min_wt: %g" % (bigimwt[imgslices][bigimwt[imgslices]>=min_wt].sum())
+        rifft[bigimwt < min_wt] = np.nan
     else:
+        if debug: print ifftn, fftmult.sum()
         rifft = np.fft.fftshift( ifftn( fftmult ) ) 
+
+    if debug:
+        print "rifft sum: %g" % (rifft.sum())
+
     if crop:
         result = rifft[ imgslices ].real
+        if debug: print "result sum: %g" % (result.sum())
         return result
     else:
         return rifft.real
+
+
+import pytest
+def test_3d(debug=False):
+    img = np.zeros([32,32,32])
+    img[15,15,15]=1
+    img[15,0,15]=1
+    kern = np.zeros([32,32,32])
+    kern[14:19,14:19,14:19] = 1
+
+    for psf_pad in (True,False):
+        conv1 = convolvend(img, kern, psf_pad=psf_pad, debug=debug)
+        conv2 = convolvend(img, kern, psf_pad=psf_pad, use_numpy_fft=True, debug=debug)
+        conv4 = convolvend(img, kern, psf_pad=psf_pad, use_numpy_fft=True, force_ignore_zeros_off=True, debug=debug)
+        conv3 = convolvend(img, kern, psf_pad=psf_pad, force_ignore_zeros_off=True, debug=debug)
+
+        print "psf_pad=%s" % psf_pad
+        print "FFTW, ignore_zeros: %g,%g" % (conv1[15,0,15],conv1[15,15,15])
+        print "numpy, ignore_zeros: %g,%g" % (conv2[15,0,15],conv2[15,15,15])
+        print "FFTW, no ignore_zeros: %g,%g" % (conv3[15,0,15],conv3[15,15,15])
+        print "numpy, no ignore_zeros: %g,%g" % (conv4[15,0,15],conv4[15,15,15])
+
+        
