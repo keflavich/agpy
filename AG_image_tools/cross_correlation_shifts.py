@@ -127,3 +127,34 @@ def second_derivative(image):
     dxy=0.25*(shift_up_right+shift_down_left-shift_up_left-shift_down_right)
 
     return dxx,dyy,dxy
+
+try:
+    import pytest
+    import itertools
+    from scipy import interpolate
+
+    shifts = [1,1.5,-1.25,8.2,10.1]
+    sizes = [99,100,101]
+
+    @pytest.mark.parametrize(('xsh','ysh','imsize'),list(itertools.product(shifts,shifts,sizes)))
+    def test_shifts(xsh,ysh,imsize):
+        width = 3.0
+        amp = 1000.0
+        noiseamp = 1.0
+        image = np.random.randn(imsize,imsize) * noiseamp
+        Y, X = np.indices([imsize, imsize])
+        X -= 50
+        Y -= 50
+        new_r = np.sqrt(X*X+Y*Y)
+        image += amp*np.exp(-(new_r)**2/(2.*width**2))
+
+        tolerance = 3. * 1./np.sqrt(2*np.pi*width**2*amp/noiseamp)
+
+        new_image = np.random.randn(imsize,imsize)*noiseamp + amp*np.exp(-((X-xsh)**2+(Y-ysh)**2)/(2.*width**2))
+        xoff,yoff = cross_correlation_shifts(image,new_image)
+        print xoff,yoff,np.abs(xoff-xsh),np.abs(yoff-ysh) 
+        assert np.abs(xoff-xsh) < tolerance
+        assert np.abs(yoff-ysh) < tolerance
+
+except ImportError:
+    pass
