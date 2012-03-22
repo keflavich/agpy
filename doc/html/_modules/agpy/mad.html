@@ -26,27 +26,18 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
-    <link rel="up" title="agpy" href="../agpy.html" />
-     
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
-      _gaq.push(['_setAllowHash', false]);
-      _gaq.push(['_trackPageview']);
-
-
-    </script>
+    <link rel="up" title="agpy" href="../agpy.html" /> 
   </head>
   <body>
     <div class="header-wrapper">
       <div class="header">
-        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="headertitle"><a
+          href="../../index.html">agpy 0.1 documentation</a></div>
         <div class="rel">
-          <a href="http://agpy.googlecode.com">agpy Home </a>  |
-          <a href=../../index.html>Docs Home </a>  |
-          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
-          <a href=../../search.html>Search </a>
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a>
         </div>
        </div>
     </div>
@@ -60,11 +51,11 @@
           <div class="body">
             
   <h1>Source code for agpy.mad</h1><div class="highlight"><pre>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">N</span>
+<span class="kn">import</span> <span class="nn">numpy.ma</span> <span class="kn">as</span> <span class="nn">ma</span>
 <span class="c">#from scipy.stats import norm, median</span>
 <span class="c">#from scipy.stats.stats import nanmedian,_nanmedian</span>
  	
-<div class="viewcode-block" id="MAD"><a class="viewcode-back" href="../../agpy.html#agpy.mad.MAD">[docs]</a><span class="k">def</span> <span class="nf">MAD</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">0.6745</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="MAD"><a class="viewcode-back" href="../../agpy.html#agpy.mad.MAD">[docs]</a><span class="k">def</span> <span class="nf">MAD</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="mf">0.6745</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Median Absolute Deviation along given axis of an array:</span>
 
@@ -75,27 +66,26 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">good</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="o">==</span><span class="n">a</span><span class="p">)</span>
-    <span class="n">a</span> <span class="o">=</span> <span class="n">N</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">N</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">masked_where</span><span class="p">(</span><span class="n">a</span><span class="o">!=</span><span class="n">a</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">d</span> <span class="o">=</span> <span class="n">N</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">good</span><span class="p">])</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="n">N</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">N</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">good</span><span class="p">]</span> <span class="o">-</span> <span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">ma</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">d</span> <span class="o">=</span> <span class="n">N</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">good</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
         <span class="c"># I don&#39;t want the array to change so I have to copy it?</span>
         <span class="k">if</span> <span class="n">axis</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">aswp</span> <span class="o">=</span> <span class="n">swapaxes</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">good</span><span class="p">],</span><span class="mi">0</span><span class="p">,</span><span class="n">axis</span><span class="p">)</span>
+            <span class="n">aswp</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">axis</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">aswp</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">good</span><span class="p">]</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="n">N</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">N</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">aswp</span> <span class="o">-</span> <span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="n">c</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">aswp</span> <span class="o">=</span> <span class="n">a</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">ma</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">ma</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">aswp</span> <span class="o">-</span> <span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="n">c</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">m</span>
 </div>
-<div class="viewcode-block" id="nanmedian"><a class="viewcode-back" href="../../agpy.html#agpy.mad.nanmedian">[docs]</a><span class="k">def</span> <span class="nf">nanmedian</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+<div class="viewcode-block" id="nanmedian"><a class="viewcode-back" href="../../agpy.html#agpy.mad.nanmedian">[docs]</a><span class="k">def</span> <span class="nf">nanmedian</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns median ignoring NAN</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">N</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="n">arr</span><span class="o">==</span><span class="n">arr</span><span class="p">])</span></div>
+    <span class="k">return</span> <span class="n">ma</span><span class="o">.</span><span class="n">median</span><span class="p">(</span> <span class="n">ma</span><span class="o">.</span><span class="n">masked_where</span><span class="p">(</span><span class="n">arr</span><span class="o">!=</span><span class="n">arr</span><span class="p">,</span> <span class="n">arr</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span> <span class="p">)</span></div>
 </pre></div>
 
           </div>
@@ -126,23 +116,25 @@
       </div>
     </div>
 
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
     <div class="footer">
-      &copy; Copyright 2011, Adam Ginsburg.
+        &copy; Copyright 2011, Adam Ginsburg.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-6253248-2']);
-      _gaq.push(['_trackPageview']);
-
-      (function() {
-        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-      })();
-
-    </script>
-        
     </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
   </body>
 </html>

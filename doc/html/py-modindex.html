@@ -26,29 +26,20 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="agpy 0.1 documentation" href="index.html" />
-
-     
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
-      _gaq.push(['_setAllowHash', false]);
-      _gaq.push(['_trackPageview']);
-
-
-    </script>
+ 
 
 
   </head>
   <body>
     <div class="header-wrapper">
       <div class="header">
-        <h1><a href="index.html">agpy 0.1 documentation</a></h1>
+        <div class="headertitle"><a
+          href="index.html">agpy 0.1 documentation</a></div>
         <div class="rel">
-          <a href="http://agpy.googlecode.com">agpy Home </a>  |
-          <a href=index.html>Docs Home </a>  |
-          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
-          <a href=search.html>Search </a>
+          <a href="#" title="Python Module Index"
+             >modules</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
         </div>
        </div>
     </div>
@@ -83,7 +74,7 @@
      <tr class="cg-1">
        <td></td>
        <td>&nbsp;&nbsp;&nbsp;
-       <a href="fft_tools.html#module-AG_fft_tools.convolve"><tt class="xref">AG_fft_tools.convolve</tt></a></td><td>
+       <a href="fft_tools.html#module-AG_fft_tools.convolve_nd"><tt class="xref">AG_fft_tools.convolve_nd</tt></a></td><td>
        <em></em></td></tr>
      <tr class="cg-1">
        <td></td>
@@ -94,6 +85,11 @@
        <td></td>
        <td>&nbsp;&nbsp;&nbsp;
        <a href="fft_tools.html#module-AG_fft_tools.psds"><tt class="xref">AG_fft_tools.psds</tt></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&nbsp;&nbsp;&nbsp;
+       <a href="fft_tools.html#module-AG_fft_tools.smooth_tools"><tt class="xref">AG_fft_tools.smooth_tools</tt></a></td><td>
        <em></em></td></tr>
      <tr>
        <td><img src="_static/minus.png" class="toggler"
@@ -160,11 +156,6 @@
      <tr class="cg-3">
        <td></td>
        <td>&nbsp;&nbsp;&nbsp;
-       <a href="agpy.html#module-agpy.downsample"><tt class="xref">agpy.downsample</tt></a></td><td>
-       <em></em></td></tr>
-     <tr class="cg-3">
-       <td></td>
-       <td>&nbsp;&nbsp;&nbsp;
        <a href="agpy.html#module-agpy.ds9_phot"><tt class="xref">agpy.ds9_phot</tt></a></td><td>
        <em></em></td></tr>
      <tr class="cg-3">
@@ -175,7 +166,7 @@
      <tr class="cg-3">
        <td></td>
        <td>&nbsp;&nbsp;&nbsp;
-       <a href="agpy.html#module-agpy.gaussfitter"><tt class="xref">agpy.gaussfitter</tt></a></td><td>
+       <a href="gaussfit.html#module-agpy.gaussfitter"><tt class="xref">agpy.gaussfitter</tt></a></td><td>
        <em></em></td></tr>
      <tr class="cg-3">
        <td></td>
@@ -186,6 +177,11 @@
        <td></td>
        <td>&nbsp;&nbsp;&nbsp;
        <a href="agpy.html#module-agpy.grep"><tt class="xref">agpy.grep</tt></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&nbsp;&nbsp;&nbsp;
+       <a href="agpy.html#module-agpy.h2fit"><tt class="xref">agpy.h2fit</tt></a></td><td>
        <em></em></td></tr>
      <tr class="cg-3">
        <td></td>
@@ -307,6 +303,11 @@
        <td>&nbsp;&nbsp;&nbsp;
        <a href="agpy.html#module-agpy.timer"><tt class="xref">agpy.timer</tt></a></td><td>
        <em></em></td></tr>
+     <tr class="cg-3">
+       <td></td>
+       <td>&nbsp;&nbsp;&nbsp;
+       <a href="uchii.html#module-agpy.UCHIIfitter"><tt class="xref">agpy.UCHIIfitter</tt></a></td><td>
+       <em></em></td></tr>
      <tr class="pcap"><td></td><td>&nbsp;</td><td></td></tr>
      <tr class="cap" id="cap-c"><td></td><td>
        <strong>c</strong></td><td></td></tr>
@@ -386,23 +387,25 @@
       </div>
     </div>
 
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="#" title="Python Module Index"
+             >modules</a> |
+          <a href="genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
     <div class="footer">
-      &copy; Copyright 2011, Adam Ginsburg.
+        &copy; Copyright 2011, Adam Ginsburg.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-6253248-2']);
-      _gaq.push(['_trackPageview']);
-
-      (function() {
-        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-      })();
-
-    </script>
-        
     </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
   </body>
 </html>

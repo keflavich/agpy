@@ -26,27 +26,18 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
-    <link rel="up" title="agpy" href="../agpy.html" />
-     
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
-      _gaq.push(['_setAllowHash', false]);
-      _gaq.push(['_trackPageview']);
-
-
-    </script>
+    <link rel="up" title="agpy" href="../agpy.html" /> 
   </head>
   <body>
     <div class="header-wrapper">
       <div class="header">
-        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="headertitle"><a
+          href="../../index.html">agpy 0.1 documentation</a></div>
         <div class="rel">
-          <a href="http://agpy.googlecode.com">agpy Home </a>  |
-          <a href=../../index.html>Docs Home </a>  |
-          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
-          <a href=../../search.html>Search </a>
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a>
         </div>
        </div>
     </div>
@@ -222,28 +213,69 @@
         <span class="k">return</span> <span class="n">arrconv</span>
 </div>
 <div class="viewcode-block" id="pca_subtract"><a class="viewcode-back" href="../../agpy.html#agpy.PCA_tools.pca_subtract">[docs]</a><span class="k">def</span> <span class="nf">pca_subtract</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">ncomps</span><span class="p">):</span>
-  <span class="k">try</span><span class="p">:</span>
-      <span class="n">arr</span><span class="p">[</span><span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-      <span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
-  <span class="k">except</span><span class="p">:</span>
-      <span class="k">pass</span>
-  <span class="n">covmat</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span>
-  <span class="n">evals</span><span class="p">,</span><span class="n">evects</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">covmat</span><span class="p">)</span>
-  <span class="n">efuncarr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
-  <span class="n">efuncarr</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="n">ncomps</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-  <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">efuncarr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the eigenfunctions and values of correlated data, then subtract off</span>
+<span class="sd">    the *ncomps* most correlated components, transform back to the original</span>
+<span class="sd">    space, and return that.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">arr</span><span class="p">[</span><span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="n">covmat</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span>
+    <span class="n">evals</span><span class="p">,</span><span class="n">evects</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">covmat</span><span class="p">)</span>
+    <span class="n">efuncarr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
+    <span class="n">efuncarr</span><span class="p">[:,</span><span class="mi">0</span><span class="p">:</span><span class="n">ncomps</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">efuncarr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="unpca_subtract"><a class="viewcode-back" href="../../agpy.html#agpy.PCA_tools.unpca_subtract">[docs]</a><span class="k">def</span> <span class="nf">unpca_subtract</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">ncomps</span><span class="p">):</span>
-  <span class="k">try</span><span class="p">:</span>
-      <span class="n">arr</span><span class="p">[</span><span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-      <span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
-  <span class="k">except</span><span class="p">:</span>
-      <span class="k">pass</span>
-  <span class="n">covmat</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span>
-  <span class="n">evals</span><span class="p">,</span><span class="n">evects</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">covmat</span><span class="p">)</span>
-  <span class="n">efuncarr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
-  <span class="n">efuncarr</span><span class="p">[:,</span><span class="n">ncomps</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
-  <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">efuncarr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Like pca_subtract, except `keep` the *ncomps* most correlated components</span>
+<span class="sd">    and reject the others</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">arr</span><span class="p">[</span><span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">arr</span><span class="o">.</span><span class="n">mask</span><span class="p">[:]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="n">covmat</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">arr</span><span class="p">)</span>
+    <span class="n">evals</span><span class="p">,</span><span class="n">evects</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">covmat</span><span class="p">)</span>
+    <span class="n">efuncarr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
+    <span class="n">efuncarr</span><span class="p">[:,</span><span class="n">ncomps</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inner</span><span class="p">(</span><span class="n">efuncarr</span><span class="p">,</span><span class="n">evects</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="pymc_linear_fit"><a class="viewcode-back" href="../../agpy.html#agpy.PCA_tools.pymc_linear_fit">[docs]</a><span class="k">def</span> <span class="nf">pymc_linear_fit</span><span class="p">(</span><span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">,</span> <span class="n">print_results</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">intercept</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">pymc</span>
+
+    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">data1</span><span class="p">,</span><span class="n">slope</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span><span class="n">intercept</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">*</span><span class="n">slope</span><span class="o">+</span><span class="n">intercept</span>
+
+    <span class="n">d</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;slope&#39;</span><span class="p">:</span><span class="n">pymc</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Uninformative</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;slope&#39;</span><span class="p">,</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+       <span class="s">&#39;intercept&#39;</span><span class="p">:</span><span class="n">pymc</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Uninformative</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;intercept&#39;</span><span class="p">,</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+       <span class="p">}</span>
+
+    <span class="n">funcdet</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">Deterministic</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;f&#39;</span><span class="p">,</span><span class="nb">eval</span><span class="o">=</span><span class="n">f</span><span class="p">,</span><span class="n">parents</span><span class="o">=</span><span class="n">d</span><span class="p">,</span><span class="n">doc</span><span class="o">=</span><span class="s">&quot;FunctionModel1D function&quot;</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="s">&#39;f&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">funcdet</span>
+
+    <span class="n">datamodel</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="s">&#39;y&#39;</span><span class="p">,</span><span class="n">mu</span><span class="o">=</span><span class="n">funcdet</span><span class="p">,</span><span class="n">observed</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">value</span><span class="o">=</span><span class="n">data2</span><span class="p">,</span><span class="n">tau</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="s">&#39;y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datamodel</span>
+    
+    <span class="n">MC</span> <span class="o">=</span> <span class="n">pymc</span><span class="o">.</span><span class="n">MCMC</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+    <span class="n">MC</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span><span class="n">burn</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span><span class="n">thin</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+    <span class="n">MCs</span> <span class="o">=</span> <span class="n">MC</span><span class="o">.</span><span class="n">stats</span><span class="p">()</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">MCs</span><span class="p">[</span><span class="s">&#39;slope&#39;</span><span class="p">][</span><span class="s">&#39;mean&#39;</span><span class="p">],</span><span class="n">MCs</span><span class="p">[</span><span class="s">&#39;intercept&#39;</span><span class="p">][</span><span class="s">&#39;mean&#39;</span><span class="p">]</span>
+    <span class="n">em</span><span class="p">,</span><span class="n">eb</span> <span class="o">=</span> <span class="n">MCs</span><span class="p">[</span><span class="s">&#39;slope&#39;</span><span class="p">][</span><span class="s">&#39;standard deviation&#39;</span><span class="p">],</span><span class="n">MCs</span><span class="p">[</span><span class="s">&#39;intercept&#39;</span><span class="p">][</span><span class="s">&#39;standard deviation&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">print_results</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;MCMC Best fit y = </span><span class="si">%g</span><span class="s"> x + </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">b</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;m = </span><span class="si">%g</span><span class="s"> +/- </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">em</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;b = </span><span class="si">%g</span><span class="s"> +/- </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">b</span><span class="p">,</span><span class="n">eb</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Chi^2 = </span><span class="si">%g</span><span class="s">, N = </span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(((</span><span class="n">data2</span><span class="o">-</span><span class="p">(</span><span class="n">data1</span><span class="o">*</span><span class="n">m</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span><span class="n">data1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">m</span><span class="p">,</span><span class="n">b</span>
+        
 </div>
 <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
 
@@ -251,30 +283,36 @@
 
     <span class="n">xvals</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span>
     <span class="n">yvals</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span>
-    <span class="k">print</span> <span class="s">&quot;First test: m=1, b=0.  Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">First test: m=1, b=0.  Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">PCA_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">total_least_squares</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">pymc_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    <span class="k">print</span> <span class="s">&quot;Second test: m=-1, b=0. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Second test: m=-1, b=0. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">PCA_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">total_least_squares</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">pymc_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">*-</span><span class="mi">1</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    <span class="k">print</span> <span class="s">&quot;Third test: m=1, b=1. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Third test: m=1, b=1. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">PCA_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">total_least_squares</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">pymc_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    <span class="k">print</span> <span class="s">&quot;Fourth test: m~1, b~0. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Fourth test: m~1, b~0. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">PCA_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">total_least_squares</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">pymc_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-    <span class="k">print</span> <span class="s">&quot;Fourth test: m~~1, b~~0. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">*</span><span class="mi">50</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Fourth test: m~~1, b~~0. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">*</span><span class="mi">50</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">PCA_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">*</span><span class="mi">50</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">total_least_squares</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">*</span><span class="mi">50</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">pymc_linear_fit</span><span class="p">(</span><span class="n">xvals</span><span class="p">,</span><span class="n">yvals</span><span class="o">+</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">*</span><span class="mi">50</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
     <span class="n">xr</span><span class="p">,</span><span class="n">yr</span> <span class="o">=</span> <span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="n">random</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-    <span class="k">print</span> <span class="s">&quot;Fifth test: no linear fit. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xr</span><span class="p">,</span><span class="n">yr</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Fifth test: no linear fit. Polyfit: &quot;</span><span class="p">,</span><span class="n">polyfit</span><span class="p">(</span><span class="n">xr</span><span class="p">,</span><span class="n">yr</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">PCA_linear_fit</span><span class="p">(</span><span class="n">xr</span><span class="p">,</span><span class="n">yr</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">total_least_squares</span><span class="p">(</span><span class="n">xr</span><span class="p">,</span><span class="n">yr</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">,</span><span class="n">b</span> <span class="o">=</span> <span class="n">pymc_linear_fit</span><span class="p">(</span><span class="n">xr</span><span class="p">,</span><span class="n">yr</span><span class="p">,</span><span class="n">print_results</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 
           </div>
@@ -305,23 +343,25 @@
       </div>
     </div>
 
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
     <div class="footer">
-      &copy; Copyright 2011, Adam Ginsburg.
+        &copy; Copyright 2011, Adam Ginsburg.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-6253248-2']);
-      _gaq.push(['_trackPageview']);
-
-      (function() {
-        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-      })();
-
-    </script>
-        
     </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
   </body>
 </html>

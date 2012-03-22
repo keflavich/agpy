@@ -26,27 +26,18 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="top" title="agpy 0.1 documentation" href="../../index.html" />
-    <link rel="up" title="agpy" href="../agpy.html" />
-     
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
-      _gaq.push(['_setAllowHash', false]);
-      _gaq.push(['_trackPageview']);
-
-
-    </script>
+    <link rel="up" title="agpy" href="../agpy.html" /> 
   </head>
   <body>
     <div class="header-wrapper">
       <div class="header">
-        <h1><a href="../../index.html">agpy 0.1 documentation</a></h1>
+        <div class="headertitle"><a
+          href="../../index.html">agpy 0.1 documentation</a></div>
         <div class="rel">
-          <a href="http://agpy.googlecode.com">agpy Home </a>  |
-          <a href=../../index.html>Docs Home </a>  |
-          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
-          <a href=../../search.html>Search </a>
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a>
         </div>
        </div>
     </div>
@@ -73,7 +64,7 @@
 <span class="kn">from</span> <span class="nn">numpy.ma</span> <span class="kn">import</span> <span class="n">median</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">pi</span>
 <span class="c">#from scipy import optimize,stats,pi</span>
-<span class="kn">from</span> <span class="nn">mpfit</span> <span class="kn">import</span> <span class="n">mpfit</span>
+<span class="kn">from</span> <span class="nn">agpy.mpfit</span> <span class="kn">import</span> <span class="n">mpfit</span>
 <span class="sd">&quot;&quot;&quot; </span>
 <span class="sd">Note about mpfit/leastsq: </span>
 <span class="sd">I switched everything over to the Markwardt mpfit routine for a few reasons,</span>
@@ -88,7 +79,7 @@
 <span class="sd">    -implement WCS-based gaussian fitting with correct coordinates</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="moments"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.moments">[docs]</a><span class="k">def</span> <span class="nf">moments</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">,</span><span class="n">estimator</span><span class="o">=</span><span class="n">median</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="moments"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.moments">[docs]</a><span class="k">def</span> <span class="nf">moments</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">circle</span><span class="p">,</span><span class="n">rotate</span><span class="p">,</span><span class="n">vheight</span><span class="p">,</span><span class="n">estimator</span><span class="o">=</span><span class="n">median</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns (height, amplitude, x, y, width_x, width_y, rotation angle)</span>
 <span class="sd">    the gaussian parameters of a 2D distribution by calculating its</span>
 <span class="sd">    moments.  Depending on the input parameters, will only output </span>
@@ -122,7 +113,7 @@
         <span class="n">mylist</span> <span class="o">=</span> <span class="n">mylist</span> <span class="o">+</span> <span class="p">[</span><span class="n">width</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">mylist</span>
 </div>
-<div class="viewcode-block" id="twodgaussian"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.twodgaussian">[docs]</a><span class="k">def</span> <span class="nf">twodgaussian</span><span class="p">(</span><span class="n">inpars</span><span class="p">,</span> <span class="n">circle</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">rotate</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">vheight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="twodgaussian"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.twodgaussian">[docs]</a><span class="k">def</span> <span class="nf">twodgaussian</span><span class="p">(</span><span class="n">inpars</span><span class="p">,</span> <span class="n">circle</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">rotate</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">vheight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns a 2d gaussian function of the form:</span>
 <span class="sd">        x&#39; = numpy.cos(rota) * x - numpy.sin(rota) * y</span>
 <span class="sd">        y&#39; = numpy.sin(rota) * x + numpy.cos(rota) * y</span>
@@ -201,7 +192,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">rotgauss</span>
 </div>
-<div class="viewcode-block" id="gaussfit"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.gaussfit">[docs]</a><span class="k">def</span> <span class="nf">gaussfit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">params</span><span class="o">=</span><span class="p">(),</span><span class="n">autoderiv</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">return_all</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">circle</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+<div class="viewcode-block" id="gaussfit"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.gaussfit">[docs]</a><span class="k">def</span> <span class="nf">gaussfit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">params</span><span class="o">=</span><span class="p">(),</span><span class="n">autoderiv</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">return_all</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="n">circle</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
         <span class="n">fixed</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="bp">False</span><span class="p">,</span><span class="mi">7</span><span class="p">),</span><span class="n">limitedmin</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">,</span><span class="bp">True</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
         <span class="n">limitedmax</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
         <span class="n">usemoment</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span><span class="n">dtype</span><span class="o">=</span><span class="s">&#39;bool&#39;</span><span class="p">),</span>
@@ -316,7 +307,7 @@
         <span class="n">returns</span> <span class="o">=</span> <span class="p">(</span><span class="n">returns</span><span class="p">,</span><span class="n">fitimage</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">returns</span>
 </div>
-<div class="viewcode-block" id="onedmoments"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.onedmoments">[docs]</a><span class="k">def</span> <span class="nf">onedmoments</span><span class="p">(</span><span class="n">Xax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">vheight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">estimator</span><span class="o">=</span><span class="n">median</span><span class="p">,</span><span class="n">negamp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+<div class="viewcode-block" id="onedmoments"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.onedmoments">[docs]</a><span class="k">def</span> <span class="nf">onedmoments</span><span class="p">(</span><span class="n">Xax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">vheight</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span><span class="n">estimator</span><span class="o">=</span><span class="n">median</span><span class="p">,</span><span class="n">negamp</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
         <span class="n">veryverbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns (height, amplitude, x, width_x)</span>
 <span class="sd">    the gaussian parameters of a 1D distribution by calculating its</span>
@@ -366,14 +357,14 @@
         <span class="n">mylist</span> <span class="o">=</span> <span class="p">[</span><span class="n">height</span><span class="p">]</span> <span class="o">+</span> <span class="n">mylist</span>
     <span class="k">return</span> <span class="n">mylist</span>
 </div>
-<div class="viewcode-block" id="onedgaussian"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.onedgaussian">[docs]</a><span class="k">def</span> <span class="nf">onedgaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">H</span><span class="p">,</span><span class="n">A</span><span class="p">,</span><span class="n">dx</span><span class="p">,</span><span class="n">w</span><span class="p">):</span>
+<div class="viewcode-block" id="onedgaussian"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.onedgaussian">[docs]</a><span class="k">def</span> <span class="nf">onedgaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">H</span><span class="p">,</span><span class="n">A</span><span class="p">,</span><span class="n">dx</span><span class="p">,</span><span class="n">w</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns a 1-dimensional gaussian of form</span>
 <span class="sd">    H+A*numpy.exp(-(x-dx)**2/(2*w**2))</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">H</span><span class="o">+</span><span class="n">A</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">dx</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">w</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
 </div>
-<div class="viewcode-block" id="onedgaussfit"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.onedgaussfit">[docs]</a><span class="k">def</span> <span class="nf">onedgaussfit</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+<div class="viewcode-block" id="onedgaussfit"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.onedgaussfit">[docs]</a><span class="k">def</span> <span class="nf">onedgaussfit</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
         <span class="n">params</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="n">fixed</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span>
         <span class="n">limitedmin</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
         <span class="n">limitedmax</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span> <span class="n">minpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
@@ -443,7 +434,7 @@
     <span class="k">return</span> <span class="n">mpp</span><span class="p">,</span><span class="n">onedgaussian</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span><span class="o">*</span><span class="n">mpp</span><span class="p">),</span><span class="n">mpperr</span><span class="p">,</span><span class="n">chi2</span>
 
 </div>
-<div class="viewcode-block" id="n_gaussian"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.n_gaussian">[docs]</a><span class="k">def</span> <span class="nf">n_gaussian</span><span class="p">(</span><span class="n">pars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">a</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">sigma</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="n_gaussian"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.n_gaussian">[docs]</a><span class="k">def</span> <span class="nf">n_gaussian</span><span class="p">(</span><span class="n">pars</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">a</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">sigma</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Returns a function that sums over N gaussians, where N is the length of</span>
 <span class="sd">    a,dx,sigma *OR* N = len(pars) / 3</span>
@@ -470,7 +461,7 @@
         <span class="k">return</span> <span class="n">v</span>
     <span class="k">return</span> <span class="n">g</span>
 </div>
-<div class="viewcode-block" id="multigaussfit"><a class="viewcode-back" href="../../agpy.html#agpy.gaussfitter.multigaussfit">[docs]</a><span class="k">def</span> <span class="nf">multigaussfit</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">ngauss</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+<div class="viewcode-block" id="multigaussfit"><a class="viewcode-back" href="../../gaussfit.html#agpy.gaussfitter.multigaussfit">[docs]</a><span class="k">def</span> <span class="nf">multigaussfit</span><span class="p">(</span><span class="n">xax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">ngauss</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
         <span class="n">fixed</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span> <span class="n">limitedmin</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">],</span>
         <span class="n">limitedmax</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">False</span><span class="p">],</span> <span class="n">minpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">maxpars</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
         <span class="n">quiet</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">shh</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">veryverbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
@@ -639,23 +630,25 @@
       </div>
     </div>
 
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="../../genindex.html" title="General Index"
+             >index</a>
+        </div>
+
+        <div class="right">
+          
     <div class="footer">
-      &copy; Copyright 2011, Adam Ginsburg.
+        &copy; Copyright 2011, Adam Ginsburg.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-6253248-2']);
-      _gaq.push(['_trackPageview']);
-
-      (function() {
-        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-      })();
-
-    </script>
-        
     </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
   </body>
 </html>

@@ -27,27 +27,22 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="agpy 0.1 documentation" href="index.html" />
     <link rel="next" title="plfit Package" href="plfit.html" />
-    <link rel="prev" title="Image Tools" href="image_tools.html" />
-     
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
-      _gaq.push(['_setAllowHash', false]);
-      _gaq.push(['_trackPageview']);
-
-
-    </script>
+    <link rel="prev" title="Image Tools" href="image_tools.html" /> 
   </head>
   <body>
     <div class="header-wrapper">
       <div class="header">
-        <h1><a href="index.html">agpy 0.1 documentation</a></h1>
+        <div class="headertitle"><a
+          href="index.html">agpy 0.1 documentation</a></div>
         <div class="rel">
-          <a href="http://agpy.googlecode.com">agpy Home </a>  |
-          <a href=index.html>Docs Home </a>  |
-          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
-          <a href=search.html>Search </a>
+          <a href="image_tools.html" title="Image Tools"
+             accesskey="P">previous</a> |
+          <a href="plfit.html" title="plfit Package"
+             accesskey="N">next</a> |
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
         </div>
        </div>
     </div>
@@ -71,97 +66,96 @@ general, smoothing with a set of &#8216;standard&#8217; kernels, and computing p
 spectra and PSDs.</p>
 </div>
 </div>
-<div class="section" id="module-AG_fft_tools.convolve">
-<span id="convolve-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">convolve</span></tt> Module<a class="headerlink" href="#module-AG_fft_tools.convolve" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-AG_fft_tools.convolve_nd">
+<span id="convolve-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">convolve</span></tt> Module<a class="headerlink" href="#module-AG_fft_tools.convolve_nd" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
-<dt id="AG_fft_tools.convolve.convolve">
-<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">convolve</tt><big>(</big><em>img</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x102671050&gt;</em>, <em>debug=False</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#convolve"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.convolve" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convolve an image with a kernel.  Returns something the size of an image.
-Assumes image &amp; kernel are centered</p>
-<p><em>NOTE</em> Order matters; the kernel should be second.</p>
-<p>Options:
-fft_pad - Default on.  Zero-pad image to the nearest 2^n
-psf_pad - Default off.  Zero-pad image to be at least the sum of the image</p>
-<blockquote>
-<div>sizes (in order to avoid edge-wrapping when smoothing)</div></blockquote>
+<dt id="AG_fft_tools.convolve_nd.convolvend">
+<tt class="descclassname">AG_fft_tools.convolve_nd.</tt><tt class="descname">convolvend</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x106daa938&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve_nd.html#convolvend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve_nd.convolvend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convolve an image with a kernel.  Returns a convolved image with shape =
+array.shape.  Assumes image &amp; kernel are centered.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Order matters; the kernel should be second.</p>
+</div>
 <dl class="docutils">
-<dt>crop - Default on.  Return an image of the size of the largest input image.</dt>
-<dd>If the images are asymmetric in opposite directions, will return the
-largest image in both directions.</dd>
-<dt>return_fft - Return the FFT instead of the convolution.  Useful for making</dt>
-<dd>PSDs.</dd>
-<dt>fftshift - If return_fft on, will shift &amp; crop image to appropriate</dt>
-<dd>dimensions</dd>
-<dt>ignore_nan - attempts to re-weight assuming NAN values are meant to be</dt>
-<dd>ignored, not treated as zero.</dd>
-<dt>ignore_zeros - Ignore the zero-pad-created zeros.  Desirable if you have</dt>
-<dd>periodic boundaries on a non-2^n grid</dd>
-<dt>force_ignore_zeros_off - You can choose to turn off the ignore-zeros when padding,</dt>
-<dd>but this is only recommended for purely debug purposes</dd>
-<dt>min_wt - If ignoring nans/zeros, force all grid points with a weight less</dt>
-<dd>than this value to NAN (the weight of a grid point with <em>no</em> ignored
-neighbors is 1.0)</dd>
+<dt><em>array</em> <span class="classifier-delimiter">:</span> <span class="classifier">np.ndarray</span></dt>
+<dd>Array to be convolved with <em>kernel</em></dd>
+<dt><em>kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">np.ndarray</span></dt>
+<dd>Will be normalized if <em>normalize_kernel</em> is set.  Assumed to be
+centered (i.e., shifts may result if your kernel is asymmetric)</dd>
 </dl>
-<p>normalize_kernel - if specified, function to divide kernel by to normalize it</p>
 <dl class="docutils">
-<dt>nthreads - if fftw3 is installed, can specify the number of threads to</dt>
-<dd>allow FFTs to use.  Probably only helpful for large arrays</dd>
+<dt><em>fft_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Default on.  Zero-pad image to the nearest 2^n</dd>
+<dt><em>psf_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Default off.  Zero-pad image to be at least the sum of the image sizes
+(in order to avoid edge-wrapping when smoothing)</dd>
+<dt><em>crop</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Default on.  Return an image of the size of the largest input image.
+If the images are asymmetric in opposite directions, will return the
+largest image in both directions.
+For example, if an input image has shape [100,3] but a kernel with shape
+[6,6] is used, the output will be [100,6].</dd>
+<dt><em>return_fft</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Return the fft(image)*fft(kernel) instead of the convolution (which is
+ifft(fft(image)*fft(kernel))).  Useful for making PSDs.</dd>
+<dt><em>fftshift</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>If return_fft on, will shift &amp; crop image to appropriate dimensions</dd>
+<dt><em>ignore_nan</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>attempts to re-weight assuming NAN values are meant to be ignored, not
+treated as zero.  If this is off, all NaN values will be treated as
+zero.</dd>
+<dt><em>ignore_edge_zeros</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Ignore the zero-pad-created zeros.  This will effectively decrease
+the kernel area on the edges but will not re-normalize the kernel.
+This is on by default but I&#8217;m not entirely sure it should be...</dd>
+<dt><em>force_ignore_zeros_off</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>You can choose to turn off the ignore-zeros when padding; this may be
+desirable if you want to think of the region outside of your image as
+all zeros</dd>
+<dt><em>min_wt</em> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd>If ignoring nans/zeros, force all grid points with a weight less than
+this value to NAN (the weight of a grid point with <em>no</em> ignored
+neighbors is 1.0).</dd>
+<dt><em>normalize_kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
+<dd>if specified, function to divide kernel by to normalize it.  e.g.,
+normalize_kernel=np.sum means that kernel will be modified to be:
+kernel = kernel / np.sum(kernel)</dd>
+<dt><em>nthreads</em> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd>if fftw3 is installed, can specify the number of threads to allow FFTs
+to use.  Probably only helpful for large arrays</dd>
+<dt><em>use_numpy_fft</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>Force the code to use the numpy FFTs instead of FFTW even if FFTW is
+installed</dd>
 </dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="AG_fft_tools.convolve.fftw2">
-<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">fftw2</tt><big>(</big><em>array</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#fftw2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.fftw2" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="AG_fft_tools.convolve.ifftw2">
-<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">ifftw2</tt><big>(</big><em>array</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#ifftw2"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.ifftw2" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="AG_fft_tools.convolve.smooth">
-<tt class="descclassname">AG_fft_tools.convolve.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x102671050&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve.html#smooth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve.smooth" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a smoothed image using a gaussian, boxcar, or tophat kernel</p>
-<p>Options: 
-kernelwidth - width of kernel in pixels  (see definitions below)
-kerneltype - gaussian, boxcar, or tophat.</p>
+<p><em>default</em> : <em>array</em> convolved with <em>kernel</em>
+if <em>return_fft</em> : fft(<em>array</em>) * fft(<em>kernel</em>)</p>
 <blockquote>
-<div><dl class="docutils">
-<dt>For a gaussian, uses a gaussian with sigma = kernelwidth (in pixels)</dt>
-<dd>out to [nwidths]-sigma</dd>
-</dl>
-<p>A boxcar is a kernelwidth x kernelwidth square 
-A tophat is a flat circle with radius = kernelwidth</p>
+<div><ul class="simple">
+<li>if <em>fftshift</em> : Determines whether the fft will be shifted before
+returning</li>
+</ul>
 </div></blockquote>
 <dl class="docutils">
-<dt>Default options:</dt>
-<dd><dl class="first last docutils">
-<dt>psf_pad = True - will pad the input image to be the image size + PSF.</dt>
-<dd>Slows things down but removes edge-wrapping effects (see convolve)
-This option should be set to false if the edges of your image are
-symmetric.</dd>
-<dt>interp_nan = False - Will replace NaN points in an image with the</dt>
-<dd>smoothed average of its neighbors (you can still simply ignore NaN 
-values by setting ignore_nan=True but leaving interp_nan=False)</dd>
-<dt>silent = True - turn it off to get verbose statements about kernel</dt>
-<dd>types</dd>
-<dt>return_kernel = False - If set to true, will return the kernel as the</dt>
-<dd>second return value</dd>
-<dt>nwidths = &#8216;max&#8217; - number of kernel widths wide to make the kernel.  Set to</dt>
-<dd>&#8216;max&#8217; to match the image shape, otherwise use any integer</dd>
-<dt>min_nwidths = 6 - minimum number of gaussian widths to make the kernel</dt>
-<dd>(the kernel will be larger than the image if the image size is &lt;
-min_widths*kernelsize)</dd>
-<dt>normalize_kernel - Should the kernel preserve the map sum (i.e. kernel.sum() = 1)</dt>
-<dd>or the kernel peak (i.e. kernel.max() = 1) ?  Must be a <em>function</em> that can
-operate on a numpy array</dd>
+<dt>if <em>crop</em> == False <span class="classifier-delimiter">:</span> <span class="classifier">Returns the image, but with the fft-padded size</span></dt>
+<dd>instead of the input size</dd>
 </dl>
-</dd>
-</dl>
-<p>Note that the kernel is forced to be even sized on each axis to assure no
-offset when smoothing.</p>
 </dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.convolve_nd.fftwn">
+<tt class="descclassname">AG_fft_tools.convolve_nd.</tt><tt class="descname">fftwn</tt><big>(</big><em>array</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve_nd.html#fftwn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve_nd.fftwn" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.convolve_nd.ifftwn">
+<tt class="descclassname">AG_fft_tools.convolve_nd.</tt><tt class="descname">ifftwn</tt><big>(</big><em>array</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve_nd.html#ifftwn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve_nd.ifftwn" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="AG_fft_tools.convolve_nd.test_3d">
+<tt class="descclassname">AG_fft_tools.convolve_nd.</tt><tt class="descname">test_3d</tt><big>(</big><em>psf_pad</em>, <em>use_numpy_fft</em>, <em>force_ignore_zeros_off</em>, <em>debug=False</em>, <em>tolerance=1.0000000000000001e-17</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve_nd.html#test_3d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve_nd.test_3d" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </div>
 <div class="section" id="module-AG_fft_tools.correlate2d">
@@ -246,6 +240,106 @@ view - Plot the PSD (in logspace)?</p>
 </dd></dl>
 
 </div>
+<div class="section" id="smooth-tools-module">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">smooth_tools</span></tt> Module<a class="headerlink" href="#smooth-tools-module" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-AG_fft_tools.smooth_tools"></span><dl class="function">
+<dt id="AG_fft_tools.smooth_tools.smooth">
+<tt class="descclassname">AG_fft_tools.smooth_tools.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x106daa938&gt;</em>, <em>downsample=False</em>, <em>downsample_factor=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/smooth_tools.html#smooth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.smooth_tools.smooth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a smoothed image using a gaussian, boxcar, or tophat kernel</p>
+<p>Options: 
+- <em>kernelwidth</em> :</p>
+<blockquote>
+<div>width of kernel in pixels  (see definitions below)</div></blockquote>
+<ul>
+<li><dl class="first docutils">
+<dt><em>kerneltype</em> :</dt>
+<dd><p class="first">gaussian, boxcar, or tophat.  
+For a gaussian, uses a gaussian with sigma = kernelwidth (in pixels)</p>
+<blockquote>
+<div><p>out to [nwidths]-sigma</p>
+</div></blockquote>
+<p class="last">A boxcar is a kernelwidth x kernelwidth square 
+A tophat is a flat circle with radius = kernelwidth</p>
+</dd>
+</dl>
+</li>
+</ul>
+<dl class="docutils">
+<dt>Default options:</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt><em>psf_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">[True]</span></dt>
+<dd><p class="first last">will pad the input image to be the image size + PSF.
+Slows things down but removes edge-wrapping effects (see convolve)
+This option should be set to false if the edges of your image are
+symmetric.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>interp_nan</em> <span class="classifier-delimiter">:</span> <span class="classifier">[False]</span></dt>
+<dd><p class="first last">Will replace NaN points in an image with the
+smoothed average of its neighbors (you can still simply ignore NaN 
+values by setting ignore_nan=True but leaving interp_nan=False)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>silent</em> <span class="classifier-delimiter">:</span> <span class="classifier">[True]</span></dt>
+<dd><p class="first last">turn it off to get verbose statements about kernel types</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>return_kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">[False]</span></dt>
+<dd><p class="first last">If set to true, will return the kernel as the
+second return value</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>nwidths</em> <span class="classifier-delimiter">:</span> <span class="classifier">[&#8216;max&#8217;]</span></dt>
+<dd><p class="first last">number of kernel widths wide to make the kernel.  Set to &#8216;max&#8217; to
+match the image shape, otherwise use any integer</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>min_nwidths</em> <span class="classifier-delimiter">:</span> <span class="classifier">[6]</span></dt>
+<dd><p class="first last">minimum number of gaussian widths to make the kernel
+(the kernel will be larger than the image if the image size is &lt;
+min_widths*kernelsize)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>normalize_kernel</em> :</dt>
+<dd><p class="first last">Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
+or the kernel peak (i.e. kernel.max() = 1) ?  Must be a <em>function</em> that can
+operate on a numpy array</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>downsample</em> :</dt>
+<dd><p class="first last">downsample after smoothing?</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><em>downsample_factor</em> :</dt>
+<dd><p class="first last">if None, default to kernelwidth</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<p>Note that the kernel is forced to be even sized on each axis to assure no
+offset when smoothing.</p>
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -263,9 +357,10 @@ view - Plot the PSD (in logspace)?</p>
 <li class="toctree-l3"><a class="reference internal" href="#fft-tools">FFT Tools</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#module-AG_fft_tools.convolve"><tt class="docutils literal"><span class="pre">convolve</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-AG_fft_tools.convolve_nd"><tt class="docutils literal"><span class="pre">convolve</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-AG_fft_tools.correlate2d"><tt class="docutils literal"><span class="pre">correlate2d</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-AG_fft_tools.psds"><tt class="docutils literal"><span class="pre">psds</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#smooth-tools-module"><tt class="docutils literal"><span class="pre">smooth_tools</span></tt> Module</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="plfit.html">plfit Package</a></li>
@@ -286,23 +381,32 @@ view - Plot the PSD (in logspace)?</p>
       </div>
     </div>
 
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <a href="image_tools.html" title="Image Tools"
+             >previous</a> |
+          <a href="plfit.html" title="plfit Package"
+             >next</a> |
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |
+          <a href="genindex.html" title="General Index"
+             >index</a>
+            <br/>
+            <a href="_sources/fft_tools.txt"
+               rel="nofollow">Show Source</a>
+        </div>
+
+        <div class="right">
+          
     <div class="footer">
-      &copy; Copyright 2011, Adam Ginsburg.
+        &copy; Copyright 2011, Adam Ginsburg.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
-    <script type="text/javascript">
-
-      var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-6253248-2']);
-      _gaq.push(['_trackPageview']);
-
-      (function() {
-        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-      })();
-
-    </script>
-        
     </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
   </body>
 </html>

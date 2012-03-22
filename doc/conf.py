@@ -26,7 +26,7 @@ import sys, os
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc',   'sphinx.ext.todo', 'sphinx.ext.coverage',
-    'sphinx.ext.pngmath',  'sphinx.ext.ifconfig', 'sphinx.ext.viewcode']
+    'sphinx.ext.pngmath',  'sphinx.ext.ifconfig', 'sphinx.ext.viewcode', 'sphinx.ext.intersphinx']
 # 'sphinx.ext.intersphinx',
 # 'sphinx.ext.doctest',
 
@@ -272,4 +272,9 @@ epub_copyright = u'2011, Adam Ginsburg'
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'python':('http://docs.python.org/', None),
+        'numpy':('http://docs.scipy.org/doc/',None),
+        'np':('http://docs.scipy.org/doc/',None),
+        }
+
+numpydoc_use_plots = True

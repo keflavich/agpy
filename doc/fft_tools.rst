@@ -12,7 +12,7 @@ AG_fft_tools Package
 :mod:`convolve` Module
 ----------------------
 
-.. automodule:: AG_fft_tools.convolve
+.. automodule:: AG_fft_tools.convolve_nd
     :members:
     :undoc-members:
 
@@ -27,6 +27,13 @@ AG_fft_tools Package
 ------------------
 
 .. automodule:: AG_fft_tools.psds
+    :members:
+    :undoc-members:
+
+:mod:`smooth_tools` Module
+----------------------
+
+.. automodule:: AG_fft_tools.smooth_tools
     :members:
     :undoc-members:
 
