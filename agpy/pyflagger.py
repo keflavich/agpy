@@ -590,6 +590,7 @@ class Flagger:
 
     def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0,axlims=None):
       self.mapfig=figure(fignum); clf(); 
+      self.mapfig.subplots_adjust(left=0,right=1,bottom=0,top=1)
       OK = self.map == self.map
       if vmax is None:
           vmax = self.map[OK].mean()+7*self.map[OK].std()
@@ -2066,6 +2067,7 @@ if __name__ == "__main__":
 
           if options.close or not options.interactive:
               f.close(write=False)
+              del f 
           else:
               flist.append(f)
               fdict[f.filename] = f
