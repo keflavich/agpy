@@ -68,43 +68,9 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         yy,xx = np.indices([szY,szX])
     shape = (szY,szX)
     if not silent: print "Kernel size set to ",shape
-    rr = np.sqrt((xx-szX/2.)**2+(yy-szY/2.)**2)
 
-    if kerneltype == 'gaussian':
-        kernel = np.exp(-(rr**2)/(2.*kernelwidth**2))
-        kernel /= normalize_kernel(kernel) #/ (kernelwidth**2 * (2*np.pi))
-#        if kernelwidth != np.round(kernelwidth):
-#            print "Rounding kernel width to %i pixels" % np.round(kernelwidth)
-#            kernelwidth = np.round(kernelwidth)
-
-    elif kerneltype == 'boxcar':
-        if not silent: print "Using boxcar kernel size %i" % np.ceil(kernelwidth)
-        kernel = np.ones([np.ceil(kernelwidth),np.ceil(kernelwidth)],dtype='float64') / kernelwidth**2
-        kernel = np.zeros(shape,dtype='float64')
-        kernel[((xx-szX/2.)<=kernelwidth)*((yy<=szY/2.)<=kernelwidth)] = 1.0
-        kernel /= normalize_kernel(kernel)
-    elif kerneltype == 'tophat':
-        kernel = np.zeros(shape,dtype='float64')
-        kernel[rr<kernelwidth] = 1.0
-        # normalize
-        kernel /= normalize_kernel(kernel)
-    elif kerneltype == 'brickwall':
-        if not silent: print "Smoothing with a %i pixel airy function" % kernelwidth
-        # airy function is first bessel(x) / x  [like the sinc]
-        print "WARNING: I think the Airy should be (2*Besel(x)/x)^2?" # http://en.wikipedia.org/wiki/Airy_disk
-        kernel = j1(rr/kernelwidth) / (rr/kernelwidth) 
-        # fix NAN @ center
-        kernel[rr==0] = 0.5
-        # normalize - technically, this should work, but practically, flux is GAINED in some images.  
-        kernel /= normalize_kernel(kernel)
-    elif kerneltype == 'trapezoid':
-        if trapslope:
-            zz = rr.max()-(rr*trapslope)
-            zz[zz<0] = 0
-            zz[rr<kernelwidth] = 1.0
-            kernel = zz/zz.sum()
-        else:
-            if not silent: print "trapezoid function requires a slope"
+    kernel = make_kernel(shape, kernelwidth=kernelwidth, kerneltype=kerneltype,
+            normalize_kernel=normalize_kernel, trapslope=trapslope)
 
     if not silent: print "Kernel of type %s normalized with %s has peak %g" % (kerneltype, normalize_kernel, kernel.max())
 
@@ -131,46 +97,94 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         if return_kernel: return temp,kernel
         else: return temp
 
-"""
-def make_kernel(kernelshape, kernelwidth=3, kerneltype='gaussian', silent=True):
-    yy,xx = np.indices(kernelshape)
-    szY,szX = kernelshape
-    if not silent: print "Kernel size set to ",kernelshape
-    rr = np.sqrt((xx-szX/2.)**2+(yy-szY/2.)**2)
+def make_kernel(kernelshape, kernelwidth=3, kerneltype='gaussian',
+        trapslope=None, normalize_kernel=np.sum, force_odd=False):
+    """
+    Create a smoothing kernel for use with `convolve` or `convolve_fft`
+
+    Parameters
+    ----------
+    kernelshape : n-tuple
+        A tuple (or list or array) defining the shape of the kernel.  The
+        length of kernelshape determines the dimensionality of the resulting
+        kernel
+
+    Options
+    -------
+    kernelwidth : float
+        Width of kernel in pixels  (see definitions under `kerneltype`)
+    kerneltype : 'gaussian', 'boxcar', 'tophat', 'brickwall', 'airy', 'trapezoid'
+        Defines the type of kernel to be generated.
+        For a gaussian, uses a gaussian with sigma = `kernelwidth` (in pixels)
+            i.e. kernel = exp(-r**2 / (2*sigma**2)) where r is the radius 
+        A boxcar is a `kernelwidth` x `kernelwidth` square 
+            e.g. kernel = (x < `kernelwidth`) * (y < `kernelwidth`)
+        A tophat is a flat circle with radius = `kernelwidth`
+            i.e. kernel = (r < `kernelwidth`)
+        A 'brickwall' or 'airy' kernel is the airy function from optics.  It
+            requires scipy.special for the bessel function.
+            http://en.wikipedia.org/wiki/Airy_disk
+        The trapezoid kernel is like a tophat but with sloped edges.  It is
+            effectively a cone chopped off at the `kernelwidth` radius.
+    trapslope : float
+        Slope of the trapezoid kernel.  Only used if `kerneltype`=='trapezoid'
+    normalize_kernel : function
+        Function to use for kernel normalization 
+    force_odd : boolean
+        If set, forces the kernel to have odd dimensions (needed for convolve
+        w/o ffts)
+
+    Returns
+    -------
+    An N-dimensional float array
+
+    """
+
+    if force_odd:
+        kernelshape = [n-1 if (n%2==0) else n for n in kernelshape]
+
+    if normalize_kernel is True:
+        normalize_kernel = np.sum
 
     if kerneltype == 'gaussian':
+        rr = np.sum([(x-(x.max()+1)//2)**2 for x in np.indices(kernelshape)],axis=0)**0.5
         kernel = np.exp(-(rr**2)/(2.*kernelwidth**2))
         kernel /= normalize_kernel(kernel) #/ (kernelwidth**2 * (2*np.pi))
-#        if kernelwidth != np.round(kernelwidth):
-#            print "Rounding kernel width to %i pixels" % np.round(kernelwidth)
-#            kernelwidth = np.round(kernelwidth)
 
     elif kerneltype == 'boxcar':
-        if not silent: print "Using boxcar kernel size %i" % np.ceil(kernelwidth)
-        kernel = np.ones([np.ceil(kernelwidth),np.ceil(kernelwidth)],dtype='float64') / kernelwidth**2
-        kernel = np.zeros(shape,dtype='float64')
-        kernel[((xx-szX/2.)<=kernelwidth)*((yy<=szY/2.)<=kernelwidth)] = 1.0
+        kernel = np.zeros(kernelshape,dtype='float64')
+        kernelslices = []
+        for dimsize in kernelshape:
+            center = dimsize - (dimsize+1)//2
+            kernelslices += [slice(center - (kernelwidth)//2, center + (kernelwidth+1)//2)]
+        kernel[kernelslices] = 1.0
         kernel /= normalize_kernel(kernel)
     elif kerneltype == 'tophat':
-        kernel = np.zeros(shape,dtype='float64')
+        rr = np.sum([(x-(x.max())/2.)**2 for x in np.indices(kernelshape)],axis=0)**0.5
+        kernel = np.zeros(kernelshape,dtype='float64')
         kernel[rr<kernelwidth] = 1.0
         # normalize
         kernel /= normalize_kernel(kernel)
-    elif kerneltype == 'brickwall':
-        if not silent: print "Smoothing with a %i pixel airy function" % kernelwidth
+    elif kerneltype in ('brickwall','airy'):
+        try:
+            import scipy.special
+        except ImportError:
+            raise ImportError("Could not import scipy.special; cannot create an "+
+                    "airy kernel without this (need the bessel function)")
+        rr = np.sum([(x-(x.max())/2.)**2 for x in np.indices(kernelshape)],axis=0)**0.5
         # airy function is first bessel(x) / x  [like the sinc]
-        print "WARNING: I think the Airy should be (2*Besel(x)/x)^2?" # http://en.wikipedia.org/wiki/Airy_disk
         kernel = j1(rr/kernelwidth) / (rr/kernelwidth) 
         # fix NAN @ center
         kernel[rr==0] = 0.5
-        # normalize - technically, this should work, but practically, flux is GAINED in some images.  
         kernel /= normalize_kernel(kernel)
     elif kerneltype == 'trapezoid':
+        rr = np.sum([(x-(x.max())/2.)**2 for x in np.indices(kernelshape)],axis=0)**0.5
         if trapslope:
             zz = rr.max()-(rr*trapslope)
             zz[zz<0] = 0
             zz[rr<kernelwidth] = 1.0
             kernel = zz/zz.sum()
         else:
-            if not silent: print "trapezoid function requires a slope"
-"""
+            raise ValueError("Must specify a slope for kerneltype='trapezoid'")
+
+    return kernel
