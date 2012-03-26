@@ -8,15 +8,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>gaussfitter &mdash; agpy 0.1 documentation</title>
+    <title>&lt;no title&gt; &mdash; agpy 0.1.2 documentation</title>
     
-    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/astropy.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.1',
+        VERSION:     '0.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,18 +25,27 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="agpy 0.1 documentation" href="index.html" /> 
+    <link rel="top" title="agpy 0.1.2 documentation" href="index.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
   </head>
   <body>
     <div class="header-wrapper">
       <div class="header">
-        <div class="headertitle"><a
-          href="index.html">agpy 0.1 documentation</a></div>
+        <h1><a href="index.html">agpy 0.1.2 documentation</a></h1>
         <div class="rel">
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |
-          <a href="genindex.html" title="General Index"
-             accesskey="I">index</a>
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=search.html>Search </a>
         </div>
        </div>
     </div>
@@ -49,9 +58,7 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <span class="target" id="module-agpy.gaussfitter"></span><div class="section" id="gaussfitter">
-<h1>gaussfitter<a class="headerlink" href="#gaussfitter" title="Permalink to this headline">¶</a></h1>
-<p>Latest version available at &lt;<a class="reference external" href="http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py">http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py</a>&gt;</p>
+  <span class="target" id="module-agpy.gaussfitter"></span><p>Latest version available at &lt;<a class="reference external" href="http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py">http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py</a>&gt;</p>
 <dl class="function">
 <dt id="agpy.gaussfitter.gaussfit">
 <tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">gaussfit</tt><big>(</big><em>data, err=None, params=(), autoderiv=True, return_all=False, circle=False, fixed=array([False, False, False, False, False, False, False], dtype=bool), limitedmin=[False, False, False, False, True, True, True], limitedmax=[False, False, False, False, False, False, True], usemoment=array([], dtype=bool), minpars=array([0, 0, 0, 0, 0, 0, 0]), maxpars=[0, 0, 0, 0, 0, 0, 360], rotate=1, vheight=1, quiet=True, returnmp=False, returnfitimage=False, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#gaussfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.gaussfit" title="Permalink to this definition">¶</a></dt>
@@ -104,7 +111,7 @@ from leastsq telling what the exit status of the fitting routine was</dd>
 
 <dl class="function">
 <dt id="agpy.gaussfitter.moments">
-<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x106f40758&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.moments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.moments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
 the gaussian parameters of a 2D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -191,7 +198,7 @@ H+A*numpy.exp(-(x-dx)**2/(2*w**2))</p>
 
 <dl class="function">
 <dt id="agpy.gaussfitter.onedmoments">
-<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">onedmoments</tt><big>(</big><em>Xax</em>, <em>data</em>, <em>vheight=True</em>, <em>estimator=&lt;function median at 0x106f40758&gt;</em>, <em>negamp=None</em>, <em>veryverbose=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#onedmoments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.onedmoments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">onedmoments</tt><big>(</big><em>Xax</em>, <em>data</em>, <em>vheight=True</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>negamp=None</em>, <em>veryverbose=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#onedmoments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.onedmoments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, width_x)
 the gaussian parameters of a 1D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -239,7 +246,6 @@ parameter by setting this to 0</dd>
 </dl>
 </dd></dl>
 
-</div>
 
 
           </div>
@@ -270,28 +276,23 @@ parameter by setting this to 0</dd>
       </div>
     </div>
 
-    <div class="footer-wrapper">
-      <div class="footer">
-        <div class="left">
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |
-          <a href="genindex.html" title="General Index"
-             >index</a>
-            <br/>
-            <a href="_sources/gaussfit.txt"
-               rel="nofollow">Show Source</a>
-        </div>
-
-        <div class="right">
-          
     <div class="footer">
-        &copy; Copyright 2011, Adam Ginsburg.
+      &copy; Copyright 2011, Adam Ginsburg.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
-    </div>
-        </div>
-        <div class="clearer"></div>
-      </div>
-    </div>
+    <script type="text/javascript">
 
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
   </body>
 </html>

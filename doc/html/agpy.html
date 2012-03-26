@@ -8,15 +8,15 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Adam Ginsburg’s Python Code (agpy) &mdash; agpy 0.1 documentation</title>
+    <title>Adam Ginsburg’s Python Code (agpy) &mdash; agpy 0.1.2 documentation</title>
     
-    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/astropy.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '0.1',
+        VERSION:     '0.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -25,24 +25,29 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="agpy 0.1 documentation" href="index.html" />
+    <link rel="top" title="agpy 0.1.2 documentation" href="index.html" />
     <link rel="next" title="Image Tools" href="image_tools.html" />
-    <link rel="prev" title="AGPY Contents:" href="index.html" /> 
+    <link rel="prev" title="AGPY Contents:" href="index.html" />
+     
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setDomainName', 'pyspeckit.bitbucket.org']);
+      _gaq.push(['_setAllowHash', false]);
+      _gaq.push(['_trackPageview']);
+
+
+    </script>
   </head>
   <body>
     <div class="header-wrapper">
       <div class="header">
-        <div class="headertitle"><a
-          href="index.html">agpy 0.1 documentation</a></div>
+        <h1><a href="index.html">agpy 0.1.2 documentation</a></h1>
         <div class="rel">
-          <a href="index.html" title="AGPY Contents:"
-             accesskey="P">previous</a> |
-          <a href="image_tools.html" title="Image Tools"
-             accesskey="N">next</a> |
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |
-          <a href="genindex.html" title="General Index"
-             accesskey="I">index</a>
+          <a href="http://agpy.googlecode.com">agpy Home </a>  |
+          <a href=index.html>Docs Home </a>  |
+          <a href="http://code.google.com/p/agpy/w/list">Wiki</a>  |
+          <a href=search.html>Search </a>
         </div>
        </div>
     </div>
@@ -60,9 +65,7 @@
 <hr class="docutils" />
 <div class="section" id="agpy-package">
 <h2><a class="reference internal" href="#module-agpy" title="agpy"><tt class="xref py py-mod docutils literal"><span class="pre">agpy</span></tt></a> Package<a class="headerlink" href="#agpy-package" title="Permalink to this headline">¶</a></h2>
-<span class="target" id="module-agpy"></span><div class="section" id="agpy">
-<h3>agpy<a class="headerlink" href="#agpy" title="Permalink to this headline">¶</a></h3>
-<p>The functions included below are the &#8216;mature&#8217; codes from the agpy package.</p>
+<span class="target" id="module-agpy"></span><p>The functions included below are the &#8216;mature&#8217; codes from the agpy package.</p>
 <dl class="function">
 <dt id="agpy.readcol">
 <tt class="descclassname">agpy.</tt><tt class="descname">readcol</tt><big>(</big><em>filename</em>, <em>skipline=0</em>, <em>skipafter=0</em>, <em>names=False</em>, <em>fsep=None</em>, <em>twod=True</em>, <em>fixedformat=None</em>, <em>asdict=False</em>, <em>comment='#'</em>, <em>verbose=True</em>, <em>nullval=None</em>, <em>asStruct=False</em>, <em>namecomment=True</em>, <em>removeblanks=False</em>, <em>header_badchars=None</em><big>)</big><a class="headerlink" href="#agpy.readcol" title="Permalink to this definition">¶</a></dt>
@@ -201,7 +204,7 @@ longitude1, latitude1, longitude2, latitude2</p>
 
 <dl class="function">
 <dt id="agpy.downsample">
-<tt class="descclassname">agpy.</tt><tt class="descname">downsample</tt><big>(</big><em>myarr</em>, <em>factor</em>, <em>estimator=&lt;function nanmean at 0x107b49ed8&gt;</em><big>)</big><a class="headerlink" href="#agpy.downsample" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">downsample</tt><big>(</big><em>myarr</em>, <em>factor</em>, <em>estimator=&lt;function nanmean at 0x1069a3410&gt;</em><big>)</big><a class="headerlink" href="#agpy.downsample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Downsample a 2D array by averaging over <em>factor</em> pixels in each axis.
 Crops upper edge if the shape is not a multiple of factor.</p>
 <p>This code is pure numpy and should be fast.</p>
@@ -239,243 +242,139 @@ image in both directions.</div></blockquote>
 
 <dl class="function">
 <dt id="agpy.convolve">
-<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x106daa938&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big><a class="headerlink" href="#agpy.convolve" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x10497bcf8&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big><a class="headerlink" href="#agpy.convolve" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convolve an image with a kernel.  Returns a convolved image with shape =
 array.shape.  Assumes image &amp; kernel are centered.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Order matters; the kernel should be second.</p>
 </div>
-<dl class="docutils">
-<dt><em>array</em> <span class="classifier-delimiter">:</span> <span class="classifier">np.ndarray</span></dt>
-<dd>Array to be convolved with <em>kernel</em></dd>
-<dt><em>kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">np.ndarray</span></dt>
-<dd>Will be normalized if <em>normalize_kernel</em> is set.  Assumed to be
-centered (i.e., shifts may result if your kernel is asymmetric)</dd>
-</dl>
-<dl class="docutils">
-<dt><em>fft_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Default on.  Zero-pad image to the nearest 2^n</dd>
-<dt><em>psf_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Default off.  Zero-pad image to be at least the sum of the image sizes
-(in order to avoid edge-wrapping when smoothing)</dd>
-<dt><em>crop</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Default on.  Return an image of the size of the largest input image.
-If the images are asymmetric in opposite directions, will return the
-largest image in both directions.
-For example, if an input image has shape [100,3] but a kernel with shape
-[6,6] is used, the output will be [100,6].</dd>
-<dt><em>return_fft</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Return the fft(image)*fft(kernel) instead of the convolution (which is
-ifft(fft(image)*fft(kernel))).  Useful for making PSDs.</dd>
-<dt><em>fftshift</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>If return_fft on, will shift &amp; crop image to appropriate dimensions</dd>
-<dt><em>ignore_nan</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>attempts to re-weight assuming NAN values are meant to be ignored, not
-treated as zero.  If this is off, all NaN values will be treated as
-zero.</dd>
-<dt><em>ignore_edge_zeros</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Ignore the zero-pad-created zeros.  This will effectively decrease
-the kernel area on the edges but will not re-normalize the kernel.
-This is on by default but I&#8217;m not entirely sure it should be...</dd>
-<dt><em>force_ignore_zeros_off</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>You can choose to turn off the ignore-zeros when padding; this may be
-desirable if you want to think of the region outside of your image as
-all zeros</dd>
-<dt><em>min_wt</em> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>If ignoring nans/zeros, force all grid points with a weight less than
-this value to NAN (the weight of a grid point with <em>no</em> ignored
-neighbors is 1.0).</dd>
-<dt><em>normalize_kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
-<dd>if specified, function to divide kernel by to normalize it.  e.g.,
-normalize_kernel=np.sum means that kernel will be modified to be:
-kernel = kernel / np.sum(kernel)</dd>
-<dt><em>nthreads</em> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd>if fftw3 is installed, can specify the number of threads to allow FFTs
-to use.  Probably only helpful for large arrays</dd>
-<dt><em>use_numpy_fft</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Force the code to use the numpy FFTs instead of FFTW even if FFTW is
-installed</dd>
-</dl>
-<p><em>default</em> : <em>array</em> convolved with <em>kernel</em>
-if <em>return_fft</em> : fft(<em>array</em>) * fft(<em>kernel</em>)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>array: `numpy.ndarray`</strong> :</p>
+<blockquote>
+<div><p>Array to be convolved with <em>kernel</em></p>
+</div></blockquote>
+<p><strong>kernel: `numpy.ndarray`</strong> :</p>
+<blockquote>
+<div><p>Will be normalized if <em>normalize_kernel</em> is set.  Assumed to be
+centered (i.e., shifts may result if your kernel is asymmetric)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>default: *array* convolved with *kernel*</strong> :</p>
+<p><strong>if return_fft: fft(*array*) * fft(*kernel*)</strong> :</p>
 <blockquote>
 <div><ul class="simple">
-<li>if <em>fftshift</em> : Determines whether the fft will be shifted before
+<li>if fftshift: Determines whether the fft will be shifted before
 returning</li>
 </ul>
 </div></blockquote>
-<dl class="docutils">
-<dt>if <em>crop</em> == False <span class="classifier-delimiter">:</span> <span class="classifier">Returns the image, but with the fft-padded size</span></dt>
-<dd>instead of the input size</dd>
-</dl>
+<p><strong>if *crop* == False</strong> : Returns the image, but with the fft-padded size</p>
+<blockquote>
+<div><p>instead of the input size</p>
+</div></blockquote>
+<p class="last"><strong>.. note: This is also implemented in :astropy:nddata:</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt>
-<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x106daa938&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x10497bcf8&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big></dt>
 <dd><p>Convolve an image with a kernel.  Returns a convolved image with shape =
 array.shape.  Assumes image &amp; kernel are centered.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Order matters; the kernel should be second.</p>
 </div>
-<dl class="docutils">
-<dt><em>array</em> <span class="classifier-delimiter">:</span> <span class="classifier">np.ndarray</span></dt>
-<dd>Array to be convolved with <em>kernel</em></dd>
-<dt><em>kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">np.ndarray</span></dt>
-<dd>Will be normalized if <em>normalize_kernel</em> is set.  Assumed to be
-centered (i.e., shifts may result if your kernel is asymmetric)</dd>
-</dl>
-<dl class="docutils">
-<dt><em>fft_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Default on.  Zero-pad image to the nearest 2^n</dd>
-<dt><em>psf_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Default off.  Zero-pad image to be at least the sum of the image sizes
-(in order to avoid edge-wrapping when smoothing)</dd>
-<dt><em>crop</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Default on.  Return an image of the size of the largest input image.
-If the images are asymmetric in opposite directions, will return the
-largest image in both directions.
-For example, if an input image has shape [100,3] but a kernel with shape
-[6,6] is used, the output will be [100,6].</dd>
-<dt><em>return_fft</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Return the fft(image)*fft(kernel) instead of the convolution (which is
-ifft(fft(image)*fft(kernel))).  Useful for making PSDs.</dd>
-<dt><em>fftshift</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>If return_fft on, will shift &amp; crop image to appropriate dimensions</dd>
-<dt><em>ignore_nan</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>attempts to re-weight assuming NAN values are meant to be ignored, not
-treated as zero.  If this is off, all NaN values will be treated as
-zero.</dd>
-<dt><em>ignore_edge_zeros</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Ignore the zero-pad-created zeros.  This will effectively decrease
-the kernel area on the edges but will not re-normalize the kernel.
-This is on by default but I&#8217;m not entirely sure it should be...</dd>
-<dt><em>force_ignore_zeros_off</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>You can choose to turn off the ignore-zeros when padding; this may be
-desirable if you want to think of the region outside of your image as
-all zeros</dd>
-<dt><em>min_wt</em> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd>If ignoring nans/zeros, force all grid points with a weight less than
-this value to NAN (the weight of a grid point with <em>no</em> ignored
-neighbors is 1.0).</dd>
-<dt><em>normalize_kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
-<dd>if specified, function to divide kernel by to normalize it.  e.g.,
-normalize_kernel=np.sum means that kernel will be modified to be:
-kernel = kernel / np.sum(kernel)</dd>
-<dt><em>nthreads</em> <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
-<dd>if fftw3 is installed, can specify the number of threads to allow FFTs
-to use.  Probably only helpful for large arrays</dd>
-<dt><em>use_numpy_fft</em> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd>Force the code to use the numpy FFTs instead of FFTW even if FFTW is
-installed</dd>
-</dl>
-<p><em>default</em> : <em>array</em> convolved with <em>kernel</em>
-if <em>return_fft</em> : fft(<em>array</em>) * fft(<em>kernel</em>)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>array: `numpy.ndarray`</strong> :</p>
+<blockquote>
+<div><p>Array to be convolved with <em>kernel</em></p>
+</div></blockquote>
+<p><strong>kernel: `numpy.ndarray`</strong> :</p>
+<blockquote>
+<div><p>Will be normalized if <em>normalize_kernel</em> is set.  Assumed to be
+centered (i.e., shifts may result if your kernel is asymmetric)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>default: *array* convolved with *kernel*</strong> :</p>
+<p><strong>if return_fft: fft(*array*) * fft(*kernel*)</strong> :</p>
 <blockquote>
 <div><ul class="simple">
-<li>if <em>fftshift</em> : Determines whether the fft will be shifted before
+<li>if fftshift: Determines whether the fft will be shifted before
 returning</li>
 </ul>
 </div></blockquote>
-<dl class="docutils">
-<dt>if <em>crop</em> == False <span class="classifier-delimiter">:</span> <span class="classifier">Returns the image, but with the fft-padded size</span></dt>
-<dd>instead of the input size</dd>
-</dl>
+<p><strong>if *crop* == False</strong> : Returns the image, but with the fft-padded size</p>
+<blockquote>
+<div><p>instead of the input size</p>
+</div></blockquote>
+<p class="last"><strong>.. note: This is also implemented in :astropy:nddata:</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="agpy.smooth">
-<tt class="descclassname">agpy.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x106daa938&gt;</em>, <em>downsample=False</em>, <em>downsample_factor=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.smooth" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x10497bcf8&gt;</em>, <em>downsample=False</em>, <em>downsample_factor=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.smooth" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a smoothed image using a gaussian, boxcar, or tophat kernel</p>
 <p>Options: 
-- <em>kernelwidth</em> :</p>
+kernelwidth:</p>
 <blockquote>
 <div>width of kernel in pixels  (see definitions below)</div></blockquote>
-<ul>
-<li><dl class="first docutils">
-<dt><em>kerneltype</em> :</dt>
+<dl class="docutils">
+<dt>kerneltype:</dt>
 <dd><p class="first">gaussian, boxcar, or tophat.  
 For a gaussian, uses a gaussian with sigma = kernelwidth (in pixels)</p>
 <blockquote>
-<div><p>out to [nwidths]-sigma</p>
-</div></blockquote>
+<div>out to [nwidths]-sigma</div></blockquote>
 <p class="last">A boxcar is a kernelwidth x kernelwidth square 
 A tophat is a flat circle with radius = kernelwidth</p>
 </dd>
-</dl>
-</li>
-</ul>
-<dl class="docutils">
 <dt>Default options:</dt>
-<dd><ul class="first last">
-<li><dl class="first docutils">
-<dt><em>psf_pad</em> <span class="classifier-delimiter">:</span> <span class="classifier">[True]</span></dt>
-<dd><p class="first last">will pad the input image to be the image size + PSF.
+<dd><dl class="first last docutils">
+<dt>psf_pad: [True]</dt>
+<dd>will pad the input image to be the image size + PSF.
 Slows things down but removes edge-wrapping effects (see convolve)
 This option should be set to false if the edges of your image are
-symmetric.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>interp_nan</em> <span class="classifier-delimiter">:</span> <span class="classifier">[False]</span></dt>
-<dd><p class="first last">Will replace NaN points in an image with the
+symmetric.</dd>
+<dt>interp_nan: [False]</dt>
+<dd>Will replace NaN points in an image with the
 smoothed average of its neighbors (you can still simply ignore NaN 
-values by setting ignore_nan=True but leaving interp_nan=False)</p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>silent</em> <span class="classifier-delimiter">:</span> <span class="classifier">[True]</span></dt>
-<dd><p class="first last">turn it off to get verbose statements about kernel types</p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>return_kernel</em> <span class="classifier-delimiter">:</span> <span class="classifier">[False]</span></dt>
-<dd><p class="first last">If set to true, will return the kernel as the
-second return value</p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>nwidths</em> <span class="classifier-delimiter">:</span> <span class="classifier">[&#8216;max&#8217;]</span></dt>
-<dd><p class="first last">number of kernel widths wide to make the kernel.  Set to &#8216;max&#8217; to
-match the image shape, otherwise use any integer</p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>min_nwidths</em> <span class="classifier-delimiter">:</span> <span class="classifier">[6]</span></dt>
-<dd><p class="first last">minimum number of gaussian widths to make the kernel
+values by setting ignore_nan=True but leaving interp_nan=False)</dd>
+<dt>silent: [True]</dt>
+<dd>turn it off to get verbose statements about kernel types</dd>
+<dt>return_kernel: [False]</dt>
+<dd>If set to true, will return the kernel as the
+second return value</dd>
+<dt>nwidths: [&#8216;max&#8217;]</dt>
+<dd>number of kernel widths wide to make the kernel.  Set to &#8216;max&#8217; to
+match the image shape, otherwise use any integer</dd>
+<dt>min_nwidths: [6]</dt>
+<dd>minimum number of gaussian widths to make the kernel
 (the kernel will be larger than the image if the image size is &lt;
-min_widths*kernelsize)</p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>normalize_kernel</em> :</dt>
-<dd><p class="first last">Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
+min_widths*kernelsize)</dd>
+<dt>normalize_kernel:</dt>
+<dd>Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
 or the kernel peak (i.e. kernel.max() = 1) ?  Must be a <em>function</em> that can
-operate on a numpy array</p>
-</dd>
+operate on a numpy array</dd>
+<dt>downsample:</dt>
+<dd>downsample after smoothing?</dd>
+<dt>downsample_factor:</dt>
+<dd>if None, default to kernelwidth</dd>
 </dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>downsample</em> :</dt>
-<dd><p class="first last">downsample after smoothing?</p>
-</dd>
-</dl>
-</li>
-<li><dl class="first docutils">
-<dt><em>downsample_factor</em> :</dt>
-<dd><p class="first last">if None, default to kernelwidth</p>
-</dd>
-</dl>
-</li>
-</ul>
 </dd>
 </dl>
 <p>Note that the kernel is forced to be even sized on each axis to assure no
@@ -579,7 +478,7 @@ Translated from IDL to Python by Adam Ginsburg (<a class="reference external" hr
 
 <dl class="function">
 <dt id="agpy.moments">
-<tt class="descclassname">agpy.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x106f40758&gt;</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.moments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.moments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
 the gaussian parameters of a 2D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -706,11 +605,8 @@ chi2</dd>
 </dd></dl>
 
 </div>
-</div>
 <div class="section" id="module-agpy.PCA_tools">
 <span id="pca-tools-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">PCA_tools</span></tt> Module<a class="headerlink" href="#module-agpy.PCA_tools" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="pca-tools">
-<h3>PCA Tools<a class="headerlink" href="#pca-tools" title="Permalink to this headline">¶</a></h3>
 <p>A set of tools for PCA analysis, singular value decomposition,
 total least squares, and other linear fitting methods.</p>
 <p>Running this code independently tests the fitting functions with different
@@ -777,11 +673,10 @@ data2 - y array</p>
 <dl class="function">
 <dt id="agpy.PCA_tools.unpca_subtract">
 <tt class="descclassname">agpy.PCA_tools.</tt><tt class="descname">unpca_subtract</tt><big>(</big><em>arr</em>, <em>ncomps</em><big>)</big><a class="reference internal" href="_modules/agpy/PCA_tools.html#unpca_subtract"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.PCA_tools.unpca_subtract" title="Permalink to this definition">¶</a></dt>
-<dd><p>Like pca_subtract, except <cite>keep</cite> the <em>ncomps</em> most correlated components
+<dd><p>Like pca_subtract, except <tt class="xref py py-obj docutils literal"><span class="pre">keep</span></tt> the <em>ncomps</em> most correlated components
 and reject the others</p>
 </dd></dl>
 
-</div>
 </div>
 <div class="section" id="module-agpy.asinh_norm">
 <span id="asinh-norm-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">asinh_norm</span></tt> Module<a class="headerlink" href="#module-agpy.asinh_norm" title="Permalink to this headline">¶</a></h2>
@@ -805,8 +700,6 @@ imshow(myimage, norm=AsinhNorm())</p>
 </div>
 <div class="section" id="module-agpy.blackbody">
 <span id="blackbody-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">blackbody</span></tt> Module<a class="headerlink" href="#module-agpy.blackbody" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="simple-black-body-calculator">
-<h3>Simple black-body calculator<a class="headerlink" href="#simple-black-body-calculator" title="Permalink to this headline">¶</a></h3>
 <p>Includes both wavelength and frequency blackbody functions.  Has flexible
 units.  Also allows for a few varieties of modified blackbody.</p>
 <dl class="function">
@@ -821,7 +714,7 @@ units.  Also allows for a few varieties of modified blackbody.</p>
 
 <dl class="function">
 <dt id="agpy.blackbody.fit_blackbody">
-<tt class="descclassname">agpy.blackbody.</tt><tt class="descname">fit_blackbody</tt><big>(</big><em>xdata</em>, <em>flux</em>, <em>guesses=(0</em>, <em>0)</em>, <em>err=None</em>, <em>blackbody_function=&lt;function blackbody at 0x1082e0938&gt;</em>, <em>quiet=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/blackbody.html#fit_blackbody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.blackbody.fit_blackbody" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.blackbody.</tt><tt class="descname">fit_blackbody</tt><big>(</big><em>xdata</em>, <em>flux</em>, <em>guesses=(0</em>, <em>0)</em>, <em>err=None</em>, <em>blackbody_function=&lt;function blackbody at 0x106f4aaa0&gt;</em>, <em>quiet=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/blackbody.html#fit_blackbody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.blackbody.fit_blackbody" title="Permalink to this definition">¶</a></dt>
 <dd><p>guesses = Temperature, Arbitrary Scale
 OR Temperature, Beta, Arbitrary Scale</p>
 </dd></dl>
@@ -852,7 +745,6 @@ N = 1e22 is the column density in cm^-2</p>
 </dd></dl>
 
 </div>
-</div>
 <div class="section" id="module-agpy.collapse_gaussfit">
 <span id="collapse-gaussfit-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">collapse_gaussfit</span></tt> Module<a class="headerlink" href="#module-agpy.collapse_gaussfit" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="collapse-gaussfit">
@@ -863,7 +755,7 @@ effective, but the uses are somewhat minimal.  I&#8217;ve tried shifting my
 cube-related work to <a class="reference external" href="pyspeckit.bitbucket.org">pyspeckit</a>.</p>
 <dl class="function">
 <dt id="agpy.collapse_gaussfit.adaptive_collapse_gaussfit">
-<tt class="descclassname">agpy.collapse_gaussfit.</tt><tt class="descname">adaptive_collapse_gaussfit</tt><big>(</big><em>cube</em>, <em>axis=2</em>, <em>nsig=3</em>, <em>nrsig=4</em>, <em>prefix='interesting'</em>, <em>vconv=&lt;function &lt;lambda&gt; at 0x109aaaa28&gt;</em>, <em>xtora=&lt;function &lt;lambda&gt; at 0x109aaaaa0&gt;</em>, <em>ytodec=&lt;function &lt;lambda&gt; at 0x109aaab18&gt;</em>, <em>doplot=True</em><big>)</big><a class="reference internal" href="_modules/agpy/collapse_gaussfit.html#adaptive_collapse_gaussfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.collapse_gaussfit.adaptive_collapse_gaussfit" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.collapse_gaussfit.</tt><tt class="descname">adaptive_collapse_gaussfit</tt><big>(</big><em>cube</em>, <em>axis=2</em>, <em>nsig=3</em>, <em>nrsig=4</em>, <em>prefix='interesting'</em>, <em>vconv=&lt;function &lt;lambda&gt; at 0x109ed1b90&gt;</em>, <em>xtora=&lt;function &lt;lambda&gt; at 0x109ed1c08&gt;</em>, <em>ytodec=&lt;function &lt;lambda&gt; at 0x109ed1c80&gt;</em>, <em>doplot=True</em><big>)</big><a class="reference internal" href="_modules/agpy/collapse_gaussfit.html#adaptive_collapse_gaussfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.collapse_gaussfit.adaptive_collapse_gaussfit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Attempts to fit one or two Gaussians to each spectrum in a data cube and returns the parameters of the fits.
 Adaptively determines where to fit two Gaussian components based on residuals.  Will fit 3 gaussians if a
 two-gaussian fit is not better than a certain threshold (specified by nsig), and those fits will be output
@@ -983,10 +875,7 @@ procedures without redoing the whole collapse</p>
 </div>
 <div class="section" id="module-agpy.constants">
 <span id="constants-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">constants</span></tt> Module<a class="headerlink" href="#module-agpy.constants" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="constants">
-<h3>Constants<a class="headerlink" href="#constants" title="Permalink to this headline">¶</a></h3>
 <p>A simple list of important constants in CGS units</p>
-</div>
 </div>
 <div class="section" id="module-agpy.conversationcount">
 <span id="conversationcount-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">conversationcount</span></tt> Module<a class="headerlink" href="#module-agpy.conversationcount" title="Permalink to this headline">¶</a></h2>
@@ -995,8 +884,6 @@ exchanged with each person on your buddy list.  Meant for adium logs.</p>
 </div>
 <div class="section" id="module-agpy.cubes">
 <span id="cubes-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">cubes</span></tt> Module<a class="headerlink" href="#module-agpy.cubes" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="cubes">
-<h3>Cubes<a class="headerlink" href="#cubes" title="Permalink to this headline">¶</a></h3>
 <p>Many tools for cube manipulation.</p>
 <p>See <a class="reference external" href="pyspeckit.bitbucket.org">pyspeckit</a> for a similar code better incorporated into a package</p>
 <dl class="function">
@@ -1107,7 +994,7 @@ average=sum and dvmul=True to get an integrated value)</p>
 
 <dl class="function">
 <dt id="agpy.cubes.subimage_integ">
-<tt class="descclassname">agpy.cubes.</tt><tt class="descname">subimage_integ</tt><big>(</big><em>cube</em>, <em>xcen</em>, <em>xwidth</em>, <em>ycen</em>, <em>ywidth</em>, <em>vrange</em>, <em>header=None</em>, <em>average=&lt;function mean at 0x106dab2a8&gt;</em>, <em>dvmult=False</em>, <em>return_HDU=False</em>, <em>units='pixels'</em>, <em>zunits=None</em><big>)</big><a class="reference internal" href="_modules/agpy/cubes.html#subimage_integ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.cubes.subimage_integ" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.cubes.</tt><tt class="descname">subimage_integ</tt><big>(</big><em>cube</em>, <em>xcen</em>, <em>xwidth</em>, <em>ycen</em>, <em>ywidth</em>, <em>vrange</em>, <em>header=None</em>, <em>average=&lt;function mean at 0x10497d668&gt;</em>, <em>dvmult=False</em>, <em>return_HDU=False</em>, <em>units='pixels'</em>, <em>zunits=None</em><big>)</big><a class="reference internal" href="_modules/agpy/cubes.html#subimage_integ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.cubes.subimage_integ" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a sub-image from a data cube integrated over the specified velocity range</p>
 <p>All units assumed to be pixel units</p>
 <p>cube has dimensions (velocity, y, x)</p>
@@ -1117,11 +1004,8 @@ average=sum and dvmul=True to get an integrated value)</p>
 </dd></dl>
 
 </div>
-</div>
 <div class="section" id="module-agpy.cutout">
 <span id="cutout-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">cutout</span></tt> Module<a class="headerlink" href="#module-agpy.cutout" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="cutout">
-<h3>Cutout<a class="headerlink" href="#cutout" title="Permalink to this headline">¶</a></h3>
 <p>Generate a cutout image from a .fits file</p>
 <dl class="exception">
 <dt id="agpy.cutout.DimensionError">
@@ -1139,7 +1023,6 @@ units - specify units to use: either pixels or wcs
 outfile - optional output file</p>
 </dd></dl>
 
-</div>
 </div>
 <div class="section" id="module-agpy.densitymap">
 <span id="densitymap-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">densitymap</span></tt> Module<a class="headerlink" href="#module-agpy.densitymap" title="Permalink to this headline">¶</a></h2>
@@ -1169,9 +1052,6 @@ returns the map</p>
 <dd></dd></dl>
 
 </div>
-<div class="section" id="downsample-module">
-<h2><tt class="xref py py-mod docutils literal"><span class="pre">downsample</span></tt> Module<a class="headerlink" href="#downsample-module" title="Permalink to this headline">¶</a></h2>
-</div>
 <div class="section" id="module-agpy.ds9_phot">
 <span id="ds9-phot-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">ds9_phot</span></tt> Module<a class="headerlink" href="#module-agpy.ds9_phot" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
@@ -1182,8 +1062,6 @@ returns the map</p>
 </div>
 <div class="section" id="module-agpy.dust">
 <span id="dust-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">dust</span></tt> Module<a class="headerlink" href="#module-agpy.dust" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="dust-emissivity">
-<h3>Dust emissivity<a class="headerlink" href="#dust-emissivity" title="Permalink to this headline">¶</a></h3>
 <p>nu is in GHz everywhere</p>
 <dl class="function">
 <dt id="agpy.dust.colofsnu">
@@ -1225,11 +1103,8 @@ snu in Jy</p>
 </dd></dl>
 
 </div>
-</div>
 <div class="section" id="module-agpy.gaussfitter">
 <span id="gaussfitter-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">gaussfitter</span></tt> Module<a class="headerlink" href="#module-agpy.gaussfitter" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="gaussfitter">
-<h3>gaussfitter<a class="headerlink" href="#gaussfitter" title="Permalink to this headline">¶</a></h3>
 <p>Latest version available at &lt;<a class="reference external" href="http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py">http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py</a>&gt;</p>
 <dl class="function">
 <dt id="agpy.gaussfitter.collapse_gaussfit">
@@ -1288,7 +1163,7 @@ from leastsq telling what the exit status of the fitting routine was</dd>
 
 <dl class="function">
 <dt id="agpy.gaussfitter.moments">
-<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x106f40758&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.moments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.moments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
 the gaussian parameters of a 2D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -1375,7 +1250,7 @@ H+A*numpy.exp(-(x-dx)**2/(2*w**2))</p>
 
 <dl class="function">
 <dt id="agpy.gaussfitter.onedmoments">
-<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">onedmoments</tt><big>(</big><em>Xax</em>, <em>data</em>, <em>vheight=True</em>, <em>estimator=&lt;function median at 0x106f40758&gt;</em>, <em>negamp=None</em>, <em>veryverbose=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#onedmoments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.onedmoments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">onedmoments</tt><big>(</big><em>Xax</em>, <em>data</em>, <em>vheight=True</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>negamp=None</em>, <em>veryverbose=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#onedmoments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.onedmoments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, width_x)
 the gaussian parameters of a 1D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -1423,7 +1298,6 @@ parameter by setting this to 0</dd>
 </dl>
 </dd></dl>
 
-</div>
 </div>
 <div class="section" id="module-agpy.get_cutouts">
 <span id="get-cutouts-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">get_cutouts</span></tt> Module<a class="headerlink" href="#module-agpy.get_cutouts" title="Permalink to this headline">¶</a></h2>
@@ -1476,17 +1350,17 @@ Values from: <a class="reference external" href="http://www.jach.hawaii.edu/UKIR
 
 <dl class="function">
 <dt id="agpy.h2fit.fitandplot">
-<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplot</tt><big>(</big><em>image, noiseimage, aperture=[], noiseaperture=[0, 10], modelspec=&lt;function modelspec at 0x10afa2848&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplot" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplot</tt><big>(</big><em>image, noiseimage, aperture=[], noiseaperture=[0, 10], modelspec=&lt;function modelspec at 0x109f301b8&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplot" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="agpy.h2fit.fitandplotspex">
-<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplotspex</tt><big>(</big><em>image, modelspec=&lt;function modelspec at 0x10afa2848&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplotspex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplotspex" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplotspex</tt><big>(</big><em>image, modelspec=&lt;function modelspec at 0x109f301b8&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplotspex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplotspex" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="agpy.h2fit.fitspec">
-<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitspec</tt><big>(</big><em>specsegments, aperture=None, modelspec=&lt;function modelspec at 0x10afa2848&gt;, outpars=False, vlsrcorr=0, extinction=False, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitspec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitspec" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitspec</tt><big>(</big><em>specsegments, aperture=None, modelspec=&lt;function modelspec at 0x109f301b8&gt;, outpars=False, vlsrcorr=0, extinction=False, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitspec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitspec" title="Permalink to this definition">¶</a></dt>
 <dd><p>fit a model spectrum 
 The model is defined internal to fitspec so that parameters can
 be fixed based on input parameters</p>
@@ -1653,7 +1527,7 @@ O III, V 19.87       1.21 1.57       0.21 0.64       0.06</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">cumint(fn=&lt;function kroupa at 0x10ba78398&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">cumint(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -1990,7 +1864,7 @@ O III, V 19.87       1.21 1.57       0.21 0.64       0.06</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">integrate(fn=&lt;function kroupa at 0x10ba78398&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">integrate(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -2356,7 +2230,7 @@ Uses the Vacca, Garmany, Shull 1996 Table 5 Log Q and Mspec parameters</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">m_cumint(fn=&lt;function kroupa at 0x10ba78398&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">m_cumint(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -2693,7 +2567,7 @@ Uses the Vacca, Garmany, Shull 1996 Table 5 Log Q and Mspec parameters</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">m_integrate(fn=&lt;function kroupa at 0x10ba78398&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">m_integrate(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -3036,7 +2910,7 @@ Uses the Vacca, Garmany, Shull 1996 Table 5 Log Q and Mspec parameters</p>
 tolerance is how close the cluster mass must be to the requested mass.  
 If the last star is greater than this tolerance, the total mass will not be within
 tolerance of the requested</p>
-<p>kwargs are passed to <cite>inverse_imf</cite></p>
+<p>kwargs are passed to <a class="reference internal" href="#agpy.imf.inverse_imf" title="agpy.imf.inverse_imf"><tt class="xref py py-obj docutils literal"><span class="pre">inverse_imf</span></tt></a></p>
 </dd></dl>
 
 <dl class="function">
@@ -3816,7 +3690,7 @@ and <a class="reference external" href="http://home.fnal.gov/~neilsen/notebook/a
 
 <dl class="function">
 <dt id="agpy.psf_fitter.psffit">
-<tt class="descclassname">agpy.psf_fitter.</tt><tt class="descname">psffit</tt><big>(</big><em>data, err=None, params=[], autoderiv=True, return_all=False, circle=True, fixed=array([False, False, False, False, False, False, False], dtype=bool), limitedmin=[False, False, False, False, True, True, True], limitedmax=[False, False, False, False, False, False, True], usemoment=array([], dtype=bool), minpars=array([0, 0, 0, 0, 0, 0, 0]), maxpars=[0, 0, 0, 0, 0, 0, 360], rotate=0, vheight=1, quiet=True, returnmp=False, returnfitimage=False, psffunction=&lt;function airy at 0x10c79e938&gt;, extra_pars=None, return_parinfo=False, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/psf_fitter.html#psffit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.psf_fitter.psffit" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.psf_fitter.</tt><tt class="descname">psffit</tt><big>(</big><em>data, err=None, params=[], autoderiv=True, return_all=False, circle=True, fixed=array([False, False, False, False, False, False, False], dtype=bool), limitedmin=[False, False, False, False, True, True, True], limitedmax=[False, False, False, False, False, False, True], usemoment=array([], dtype=bool), minpars=array([0, 0, 0, 0, 0, 0, 0]), maxpars=[0, 0, 0, 0, 0, 0, 360], rotate=0, vheight=1, quiet=True, returnmp=False, returnfitimage=False, psffunction=&lt;function airy at 0x109e68cf8&gt;, extra_pars=None, return_parinfo=False, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/psf_fitter.html#psffit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.psf_fitter.psffit" title="Permalink to this definition">¶</a></dt>
 <dd><p>PSF fitter with the ability to fit a variety of different forms of
 2-dimensional gaussian OR an Airy.
 This code is mostly directly copied from gaussfitter.py and presents 
@@ -4108,8 +3982,23 @@ formatted to work with Arecibo&#8217;s CIMA
 </dd></dl>
 
 </div>
-<div class="section" id="subim-gaussfit-module">
-<h2><tt class="xref py py-mod docutils literal"><span class="pre">subim_gaussfit</span></tt> Module<a class="headerlink" href="#subim-gaussfit-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-agpy.subim_gaussfit">
+<span id="subim-gaussfit-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">subim_gaussfit</span></tt> Module<a class="headerlink" href="#module-agpy.subim_gaussfit" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="agpy.subim_gaussfit.fitstar">
+<tt class="descclassname">agpy.subim_gaussfit.</tt><tt class="descname">fitstar</tt><big>(</big><em>filename</em>, <em>x_cen</em>, <em>y_cen</em>, <em>errname=</em><span class="optional">[</span><span class="optional">]</span><big>)</big><a class="reference internal" href="_modules/agpy/subim_gaussfit.html#fitstar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.subim_gaussfit.fitstar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="agpy.subim_gaussfit.fitstars">
+<tt class="descclassname">agpy.subim_gaussfit.</tt><tt class="descname">fitstars</tt><big>(</big><em>filelist</em>, <em>x_cen</em>, <em>y_cen</em><big>)</big><a class="reference internal" href="_modules/agpy/subim_gaussfit.html#fitstars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.subim_gaussfit.fitstars" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="agpy.subim_gaussfit.printfits">
+<tt class="descclassname">agpy.subim_gaussfit.</tt><tt class="descname">printfits</tt><big>(</big><em>outfilename</em>, <em>filelist</em>, <em>xcen</em>, <em>ycen</em><big>)</big><a class="reference internal" href="_modules/agpy/subim_gaussfit.html#printfits"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.subim_gaussfit.printfits" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
 <div class="section" id="module-agpy.timer">
 <span id="timer-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">timer</span></tt> Module<a class="headerlink" href="#module-agpy.timer" title="Permalink to this headline">¶</a></h2>
@@ -4138,50 +4027,25 @@ contributed</pre>
           <h3>Table Of Contents</h3>
           <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="">Adam Ginsburg&#8217;s Python Code (agpy)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#agpy-package"><tt class="docutils literal"><span class="pre">agpy</span></tt> Package</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#agpy">agpy</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#module-agpy.PCA_tools"><tt class="docutils literal"><span class="pre">PCA_tools</span></tt> Module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#pca-tools">PCA Tools</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#agpy-package"><tt class="docutils literal"><span class="pre">agpy</span></tt> Package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.PCA_tools"><tt class="docutils literal"><span class="pre">PCA_tools</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.asinh_norm"><tt class="docutils literal"><span class="pre">asinh_norm</span></tt> Module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#arcsinh-colorbar-normalization">Arcsinh Colorbar Normalization</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#module-agpy.blackbody"><tt class="docutils literal"><span class="pre">blackbody</span></tt> Module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#simple-black-body-calculator">Simple black-body calculator</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.blackbody"><tt class="docutils literal"><span class="pre">blackbody</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.collapse_gaussfit"><tt class="docutils literal"><span class="pre">collapse_gaussfit</span></tt> Module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#collapse-gaussfit">Collapse Gaussfit</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#module-agpy.constants"><tt class="docutils literal"><span class="pre">constants</span></tt> Module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#constants">Constants</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.constants"><tt class="docutils literal"><span class="pre">constants</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.conversationcount"><tt class="docutils literal"><span class="pre">conversationcount</span></tt> Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-agpy.cubes"><tt class="docutils literal"><span class="pre">cubes</span></tt> Module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#cubes">Cubes</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#module-agpy.cutout"><tt class="docutils literal"><span class="pre">cutout</span></tt> Module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#cutout">Cutout</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.cubes"><tt class="docutils literal"><span class="pre">cubes</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.cutout"><tt class="docutils literal"><span class="pre">cutout</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.densitymap"><tt class="docutils literal"><span class="pre">densitymap</span></tt> Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#downsample-module"><tt class="docutils literal"><span class="pre">downsample</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.ds9_phot"><tt class="docutils literal"><span class="pre">ds9_phot</span></tt> Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#module-agpy.dust"><tt class="docutils literal"><span class="pre">dust</span></tt> Module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#dust-emissivity">Dust emissivity</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#module-agpy.gaussfitter"><tt class="docutils literal"><span class="pre">gaussfitter</span></tt> Module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#gaussfitter">gaussfitter</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.dust"><tt class="docutils literal"><span class="pre">dust</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.gaussfitter"><tt class="docutils literal"><span class="pre">gaussfitter</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.get_cutouts"><tt class="docutils literal"><span class="pre">get_cutouts</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.grep"><tt class="docutils literal"><span class="pre">grep</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.h2fit"><tt class="docutils literal"><span class="pre">h2fit</span></tt> Module</a></li>
@@ -4206,7 +4070,7 @@ contributed</pre>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.region_positions"><tt class="docutils literal"><span class="pre">region_positions</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.regtoapo"><tt class="docutils literal"><span class="pre">regtoapo</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.regtocima"><tt class="docutils literal"><span class="pre">regtocima</span></tt> Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#subim-gaussfit-module"><tt class="docutils literal"><span class="pre">subim_gaussfit</span></tt> Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-agpy.subim_gaussfit"><tt class="docutils literal"><span class="pre">subim_gaussfit</span></tt> Module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-agpy.timer"><tt class="docutils literal"><span class="pre">timer</span></tt> Module</a></li>
 </ul>
 </li>
@@ -4230,32 +4094,23 @@ contributed</pre>
       </div>
     </div>
 
-    <div class="footer-wrapper">
-      <div class="footer">
-        <div class="left">
-          <a href="index.html" title="AGPY Contents:"
-             >previous</a> |
-          <a href="image_tools.html" title="Image Tools"
-             >next</a> |
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |
-          <a href="genindex.html" title="General Index"
-             >index</a>
-            <br/>
-            <a href="_sources/agpy.txt"
-               rel="nofollow">Show Source</a>
-        </div>
-
-        <div class="right">
-          
     <div class="footer">
-        &copy; Copyright 2011, Adam Ginsburg.
+      &copy; Copyright 2011, Adam Ginsburg.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2pre.
-    </div>
-        </div>
-        <div class="clearer"></div>
-      </div>
-    </div>
+    <script type="text/javascript">
 
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-6253248-2']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+        
+    </div>
   </body>
 </html>

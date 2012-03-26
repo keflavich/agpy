@@ -79,13 +79,6 @@ Adam Ginsburg's Python Code (agpy)
     :members:
     :undoc-members:
 
-:mod:`downsample` Module
-------------------------
-
-.. automodule:: agpy.downsample
-    :members:
-    :undoc-members:
-
 :mod:`ds9_phot` Module
 ----------------------
 
