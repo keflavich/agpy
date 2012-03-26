@@ -8,6 +8,7 @@ The functions included below are the 'mature' codes from the agpy package.
 .. moduleauthor:: Adam Ginsburg <adam.g.ginsburg@gmail.com>
 
 """
+__version__='0.1.2'
 ##from luminosity import luminosity
 #import readcol as readcol_mod
 from readcol import readcol

@@ -8,8 +8,11 @@ with open('README.txt') as file:
 with open('CHANGES') as file:
     long_description += file.read()
 
+
+from agpy import __version__ as version
+
 setup(name='agpy',
-      version='0.1.2',
+      version=version,
       description='agpy, Adam Ginsburg\'s Python Code (in 0.1 for perpetuity - it won\'t bump up until I release something)',
       long_description=long_description,
       author='Adam Ginsburg',

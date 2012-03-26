@@ -73,7 +73,7 @@ spectra and PSDs.</p>
 <h2><tt class="xref py py-mod docutils literal"><span class="pre">convolve_nd</span></tt> Module<a class="headerlink" href="#convolve-nd-module" title="Permalink to this headline">¶</a></h2>
 <span class="target" id="module-AG_fft_tools.convolve_nd"></span><dl class="function">
 <dt id="AG_fft_tools.convolve_nd.convolvend">
-<tt class="descclassname">AG_fft_tools.convolve_nd.</tt><tt class="descname">convolvend</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x10317acf8&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve_nd.html#convolvend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve_nd.convolvend" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">AG_fft_tools.convolve_nd.</tt><tt class="descname">convolvend</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>boundary='fill'</em>, <em>fill_value=0</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>interpolate_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=False</em>, <em>min_wt=0.0</em>, <em>normalize_kernel=False</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/convolve_nd.html#convolvend"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.convolve_nd.convolvend" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convolve an ndarray with an nd-kernel.  Returns a convolved image with shape =
 array.shape.  Assumes image &amp; kernel are centered.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -91,23 +91,55 @@ centered (i.e., shifts may result if your kernel is asymmetric)</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>default: *array* convolved with *kernel*</strong> :</p>
-<p><strong>if return_fft: fft(*array*) * fft(*kernel*)</strong> :</p>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>default: `array` convolved with `kernel`</strong> :</p>
+<p><strong>if return_fft: fft(`array`) * fft(`kernel`)</strong> :</p>
 <blockquote>
 <div><ul class="simple">
 <li>if fftshift: Determines whether the fft will be shifted before
 returning</li>
 </ul>
 </div></blockquote>
-<p><strong>if *crop* == False</strong> : Returns the image, but with the fft-padded size</p>
-<blockquote>
+<p><strong>if not(`crop`)</strong> : Returns the image, but with the fft-padded size</p>
+<blockquote class="last">
 <div><p>instead of the input size</p>
 </div></blockquote>
-<p class="last"><strong>.. note: This is also implemented in :astropy:nddata:</strong> :</p>
 </td>
 </tr>
 </tbody>
 </table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="go">array([ 1.,  4.,  3.])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span>
+<span class="go">array([ 1.,  4.,  3.])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+<span class="go">array([ 1.,  0.,  3.])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">])</span>
+<span class="go">array([ 1.,  2.,  3.])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">interpolate_nan</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">array([ 1.,  0.,  3.])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">interpolate_nan</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">min_wt</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+<span class="go">array([ 1.,  nan,  3.])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">interpolate_nan</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">array([ 1.,  4.,  3.])</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convolve_fft</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span><span class="mi">3</span><span class="p">],[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">interpolate_nan</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">normalize_kernel</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">array([ 1.,  2.,  3.])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="function">
@@ -211,8 +243,31 @@ view - Plot the PSD (in logspace)?</p>
 <div class="section" id="smooth-tools-module">
 <h2><tt class="xref py py-mod docutils literal"><span class="pre">smooth_tools</span></tt> Module<a class="headerlink" href="#smooth-tools-module" title="Permalink to this headline">¶</a></h2>
 <span class="target" id="module-AG_fft_tools.smooth_tools"></span><dl class="function">
+<dt id="AG_fft_tools.smooth_tools.make_kernel">
+<tt class="descclassname">AG_fft_tools.smooth_tools.</tt><tt class="descname">make_kernel</tt><big>(</big><em>kernelshape</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>normalize_kernel=&lt;function sum at 0x10637bcf8&gt;</em>, <em>force_odd=False</em><big>)</big><a class="headerlink" href="#AG_fft_tools.smooth_tools.make_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a smoothing kernel for use with <tt class="xref py py-obj docutils literal"><span class="pre">convolve</span></tt> or <tt class="xref py py-obj docutils literal"><span class="pre">convolve_fft</span></tt></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>kernelshape</strong> : n-tuple</p>
+<blockquote>
+<div><p>A tuple (or list or array) defining the shape of the kernel.  The
+length of kernelshape determines the dimensionality of the resulting
+kernel</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last"><strong>An N-dimensional float array</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="AG_fft_tools.smooth_tools.smooth">
-<tt class="descclassname">AG_fft_tools.smooth_tools.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x10317acf8&gt;</em>, <em>downsample=False</em>, <em>downsample_factor=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/smooth_tools.html#smooth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.smooth_tools.smooth" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">AG_fft_tools.smooth_tools.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x10637bcf8&gt;</em>, <em>downsample=False</em>, <em>downsample_factor=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/AG_fft_tools/smooth_tools.html#smooth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AG_fft_tools.smooth_tools.smooth" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a smoothed image using a gaussian, boxcar, or tophat kernel</p>
 <p>Options: 
 kernelwidth:</p>

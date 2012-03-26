@@ -4,7 +4,22 @@ import numpy as np
 def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=False, quiet=True, sigma_cut=False, **kwargs):
     """
     Determine the shift between two FITS images using the cross-correlation
-    technique.  Requires montage.
+    technique.  Requires montage or hcongrid.
+
+    Parameters
+    ----------
+    fitsfile1: str
+        Reference fits file name
+    fitsfile2: str
+        Offset fits file name
+    return_cropped_images: bool
+        Returns the images used for the analysis in addition to the measured
+        offsets
+    quiet: bool
+        Silence messages?
+    sigma_cut: bool or int
+        Perform a sigma-cut before cross-correlating the images to minimize
+        noise correlation?
     """
     import montage
     import pyfits
@@ -51,17 +66,31 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=Fa
     
 
 def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwargs):
-    """
-    From http://solarmuri.ssl.berkeley.edu/~welsch/public/software/cross_cor_taylor.pro
+    """ Use cross-correlation and a 2nd order taylor expansion to measure the
+    offset between two images
 
     Given two images, calculate the amount image2 is offset from image1 to
     sub-pixel accuracy using 2nd order taylor expansion.
 
-    :maxoff: Maximum allowed offset (in pixels).  Useful for low s/n images that you know
-    are reasonably well-aligned, but might find incorrect offsets
+    Parameters
+    ----------
+    image1: np.ndarray
+        The reference image
+    image2: np.ndarray
+        The offset image.  Must have the same shape as image1
+    maxoff: int
+        Maximum allowed offset (in pixels).  Useful for low s/n images that you
+        know are reasonably well-aligned, but might find incorrect offsets due to 
+        edge noise
+    verbose: bool
+        Print out extra messages?
 
     **kwargs are passed to correlate2d, which in turn passes them to convolve.
     The available options include image padding for speed and ignoring NaNs.
+
+    References
+    ----------
+    From http://solarmuri.ssl.berkeley.edu/~welsch/public/software/cross_cor_taylor.pro
 
     """
 
@@ -104,6 +133,20 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwarg
     return -(xshift_int+shiftsubx),-(yshift_int+shiftsuby)
 
 def second_derivative(image):
+    """
+    Compute the second derivative of an image
+    The derivatives are set to zero at the edges
+
+    Parameters
+    ----------
+    image: np.ndarray
+
+    Returns
+    -------
+    d/dx^2, d/dy^2, d/dxdy
+    All three are np.ndarrays with the same shape as image.
+
+    """
     shift_right = np.roll(image,1,1)
     shift_right[:,0] = 0
     shift_left = np.roll(image,-1,1)

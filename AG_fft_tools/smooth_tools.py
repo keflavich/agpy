@@ -11,43 +11,43 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
     Options: 
-    - *kernelwidth* :
+    kernelwidth:
         width of kernel in pixels  (see definitions below)
-    - *kerneltype* :
+    kerneltype:
         gaussian, boxcar, or tophat.  
         For a gaussian, uses a gaussian with sigma = kernelwidth (in pixels)
             out to [nwidths]-sigma
         A boxcar is a kernelwidth x kernelwidth square 
         A tophat is a flat circle with radius = kernelwidth
     Default options:
-        - *psf_pad* : [True]
+        psf_pad: [True]
             will pad the input image to be the image size + PSF.
             Slows things down but removes edge-wrapping effects (see convolve)
             This option should be set to false if the edges of your image are
             symmetric.
-        - *interp_nan* : [False]
+        interp_nan: [False]
             Will replace NaN points in an image with the
             smoothed average of its neighbors (you can still simply ignore NaN 
             values by setting ignore_nan=True but leaving interp_nan=False)
-        - *silent* : [True]
+        silent: [True]
             turn it off to get verbose statements about kernel types
-        - *return_kernel* : [False]
+        return_kernel: [False]
             If set to true, will return the kernel as the
             second return value
-        - *nwidths* : ['max']
+        nwidths: ['max']
             number of kernel widths wide to make the kernel.  Set to 'max' to
             match the image shape, otherwise use any integer 
-        - *min_nwidths* : [6]
+        min_nwidths: [6]
             minimum number of gaussian widths to make the kernel
             (the kernel will be larger than the image if the image size is <
             min_widths*kernelsize)
-        - *normalize_kernel* :
+        normalize_kernel:
             Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
             or the kernel peak (i.e. kernel.max() = 1) ?  Must be a *function* that can
             operate on a numpy array
-        - *downsample* :
+        downsample:
             downsample after smoothing?
-        - *downsample_factor* :
+        downsample_factor:
             if None, default to kernelwidth
 
     Note that the kernel is forced to be even sized on each axis to assure no

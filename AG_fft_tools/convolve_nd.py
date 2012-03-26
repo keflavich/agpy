@@ -138,6 +138,7 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
 
     """
 
+
     # Checking copied from convolve.py - however, since FFTs have real &
     # complex components, we change the types.  Only the real part will be
     # returned!

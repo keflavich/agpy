@@ -149,16 +149,16 @@ def fitstar(filename,x_cen,y_cen,errname=[]):
     return returnval
 
 
-printfits(outfile,filelist,x_cen,y_cen)
-
-ParmArr = fitstars(filelist,x_cen,y_cen)
-figure(1); clf()
-title('FWHM vs Julian Date')
-plot(dates,width,'x')
-figure(2); clf();
-plot(dates,amp,'o')
-plot(dates,back,'d')
-figure(4); clf();
-title('Flux vs. Amplitude')
-plot(flux,amp,'x')
-
+# printfits(outfile,filelist,x_cen,y_cen)
+# 
+# ParmArr = fitstars(filelist,x_cen,y_cen)
+# figure(1); clf()
+# title('FWHM vs Julian Date')
+# plot(dates,width,'x')
+# figure(2); clf();
+# plot(dates,amp,'o')
+# plot(dates,back,'d')
+# figure(4); clf();
+# title('Flux vs. Amplitude')
+# plot(flux,amp,'x')
+ 
