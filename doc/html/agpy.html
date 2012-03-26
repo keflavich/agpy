@@ -10,7 +10,7 @@
     
     <title>Adam Ginsburg’s Python Code (agpy) &mdash; agpy 0.1.2 documentation</title>
     
-    <link rel="stylesheet" href="_static/astropy.css" type="text/css" />
+    <link rel="stylesheet" href="_static/extra.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -38,6 +38,7 @@
 
 
     </script>
+    <link rel="stylesheet" type="text/css" href="_static/extra.css" />
   </head>
   <body>
     <div class="header-wrapper">
@@ -204,7 +205,7 @@ longitude1, latitude1, longitude2, latitude2</p>
 
 <dl class="function">
 <dt id="agpy.downsample">
-<tt class="descclassname">agpy.</tt><tt class="descname">downsample</tt><big>(</big><em>myarr</em>, <em>factor</em>, <em>estimator=&lt;function nanmean at 0x1069a3410&gt;</em><big>)</big><a class="headerlink" href="#agpy.downsample" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">downsample</tt><big>(</big><em>myarr</em>, <em>factor</em>, <em>estimator=&lt;function nanmean at 0x10bbca410&gt;</em><big>)</big><a class="headerlink" href="#agpy.downsample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Downsample a 2D array by averaging over <em>factor</em> pixels in each axis.
 Crops upper edge if the shape is not a multiple of factor.</p>
 <p>This code is pure numpy and should be fast.</p>
@@ -242,13 +243,9 @@ image in both directions.</div></blockquote>
 
 <dl class="function">
 <dt id="agpy.convolve">
-<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x10497bcf8&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big><a class="headerlink" href="#agpy.convolve" title="Permalink to this definition">¶</a></dt>
-<dd><p>Convolve an image with a kernel.  Returns a convolved image with shape =
+<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x10317acf8&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big><a class="headerlink" href="#agpy.convolve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convolve an ndarray with an nd-kernel.  Returns a convolved image with shape =
 array.shape.  Assumes image &amp; kernel are centered.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Order matters; the kernel should be second.</p>
-</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -285,13 +282,9 @@ returning</li>
 
 <dl class="function">
 <dt>
-<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x10497bcf8&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big></dt>
-<dd><p>Convolve an image with a kernel.  Returns a convolved image with shape =
+<tt class="descclassname">agpy.</tt><tt class="descname">convolve</tt><big>(</big><em>array</em>, <em>kernel</em>, <em>crop=True</em>, <em>return_fft=False</em>, <em>fftshift=True</em>, <em>fft_pad=True</em>, <em>psf_pad=False</em>, <em>ignore_nan=False</em>, <em>quiet=False</em>, <em>ignore_edge_zeros=True</em>, <em>min_wt=1e-08</em>, <em>force_ignore_zeros_off=False</em>, <em>normalize_kernel=&lt;function sum at 0x10317acf8&gt;</em>, <em>use_numpy_fft=False</em>, <em>nthreads=1</em><big>)</big></dt>
+<dd><p>Convolve an ndarray with an nd-kernel.  Returns a convolved image with shape =
 array.shape.  Assumes image &amp; kernel are centered.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Order matters; the kernel should be second.</p>
-</div>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -328,7 +321,7 @@ returning</li>
 
 <dl class="function">
 <dt id="agpy.smooth">
-<tt class="descclassname">agpy.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x10497bcf8&gt;</em>, <em>downsample=False</em>, <em>downsample_factor=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.smooth" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">smooth</tt><big>(</big><em>image</em>, <em>kernelwidth=3</em>, <em>kerneltype='gaussian'</em>, <em>trapslope=None</em>, <em>silent=True</em>, <em>psf_pad=True</em>, <em>interp_nan=False</em>, <em>nwidths='max'</em>, <em>min_nwidths=6</em>, <em>return_kernel=False</em>, <em>normalize_kernel=&lt;function sum at 0x10317acf8&gt;</em>, <em>downsample=False</em>, <em>downsample_factor=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.smooth" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a smoothed image using a gaussian, boxcar, or tophat kernel</p>
 <p>Options: 
 kernelwidth:</p>
@@ -478,7 +471,7 @@ Translated from IDL to Python by Adam Ginsburg (<a class="reference external" hr
 
 <dl class="function">
 <dt id="agpy.moments">
-<tt class="descclassname">agpy.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.moments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x1037f9488&gt;</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#agpy.moments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
 the gaussian parameters of a 2D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -714,7 +707,7 @@ units.  Also allows for a few varieties of modified blackbody.</p>
 
 <dl class="function">
 <dt id="agpy.blackbody.fit_blackbody">
-<tt class="descclassname">agpy.blackbody.</tt><tt class="descname">fit_blackbody</tt><big>(</big><em>xdata</em>, <em>flux</em>, <em>guesses=(0</em>, <em>0)</em>, <em>err=None</em>, <em>blackbody_function=&lt;function blackbody at 0x106f4aaa0&gt;</em>, <em>quiet=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/blackbody.html#fit_blackbody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.blackbody.fit_blackbody" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.blackbody.</tt><tt class="descname">fit_blackbody</tt><big>(</big><em>xdata</em>, <em>flux</em>, <em>guesses=(0</em>, <em>0)</em>, <em>err=None</em>, <em>blackbody_function=&lt;function blackbody at 0x10c95aaa0&gt;</em>, <em>quiet=True</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/blackbody.html#fit_blackbody"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.blackbody.fit_blackbody" title="Permalink to this definition">¶</a></dt>
 <dd><p>guesses = Temperature, Arbitrary Scale
 OR Temperature, Beta, Arbitrary Scale</p>
 </dd></dl>
@@ -755,7 +748,7 @@ effective, but the uses are somewhat minimal.  I&#8217;ve tried shifting my
 cube-related work to <a class="reference external" href="pyspeckit.bitbucket.org">pyspeckit</a>.</p>
 <dl class="function">
 <dt id="agpy.collapse_gaussfit.adaptive_collapse_gaussfit">
-<tt class="descclassname">agpy.collapse_gaussfit.</tt><tt class="descname">adaptive_collapse_gaussfit</tt><big>(</big><em>cube</em>, <em>axis=2</em>, <em>nsig=3</em>, <em>nrsig=4</em>, <em>prefix='interesting'</em>, <em>vconv=&lt;function &lt;lambda&gt; at 0x109ed1b90&gt;</em>, <em>xtora=&lt;function &lt;lambda&gt; at 0x109ed1c08&gt;</em>, <em>ytodec=&lt;function &lt;lambda&gt; at 0x109ed1c80&gt;</em>, <em>doplot=True</em><big>)</big><a class="reference internal" href="_modules/agpy/collapse_gaussfit.html#adaptive_collapse_gaussfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.collapse_gaussfit.adaptive_collapse_gaussfit" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.collapse_gaussfit.</tt><tt class="descname">adaptive_collapse_gaussfit</tt><big>(</big><em>cube</em>, <em>axis=2</em>, <em>nsig=3</em>, <em>nrsig=4</em>, <em>prefix='interesting'</em>, <em>vconv=&lt;function &lt;lambda&gt; at 0x10e1e2aa0&gt;</em>, <em>xtora=&lt;function &lt;lambda&gt; at 0x10e1e2b18&gt;</em>, <em>ytodec=&lt;function &lt;lambda&gt; at 0x10e1e2b90&gt;</em>, <em>doplot=True</em><big>)</big><a class="reference internal" href="_modules/agpy/collapse_gaussfit.html#adaptive_collapse_gaussfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.collapse_gaussfit.adaptive_collapse_gaussfit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Attempts to fit one or two Gaussians to each spectrum in a data cube and returns the parameters of the fits.
 Adaptively determines where to fit two Gaussian components based on residuals.  Will fit 3 gaussians if a
 two-gaussian fit is not better than a certain threshold (specified by nsig), and those fits will be output
@@ -994,7 +987,7 @@ average=sum and dvmul=True to get an integrated value)</p>
 
 <dl class="function">
 <dt id="agpy.cubes.subimage_integ">
-<tt class="descclassname">agpy.cubes.</tt><tt class="descname">subimage_integ</tt><big>(</big><em>cube</em>, <em>xcen</em>, <em>xwidth</em>, <em>ycen</em>, <em>ywidth</em>, <em>vrange</em>, <em>header=None</em>, <em>average=&lt;function mean at 0x10497d668&gt;</em>, <em>dvmult=False</em>, <em>return_HDU=False</em>, <em>units='pixels'</em>, <em>zunits=None</em><big>)</big><a class="reference internal" href="_modules/agpy/cubes.html#subimage_integ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.cubes.subimage_integ" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.cubes.</tt><tt class="descname">subimage_integ</tt><big>(</big><em>cube</em>, <em>xcen</em>, <em>xwidth</em>, <em>ycen</em>, <em>ywidth</em>, <em>vrange</em>, <em>header=None</em>, <em>average=&lt;function mean at 0x10317c668&gt;</em>, <em>dvmult=False</em>, <em>return_HDU=False</em>, <em>units='pixels'</em>, <em>zunits=None</em><big>)</big><a class="reference internal" href="_modules/agpy/cubes.html#subimage_integ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.cubes.subimage_integ" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a sub-image from a data cube integrated over the specified velocity range</p>
 <p>All units assumed to be pixel units</p>
 <p>cube has dimensions (velocity, y, x)</p>
@@ -1163,7 +1156,7 @@ from leastsq telling what the exit status of the fitting routine was</dd>
 
 <dl class="function">
 <dt id="agpy.gaussfitter.moments">
-<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.moments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">moments</tt><big>(</big><em>data</em>, <em>circle</em>, <em>rotate</em>, <em>vheight</em>, <em>estimator=&lt;function median at 0x1037f9488&gt;</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#moments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.moments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, y, width_x, width_y, rotation angle)
 the gaussian parameters of a 2D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -1250,7 +1243,7 @@ H+A*numpy.exp(-(x-dx)**2/(2*w**2))</p>
 
 <dl class="function">
 <dt id="agpy.gaussfitter.onedmoments">
-<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">onedmoments</tt><big>(</big><em>Xax</em>, <em>data</em>, <em>vheight=True</em>, <em>estimator=&lt;function median at 0x104ecd488&gt;</em>, <em>negamp=None</em>, <em>veryverbose=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#onedmoments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.onedmoments" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.gaussfitter.</tt><tt class="descname">onedmoments</tt><big>(</big><em>Xax</em>, <em>data</em>, <em>vheight=True</em>, <em>estimator=&lt;function median at 0x1037f9488&gt;</em>, <em>negamp=None</em>, <em>veryverbose=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/gaussfitter.html#onedmoments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.gaussfitter.onedmoments" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns (height, amplitude, x, width_x)
 the gaussian parameters of a 1D distribution by calculating its
 moments.  Depending on the input parameters, will only output 
@@ -1350,17 +1343,17 @@ Values from: <a class="reference external" href="http://www.jach.hawaii.edu/UKIR
 
 <dl class="function">
 <dt id="agpy.h2fit.fitandplot">
-<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplot</tt><big>(</big><em>image, noiseimage, aperture=[], noiseaperture=[0, 10], modelspec=&lt;function modelspec at 0x109f301b8&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplot" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplot</tt><big>(</big><em>image, noiseimage, aperture=[], noiseaperture=[0, 10], modelspec=&lt;function modelspec at 0x10e2a10c8&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplot" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="agpy.h2fit.fitandplotspex">
-<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplotspex</tt><big>(</big><em>image, modelspec=&lt;function modelspec at 0x109f301b8&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplotspex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplotspex" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitandplotspex</tt><big>(</big><em>image, modelspec=&lt;function modelspec at 0x10e2a10c8&gt;, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], nameregex='-', vlsrcorr=0, extinction=False, quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitandplotspex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitandplotspex" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="agpy.h2fit.fitspec">
-<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitspec</tt><big>(</big><em>specsegments, aperture=None, modelspec=&lt;function modelspec at 0x109f301b8&gt;, outpars=False, vlsrcorr=0, extinction=False, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitspec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitspec" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.h2fit.</tt><tt class="descname">fitspec</tt><big>(</big><em>specsegments, aperture=None, modelspec=&lt;function modelspec at 0x10e2a10c8&gt;, outpars=False, vlsrcorr=0, extinction=False, parinfo=[{'limited': [1, 1], 'limits': [200.0, 15000.0], 'value': 2000, 'n': 0, 'error': 0, 'fixed': 0, 'parname': 'TEMPERATURE'}, {'limited': [1, 0], 'limits': [0, 0], 'value': 5.0000000000000001e-09, 'n': 1, 'error': 0, 'fixed': 0, 'parname': 'SCALE'}, {'limited': [1, 1], 'limits': [0, 1000.0], 'value': 31.100000000000001, 'n': 2, 'error': 0, 'fixed': 0, 'parname': 'WIDTH'}, {'limited': [1, 1], 'limits': [-500.0, 500.0], 'value': -20.0, 'n': 3, 'error': 0, 'fixed': 0, 'parname': 'SHIFT'}, {'limited': [1, 1], 'limits': [1.5, 3.5], 'value': 3, 'n': 4, 'error': 0, 'fixed': 0, 'parname': 'ORTHOtoPARA'}], quiet=1, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/h2fit.html#fitspec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.h2fit.fitspec" title="Permalink to this definition">¶</a></dt>
 <dd><p>fit a model spectrum 
 The model is defined internal to fitspec so that parameters can
 be fixed based on input parameters</p>
@@ -1527,7 +1520,7 @@ O III, V 19.87       1.21 1.57       0.21 0.64       0.06</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">cumint(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">cumint(fn=&lt;function kroupa at 0x10e2b3050&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -1864,7 +1857,7 @@ O III, V 19.87       1.21 1.57       0.21 0.64       0.06</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">integrate(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">integrate(fn=&lt;function kroupa at 0x10e2b3050&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -2230,7 +2223,7 @@ Uses the Vacca, Garmany, Shull 1996 Table 5 Log Q and Mspec parameters</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">m_cumint(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">m_cumint(fn=&lt;function kroupa at 0x10e2b3050&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -2567,7 +2560,7 @@ Uses the Vacca, Garmany, Shull 1996 Table 5 Log Q and Mspec parameters</p>
 
 <dl class="function">
 <dt>
-<tt class="descname">m_integrate(fn=&lt;function kroupa at 0x109f43140&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
+<tt class="descname">m_integrate(fn=&lt;function kroupa at 0x10e2b3050&gt;, bins=array([  1.00000000e-02,   1.01862899e-02,   1.03760502e-02,</tt></dt>
 <dt>
 <tt class="descname">1.05693455e-02,   1.07662418e-02,   1.09668060e-02,</tt></dt>
 <dt>
@@ -3690,7 +3683,7 @@ and <a class="reference external" href="http://home.fnal.gov/~neilsen/notebook/a
 
 <dl class="function">
 <dt id="agpy.psf_fitter.psffit">
-<tt class="descclassname">agpy.psf_fitter.</tt><tt class="descname">psffit</tt><big>(</big><em>data, err=None, params=[], autoderiv=True, return_all=False, circle=True, fixed=array([False, False, False, False, False, False, False], dtype=bool), limitedmin=[False, False, False, False, True, True, True], limitedmax=[False, False, False, False, False, False, True], usemoment=array([], dtype=bool), minpars=array([0, 0, 0, 0, 0, 0, 0]), maxpars=[0, 0, 0, 0, 0, 0, 360], rotate=0, vheight=1, quiet=True, returnmp=False, returnfitimage=False, psffunction=&lt;function airy at 0x109e68cf8&gt;, extra_pars=None, return_parinfo=False, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/psf_fitter.html#psffit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.psf_fitter.psffit" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">agpy.psf_fitter.</tt><tt class="descname">psffit</tt><big>(</big><em>data, err=None, params=[], autoderiv=True, return_all=False, circle=True, fixed=array([False, False, False, False, False, False, False], dtype=bool), limitedmin=[False, False, False, False, True, True, True], limitedmax=[False, False, False, False, False, False, True], usemoment=array([], dtype=bool), minpars=array([0, 0, 0, 0, 0, 0, 0]), maxpars=[0, 0, 0, 0, 0, 0, 360], rotate=0, vheight=1, quiet=True, returnmp=False, returnfitimage=False, psffunction=&lt;function airy at 0x10e39dc08&gt;, extra_pars=None, return_parinfo=False, **kwargs</em><big>)</big><a class="reference internal" href="_modules/agpy/psf_fitter.html#psffit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#agpy.psf_fitter.psffit" title="Permalink to this definition">¶</a></dt>
 <dd><p>PSF fitter with the ability to fit a variety of different forms of
 2-dimensional gaussian OR an Airy.
 This code is mostly directly copied from gaussfitter.py and presents 
