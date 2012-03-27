@@ -54,6 +54,7 @@ def hcongrid(image, header1, header2, **kwargs):
 
     if not all([w1==w2 for w1,w2 in zip(wcs1.wcs.ctype,wcs2.wcs.ctype)]):
         # do unit conversions
+        raise NotImplementedError("Unit conversions have not yet been implemented.")
 
     outshape = [wcs2.naxis2,wcs2.naxis1]
     yy2,xx2 = np.indices(outshape)
