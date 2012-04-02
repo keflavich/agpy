@@ -14,22 +14,19 @@ import numpy
 
   
 def efuncs(arr, return_others=False):
-  """
-  Determine eigenfunctions of an array for use with
-  PCA cleaning
-  """
-  try:
-      arr[arr.mask] = 0
-      arr.mask[:] = 0
-  except:
-      pass
-  covmat = numpy.dot(arr.T,arr)
-  evals,evects = numpy.linalg.eig(covmat)
-  efuncarr = numpy.dot(arr,evects)
-  if return_others:
-      return efuncarr,covmat,evals,evects
-  else:
-      return efuncarr
+    """
+    Determine eigenfunctions of an array for use with
+    PCA cleaning
+    """
+    if hasattr(arr,'filled'):
+        arr = arr.filled(0)
+    covmat = numpy.dot(arr.T,arr)
+    evals,evects = numpy.linalg.eig(covmat)
+    efuncarr = numpy.dot(arr,evects)
+    if return_others:
+        return efuncarr,covmat,evals,evects
+    else:
+        return efuncarr
 
 def PCA_linear_fit(data1, data2, print_results=False, ignore_nans=True):
     """
@@ -165,11 +162,8 @@ def pca_subtract(arr,ncomps):
     the *ncomps* most correlated components, transform back to the original
     space, and return that.
     """
-    try:
-        arr[arr.mask] = 0
-        arr.mask[:] = 0
-    except:
-        pass
+    if hasattr(arr,'filled'):
+        arr = arr.filled(0)
     covmat = numpy.dot(arr.T,arr)
     evals,evects = numpy.linalg.eig(covmat)
     efuncarr = numpy.dot(arr,evects)
@@ -181,11 +175,8 @@ def unpca_subtract(arr,ncomps):
     Like pca_subtract, except `keep` the *ncomps* most correlated components
     and reject the others
     """
-    try:
-        arr[arr.mask] = 0
-        arr.mask[:] = 0
-    except:
-        pass
+    if hasattr(arr,'filled'):
+        arr = arr.filled(0)
     covmat = numpy.dot(arr.T,arr)
     evals,evects = numpy.linalg.eig(covmat)
     efuncarr = numpy.dot(arr,evects)

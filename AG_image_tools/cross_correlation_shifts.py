@@ -57,7 +57,10 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=Fa
     xoff,yoff = cross_correlation_shifts(corr_image1, corr_image2, verbose=verbose,**kwargs)
     
     wcs = pywcs.WCS(header)
-    xoff_wcs,yoff_wcs = np.inner( np.array([[xoff,0],[0,yoff]]), wcs.wcs.cd )[[0,1],[0,1]]
+    try:
+        xoff_wcs,yoff_wcs = np.inner( np.array([[xoff,0],[0,yoff]]), wcs.wcs.cd )[[0,1],[0,1]]
+    except AttributeError:
+        xoff_wcs,yoff_wcs = 0,0
 
     if return_cropped_images:
         return xoff,yoff,xoff_wcs,yoff_wcs,image1,image2_projected

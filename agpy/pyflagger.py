@@ -3,6 +3,7 @@
 import math
 import warnings
 warnings.filterwarnings('ignore','masked')
+warnings.simplefilter('ignore')
 import pylab
 from pylab import *
 for k,v in pylab.__dict__.iteritems():  
@@ -151,6 +152,9 @@ class Flagger:
             self._loadfits(filename,**kwargs)
         elif filename[-3:] == 'sav':
             self._loadsav(filename,**kwargs)
+
+        self.autopca = False
+        self.autohist = False
 
         self.help = """
 
@@ -477,6 +481,8 @@ class Flagger:
         'zeromedian': lambda: self.atmo_one,
         'atmo_one_itermedian': lambda: itermedian(self.atmo_one),
         'expsub': lambda: exponent_sub(self.lookup('atmo_one_itermedian')),
+        'preexpsub': lambda: exponent_sub(self.lookup('acbolos_noscale')),
+        'preexpsub_piecewise': lambda: exponent_sub(self.lookup('acbolos_noscale'),piecewise=True),
         'atmos_remainder': lambda: self.lookup('atmo_one_itermedian'),#self.lookup('expsub'),
         'atmos_remainder_v1': lambda: itermedian(self.atmo_one,scale=1.0,niter=1),
         'expmodel': lambda: self.lookup('atmo_one_itermedian') - self.lookup('expsub'),
@@ -574,8 +580,8 @@ class Flagger:
         self.varscalemap[abs(self.weightmap**2 - self.weightsquaremap) < self.weightsquaremap/1e6] = 0
         self.rmssamplemean = (self.varscalemap * self.residsquaremap)**0.5
         self.rootresidsquaremap = self.residsquaremap**0.5
-        self.smoothresid = smooth(self.residualmap,10/2.35,ignore_nan=True)
-        self.smoothnoisemap = numpy.sqrt( smooth((self.residualmap-self.smoothresid)**2,10/2.35,ignore_nan=True) )
+        self.smoothresid = smooth(self.residualmap,10/2.35,interpolate_nan=True)
+        self.smoothnoisemap = numpy.sqrt( smooth((self.residualmap-self.smoothresid)**2,10/2.35,interpolate_nan=True) )
         for arrname in ("residualmap", "weightmap", "nhitsmap", "residsquaremap", "weightsquaremap", "varscalemap", "rmssamplemean", "rootresidsquaremap",):
             self.__dict__[arrname] = nantomask(self.__dict__[arrname])
             print "%20s mu=%8.2g std=%8.2g" % (arrname,self.__dict__[arrname].mean(),self.__dict__[arrname].std())
@@ -588,36 +594,38 @@ class Flagger:
             F[0].data = self.__dict__[arrname]
             F.writeto(prefix+"_"+arrname+".fits",clobber=clobber)
 
-    def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0,axlims=None):
-      self.mapfig=figure(fignum); clf(); 
-      self.mapfig.subplots_adjust(left=0,right=1,bottom=0,top=1)
-      OK = self.map == self.map
-      if vmax is None:
-          vmax = self.map[OK].mean()+7*self.map[OK].std()
-      elif vmax=='max':
-          vmax = self.map[OK].max()
-      if vmin is None:
-          vmin = self.map[OK].mean()-2*self.map[OK].std()
-      elif vmin=='min':
-          vmin = self.map[OK].min()
-      self.mapim = pylab.imshow(self.map,
-              vmin=vmin,vmax=vmax,
-              interpolation='nearest',
-              cmap=colormap); 
-      self.mapim.axes.patch.set_fc('gray')
-      if axlims:
-          self.mapim.axes.axis(axlims)
-      colorbar()
-      try:
-          disconnect(self.MtoT)
-          disconnect(self.MtoTkey)
-      except:
-          pass
-      self.MtoT = connect('button_press_event',self.mapclick)
-      self.MtoTkey = connect('key_press_event',self.mapkeypress)
-      self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
-      self.mapconnections.append(self.MtoT)
-      self.mapconnections.append(self.MtoTkey)
+    def showmap(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=0,axlims=None,geometry="1920x1280+1920+0"):
+        self.mapfig=figure(fignum); clf(); 
+        if geometry is not None:
+            self.mapfig.canvas.manager.window.wm_geometry(geometry)
+        self.mapfig.subplots_adjust(left=0,right=1,bottom=0,top=1)
+        OK = self.map == self.map
+        if vmax is None:
+            vmax = self.map[OK].mean()+7*self.map[OK].std()
+        elif vmax=='max':
+            vmax = self.map[OK].max()
+        if vmin is None:
+            vmin = self.map[OK].mean()-2*self.map[OK].std()
+        elif vmin=='min':
+            vmin = self.map[OK].min()
+        self.mapim = pylab.imshow(self.map,
+                vmin=vmin,vmax=vmax,
+                interpolation='nearest',
+                cmap=colormap); 
+        self.mapim.axes.patch.set_fc('gray')
+        if axlims:
+            self.mapim.axes.axis(axlims)
+        colorbar()
+        try:
+            disconnect(self.MtoT)
+            disconnect(self.MtoTkey)
+        except:
+            pass
+        self.MtoT = connect('button_press_event',self.mapclick)
+        self.MtoTkey = connect('key_press_event',self.mapkeypress)
+        self.mapcursor=Cursor(gca(),useblit=True,color='black',linewidth=1)
+        self.mapconnections.append(self.MtoT)
+        self.mapconnections.append(self.MtoTkey)
 
     def showmodel(self,colormap=cm.spectral,vmin=None,vmax=None,fignum=6):
       self.modelfig=figure(fignum); clf(); 
@@ -807,7 +815,7 @@ class Flagger:
         else:
             self.plane = self.data[scannum,:,:] 
 
-    def plotscan(self, scannum, fignum=1, button=1, data=None, flag=True, logscale=False):
+    def plotscan(self, scannum, fignum=1, button=1, data=None, flag=True, logscale=False, dopca=False):
       if self.connected:
           self.dcon()
       self.scannum = scannum
@@ -828,6 +836,7 @@ class Flagger:
                   origin='lower',aspect=self.aspect)
           self.flagcb = pylab.colorbar()
           self.datafig = figure(fignum,figsize=[16,12]);clf();
+          self.datafig.canvas.manager.window.tkraise()
           if texOn:
             self.datatitle = pylab.title("Scan "+str(self.scannum)+" in "+self.ncfilename.replace("_","\\_"));
           else:
@@ -852,6 +861,13 @@ class Flagger:
       self.cursor = Cursor(self.dataim.axes,useblit=True,color='black',linewidth=1)
       self._refresh()
       self.reconnect()
+      if dopca or self.autopca:
+          self.planePCA(plotitem='evects',fignum=11,geometry='950x700+1920+0')
+          self.planePCA(plotitem='efuncarr',fignum=12,geometry='950x700+2870+0')
+      if self.autopca or self.autohist or dopca:
+          self.hist_corr_pca()
+      if self.autohist:
+          self.plane_histograms()
       """
       self.md  = connect('button_press_event',self.mouse_down_event)
       self.mu  = connect('button_release_event',self.mouse_up_event)
@@ -1335,14 +1351,24 @@ class Flagger:
                     self.weight[ii,jj,kk],
                     self.scalearr[ii,jj,kk])
 
-    def expsub(self):
+    def expsub(self,piecewise=False):
         for ii in xrange(self.nbolos):
             if hasattr(self.plane,'mask'):
                 if self.plane.mask[:,ii].sum() < self.plane.shape[0] - 2:
-                    self.plane[:,ii] = expsub_line(self.plane[:,ii])
+                    self.plane[:,ii] = expsub_line(self.plane[:,ii], piecewise=piecewise)
             else:
-                self.plane[:,ii] = expsub_line(self.plane[:,ii])
+                self.plane[:,ii] = expsub_line(self.plane[:,ii], piecewise=piecewise)
         self.plotscan(self.scannum, data=self.plane, flag=False)
+
+    def polysub(self):
+        for ii in xrange(self.nbolos):
+            if hasattr(self.plane,'mask'):
+                if self.plane.mask[:,ii].sum() < self.plane.shape[0] - 2:
+                    self.plane[:,ii] = polysub_line(self.plane[:,ii])
+            else:
+                self.plane[:,ii] = polysub_line(self.plane[:,ii])
+        self.plotscan(self.scannum, data=self.plane, flag=False)
+
 
     def hist_all_points(self,x,y,clear=True,timestream='mapped_timestream'):
         mappoint = y * self.map.shape[1] + x
@@ -1718,14 +1744,14 @@ class Flagger:
 
         subplot(211)
         title("Weights")
-        imshow(f.weight.mean(axis=1))
+        imshow(self.weight.mean(axis=1))
         colorbar()
         xlabel("Bolometer #")
         ylabel("Scan #")
 
         subplot(212)
         title("Scales")
-        imshow(f.scalearr.mean(axis=1))
+        imshow(self.scalearr.mean(axis=1))
         colorbar()
         xlabel("Bolometer #")
         ylabel("Scan #")
@@ -1744,7 +1770,7 @@ class Flagger:
 
         if flag:
             # lowest flag for a bolometer 
-            OKflags = f.flags.min(axis=0).min(axis=0) == 0
+            OKflags = self.flags.min(axis=0).min(axis=0) == 0
             OKscale *= OKflags
             OKweight *= OKflags
 
@@ -1755,6 +1781,36 @@ class Flagger:
         n2,l2,h2 =hist(self.weight[:,:,OKweight].mean(axis=1).ravel(),weights=ones((self.nscans,OKweight.sum())).ravel()/self.nscans,histtype='step',bins=nbins,label='Weights (not avgd. over scans)',color='g',linewidth=2)
         gca().set_ylim(0,max([max(n1),max(n2)])+1)
         
+        if dolegend: legend(loc=loc)
+
+    def plane_histograms(self, fignum=14, clear=True, hrange=[0,2], nbins=21, dolegend=True,
+            loc='best', ignore_zeros=True, flag=True, **kwargs):
+
+        self.planehistfig = figure(fignum)
+        if clear: self.planehistfig.clear()
+        self.planehistfig.canvas.manager.window.wm_geometry("400x600+1920+575")
+
+        if ignore_zeros:
+            OKscale = self.scale_coeffs != 0
+            OKweight = self.weight_by_bolo != 0
+        else:
+            OKscale = OKweight = self.scale_coeffs*0+True
+
+        if flag:
+            # lowest flag for a bolometer 
+            OKflags = self.flags.min(axis=0).min(axis=0) == 0
+            OKscale *= OKflags
+            OKweight *= OKflags
+
+        subplot(211)
+        hist(self.scale_coeffs[OKscale],histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
+        subplot(212)
+        n1,l1,h1 =hist(self.weight_by_bolo[OKweight],histtype='step',bins=nbins,label='Weights',color='r',linewidth=2)
+        n2,l2,h2 =hist(self.weight[f.scannum,:,OKweight].mean(axis=1).ravel(),
+                weights=ones(OKweight.sum()).ravel(),
+                histtype='step',bins=nbins,label='Weights (indiv scan)',color='g',linewidth=2)
+        gca().set_ylim(0,max([max(n1),max(n2)])+1)
+
         if dolegend: legend(loc=loc)
 
     def unmask_timestream(self, timestream='data'):
@@ -1785,7 +1841,42 @@ class Flagger:
 
         self.unmask_all()
 
-    def doPCA(self,clear=True,timestream='data', fignum=7, plotitem='evects', **kwargs):
+    def planePCA(self,clear=True, timestream='data', fignum=11, plotitem='evects', scannum=None, flag=True, geometry=None, **kwargs):
+
+        if scannum is None:
+            scannum = self.scannum
+
+        if timestream == 'data':
+            data = self.data[scannum,:,:].copy()
+            if flag:
+                data[self.flags[scannum,:,:].astype('bool')] = 0
+            self.efuncarr,self.covmat,self.evals,self.evects = efuncs(data,return_others=True)
+        elif self.tsplot_dict.has_key(timestream):
+            data = self.lookup(timestream) #tsplot_dict[timestream]()
+            data = data[scannum,:,:].copy()
+            if flag:
+                data[self.flags[scannum,:,:].astype('bool')] = 0
+            self.efuncarr,self.covmat,self.evals,self.evects = efuncs(data,return_others=True)
+        else:
+            raise KeyError("Timestream %s is not valid." % timestream)
+
+        self.PCAfig=figure(fignum)
+        if clear: self.PCAfig.clear()
+        if geometry is not None:
+            self.PCAfig.canvas.manager.window.wm_geometry(geometry)
+      
+        plotitem_dict = {'evects':self.evects,'efuncarr':self.efuncarr,'covmat':self.covmat,'evals':self.evals}
+        plottype_dict = {'evects':imshow,'efuncarr':imshow,'covmat':imshow,'evals':plot}
+        plotkwargs_dict = {'evects':{},'efuncarr':{'aspect':float(self.efuncarr.shape[1])/self.efuncarr.shape[0]},'covmat':{},'evals':{}}
+        xlabel_dict = {'evects':'Eigenfunction','efuncarr':'Eigenfunction','covmat':'Bolometer','evals':'Eigenfunction'}
+        ylabel_dict = {'evects':'Bolometer','efuncarr':'Time','covmat':'Bolometer','evals':'Correlation Coefficient'}
+
+        plottype_dict[plotitem](plotitem_dict[plotitem], label=plotitem, **dict(plotkwargs_dict[plotitem].items() + kwargs.items()))
+        xlabel(xlabel_dict[plotitem])
+        ylabel(ylabel_dict[plotitem])
+        colorbar()
+
+    def doPCA(self,clear=True,timestream='data', fignum=9, plotitem='evects', **kwargs):
 
         if timestream == 'data':
             self.efuncarr,self.covmat,self.evals,self.evects = efuncs(reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]]),return_others=True)
@@ -1799,11 +1890,11 @@ class Flagger:
       
         plotitem_dict = {'evects':self.evects,'efuncarr':self.efuncarr,'covmat':self.covmat,'evals':self.evals}
         plottype_dict = {'evects':imshow,'efuncarr':imshow,'covmat':imshow,'evals':plot}
-        plotkwargs_dict = {'evects':{},'efuncarr':{'aspect':float(self.efuncarr.shape[1])/self.efuncarr.shape[0]},'covmat':imshow,'evals':plot}
+        plotkwargs_dict = {'evects':{},'efuncarr':{'aspect':float(self.efuncarr.shape[1])/self.efuncarr.shape[0]},'covmat':{},'evals':{}}
         xlabel_dict = {'evects':'Eigenfunction','efuncarr':'Eigenfunction','covmat':'Bolometer','evals':'Eigenfunction'}
         ylabel_dict = {'evects':'Bolometer','efuncarr':'Time','covmat':'Bolometer','evals':'Correlation Coefficient'}
 
-        plottype_dict[plotitem](plotitem_dict[plotitem], label=plotitem, **dict(plotkwargs_dict[plotitem].items(), kwargs.items()))
+        plottype_dict[plotitem](plotitem_dict[plotitem], label=plotitem, **dict(plotkwargs_dict[plotitem].items() + kwargs.items()))
         xlabel(xlabel_dict[plotitem])
         ylabel(ylabel_dict[plotitem])
         colorbar()
@@ -1836,17 +1927,47 @@ class Flagger:
             print command
             return command
 
+    def hist_corr_pca(self, eigenfunction=0, fignum=13, clear=True):
+        if not fignum in get_fignums():
+            fig = figure(fignum)
+            fig.canvas.manager.window.wm_geometry("400x600+3120+575")
+        if hasattr(self,'evects'):
+            figure(fignum)
+            if clear: clf()
+            ev = self.evects[:,eigenfunction]
+            n,bins,patches = hist(ev, histtype='stepfilled')
+            xlabel("Eigenvalue")
+            ylabel("Number of bolometers")
+
+            import agpy
+            med = median(ev)
+            mad = agpy.mad.MAD(ev)
+            vlines(med,0,max(n),color='k',linestyles=':')
+            fill_betweenx([0,max(n)],[med-mad]*2,[med+mad]*2,color='k',alpha=0.1)
+            
+
+
+    def find_poorly_correlated(self, eigenfunction=0, verbose=True, flag=True, nsig=3):
+        import agpy
+        badarr = np.zeros([self.datashape[0],self.datashape[2]])
+        for ii in xrange(self.nscans):
+            self.planePCA(ii)
+            corrvals = self.evects[:,eigenfunction]
+            lowercut = (median(corrvals)-nsig*agpy.mad.MAD(corrvals))
+            uppercut = (median(corrvals)+nsig*agpy.mad.MAD(corrvals))
+            highvals = (corrvals > uppercut)
+            lowvals  = (corrvals < lowercut)  
+            if verbose:
+                print "Found %i high and %i low in scan %i" % (highvals.sum(),lowvals.sum(),ii)
+            if flag:
+                self.flags[ii, :, highvals+lowvals] = True
+            badarr[ii, highvals+lowvals] = True
+        return badarr
+        
 
 def nantomask(arr):
       mask = (arr != arr)
       return numpy.ma.masked_where(mask,arr)
-
-def masktozero(arr):
-      try:
-          arr[arr.mask] = 0
-      except AttributeError:
-          arr[arr!=arr] = 0
-      return numpy.array(arr)
 
 def getmask(arr):
       if hasattr(arr,'mask'):
@@ -1911,30 +2032,103 @@ def itermedian(ts,scale=0.8,niter=5,axis=2):
           mts = mts - numpy.median(mts,axis=2)[:,:,newaxis]*scale
       return mts
 
-def boloexp(xax,height,amp,fjac=None): 
+def piecewise_boloexp(xax,height,amp,cutoff,fjac=None,verbose=False): 
     # set time constant of exponential:
     tc=10.4 #in seconds
     expterm = exp(-xax/(tc*50.))	#data taken at 50 Hz
     model = amp * expterm + height
+    if (cutoff < xax.max()) and (cutoff > 0):
+        model[xax < cutoff] = model[argmin(abs(xax-cutoff))]
+    else:
+        # force the model to be exponentially wrong...
+        if cutoff < 0:
+            model[:] = exp(abs(cutoff))
+        if cutoff > xax.max():
+            model[:] = exp(abs(cutoff-xax.max()))
+    if verbose: print height,amp,cutoff
     return model
 
-def boloexp_resids(xax,data,mpfit=False):
+def boloexp(xax,height,amp,fjac=None,verbose=False): 
+    # set time constant of exponential:
+    tc=10.4 #in seconds
+    expterm = exp(-xax/(tc*50.))	#data taken at 50 Hz
+    model = amp * expterm + height
+    if verbose: print height,amp
+    return model
+
+def boloexp_resids(xax,data,err=None,mpfit=False,piecewise=False,verbose=False,singlevalue=False):
     def f(p,fjac=None):
-        model = boloexp(xax,p[0],p[1])
-        if mpfit:
-            return [0,(data-model)]
+        if piecewise:
+            model = piecewise_boloexp(xax,p[0],p[1],p[2],fjac=fjac,verbose=verbose)
+        else:
+            model = boloexp(xax,p[0],p[1],fjac=fjac,verbose=verbose)
+        if singlevalue:
+            if err is not None:
+                return (((data-model)/(err))**2).sum()
+            else:
+                return ((data-model)**2).sum()
+        elif mpfit:
+            if err is not None:
+                return [0,(data-model)/err]
+            else:
+                return [0,(data-model)]
         else:
             return (data-model)
     return f
 
-def expsub_line(ts, sampleinterval=0.04, quiet=True, **kwargs):
+def expfit_line(ts, sampleinterval=0.04, quiet=True, dompfit=False, piecewise=False, anneal=False, T0=0.4, retry=True, **kwargs):
     xax = arange(ts.shape[0]) * sampleinterval/0.02
-    if mpfit:
-        mp = mpfit.mpfit(boloexp_resids(xax,ts,mpfit=True),[0,median(ts)],quiet=quiet,**kwargs)
+    tstofit = np.array(ts)
+    if hasattr(ts,'mask'):
+        tstofit[ts.mask] = 0
+        OK = [True-ts.mask]
+    else:
+        OK = np.ones(xax.shape,dtype='bool')
+    if anneal:
+        status = 1
+        while status != 0:
+            if piecewise:
+                params,status = scipy.optimize.anneal(boloexp_resids(xax[OK],tstofit[OK],piecewise=True,singlevalue=True),[0,median(tstofit[OK]),0], T0=0.4, **kwargs)
+            else:
+                params,status = scipy.optimize.anneal(boloexp_resids(xax[OK],tstofit[OK],singlevalue=True),[0,median(tstofit[OK])], T0=0.4, **kwargs)
+            if not retry: break
+    elif dompfit:
+        err = ((ts.mask*1e10)+1.) if np.ma.is_masked(ts) else ((ts!=ts)*1e10 + 1.)
+        if piecewise:
+            mp = mpfit.mpfit(boloexp_resids(xax[OK],tstofit[OK],err=err[OK],mpfit=True,piecewise=True),
+                    parinfo=[{'value':0},
+                        {'value':median(tstofit)},
+                        {'value':1,'step':5.0}],
+                    quiet=quiet,**kwargs)
+        else:
+            mp = mpfit.mpfit(boloexp_resids(xax[OK],tstofit[OK],err=err[OK],mpfit=True),[0,median(tstofit)],quiet=quiet,**kwargs)
         params = mp.params
     else:
-        params = scipy.optimize.leastsq(boloexp_resids(xax,ts),[0,median(ts)])
-    model = boloexp(xax,*params)
+        if piecewise:
+            params,status = scipy.optimize.leastsq(boloexp_resids(xax[OK],tstofit[OK],piecewise=True),[0,median(tstofit[OK]),0], epsfcn=10.)
+        else:
+            params,status = scipy.optimize.leastsq(boloexp_resids(xax[OK],tstofit[OK]),[0,median(tstofit[OK])])
+    return params
+
+def expsub_line(ts, piecewise=False, sampleinterval=0.04, **kwargs):
+    xax = arange(ts.shape[0]) * sampleinterval/0.02
+    params = expfit_line(ts, piecewise=piecewise, sampleinterval=sampleinterval, **kwargs)
+    if piecewise:
+        model = piecewise_boloexp(xax,*params)
+    else:
+        model = boloexp(xax,*params)
+    return ts-model
+
+def polysub_line(ts, order=5, sampleinterval=0.04, quiet=True, **kwargs):
+    xax = arange(ts.shape[0]) * sampleinterval/0.02
+    tstofit = np.array(ts)
+    if hasattr(ts,'mask'):
+        tstofit[ts.mask] = 0
+        OK = [True-ts.mask]
+    else:
+        OK = np.ones(xax.shape,dtype='bool')
+    params = polyfit(xax[OK],tstofit[OK],order)
+    model = polyval(params, xax)
     return ts-model
 
 def exponent_sub(arr, **kwargs):
@@ -1951,6 +2145,9 @@ def exponent_sub(arr, **kwargs):
 
     return subbedarr
 
+def masktozero(arr):
+    if hasattr(arr,'filled'):
+        return arr.filled(0)
 
 if __name__ == "__main__":
 

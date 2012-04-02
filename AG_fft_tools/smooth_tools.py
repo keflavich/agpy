@@ -79,8 +79,8 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     # convolve does this already temp[bad] = 0
 
     # kwargs parsing to avoid duplicate keyword passing
-    if not kwargs.has_key('ignore_zeros'): kwargs['ignore_zeros']=True
-    if not kwargs.has_key('ignore_nan'): kwargs['ignore_nan']=interp_nan
+    if not kwargs.has_key('ignore_edge_zeros'): kwargs['ignore_edge_zeros']=True
+    if not kwargs.has_key('interpolate_nan'): kwargs['interpolate_nan']=interp_nan
 
     # No need to normalize - normalization is dealt with in this code
     temp = convolve(temp,kernel,psf_pad=psf_pad, normalize_kernel=False, **kwargs)
