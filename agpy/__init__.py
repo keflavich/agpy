@@ -42,6 +42,7 @@ from AG_image_tools import *
 
 import cutout
 import get_cutouts
+import pymc_plotting
 
 # import all of the functions but not the modules...
 __all__ = ['readcol', 'gaussfitter', 'kdist', 'reg_gal2cel', 'posang',
