@@ -221,17 +221,18 @@ class Flagger:
                     + "You'll probably get errors and your work won't be saved."
             self.ncfilename = self.pathprefix+fnsearch.groups()[0]
 
-        self.fileprefix = fnsearch.group()
-        self.pathprefix = filename[:fnsearch.start()]
-        self.tsfn = self.pathprefix+self.fileprefix+"_timestream00.fits"
-        self.tsfile = pyfits.open(self.tsfn)
-        self.mapfn = self.pathprefix+self.fileprefix+"_map"+mapnum+".fits"
-        self.mapfile = pyfits.open(self.mapfn)
-        self.map = self.mapfile[0].data
-        self.map[numpy.isnan(self.map)] = 0
-        self.tstomapfn = self.pathprefix+self.fileprefix+"_tstomap.fits"
-        self.tstomapfile = pyfits.open(self.tstomapfn)
-        self.tstomap = self.tstomapfile[0].data
+        if fnsearch.group() is not None:
+            self.fileprefix = fnsearch.group()
+            self.pathprefix = filename[:fnsearch.start()]
+            self.tsfn = self.pathprefix+self.fileprefix+"_timestream00.fits"
+            self.tsfile = pyfits.open(self.tsfn)
+            self.mapfn = self.pathprefix+self.fileprefix+"_map"+mapnum+".fits"
+            self.mapfile = pyfits.open(self.mapfn)
+            self.map = self.mapfile[0].data
+            self.map[numpy.isnan(self.map)] = 0
+            self.tstomapfn = self.pathprefix+self.fileprefix+"_tstomap.fits"
+            self.tstomapfile = pyfits.open(self.tstomapfn)
+            self.tstomap = self.tstomapfile[0].data
 
 #      self.outfile = open(self.pathprefix+"log_"+self.fileprefix+"_flags.log",'a')
         self.data = self.tsfile[0].data
@@ -314,8 +315,9 @@ class Flagger:
 
         fnsearch = re.compile(
                 '([0-9]{6}_o[0-9b][0-9]_raw_ds[125].nc)(_indiv[0-9]{1,2}pca)').search(savfile)
-        self.fileprefix = fnsearch.group()
-        self.pathprefix = savfile[:fnsearch.start()]
+        if fnsearch is not None:
+            self.fileprefix = fnsearch.group()
+            self.pathprefix = savfile[:fnsearch.start()]
 
         self.ncscans = self.bgps['scans_info'][0]
         self.sample_interval = self.bgps['sample_interval'][0]
@@ -472,7 +474,8 @@ class Flagger:
         'raw': lambda: self.raw,
         'rawscaled': lambda: self.raw * self.scalearr,
         'noise': lambda: self.noise,
-        'newnoise': lambda: self.PCA_astro + self.astrosignal - self.astrosignal_from_model,
+        'nomodel_astro': lambda: self.noise+self.astrosignal,
+        'newnoise': lambda: self.lookup('PCA_astro') + self.astrosignal - self.lookup('astrosignal_from_model'),
         'mapped_astrosignal': lambda: self.mapped_astrosignal,
         'mapped_timestream': lambda: self.mapped_timestream,
         'astrosignal_from_map': lambda: self.default_map.flat[self.tstomap],
@@ -862,8 +865,7 @@ class Flagger:
       self._refresh()
       self.reconnect()
       if dopca or self.autopca:
-          self.planePCA(plotitem='evects',fignum=11,geometry='950x700+1920+0')
-          self.planePCA(plotitem='efuncarr',fignum=12,geometry='950x700+2870+0')
+          self._autopca()
       if self.autopca or self.autohist or dopca:
           self.hist_corr_pca()
       if self.autohist:
@@ -876,6 +878,22 @@ class Flagger:
       self.connections.append(self.mu)
       self.connections.append(self.key)
       """
+
+    def _autopca(self):
+        self.planePCA(plotitem='evects',fignum=11,geometry='950x700+1920+0')
+        figure(11).axes[0].set_position([0.26,0.1,0.65,0.8])
+        figure(11).axes[1].set_position([0.91,0.1,0.075,0.8])
+        ax1 = figure(11).add_axes([0.03,0.1,0.125,0.8])
+        title('Scale')
+        plot(self.scale_coeffs, arange(self.nbolos),drawstyle='steps-mid',color='b')
+        plot(self.scalearr[self.scannum,:,:].mean(axis=0).squeeze(), arange(self.nbolos),drawstyle='steps',color='g')
+        ax1.set_ylim(0,self.nbolos)
+        ax2 = figure(11).add_axes([0.17,0.1,0.125,0.8])
+        title('Weight')
+        plot(self.weight_by_bolo, arange(self.nbolos),drawstyle='steps-mid',color='r')
+        plot(self.weight[self.scannum,:,:].mean(axis=0).squeeze(), arange(self.nbolos),drawstyle='steps',color='m')
+        ax2.set_ylim(0,self.nbolos)
+        self.planePCA(plotitem='efuncarr',fignum=12,geometry='950x700+2870+0')
 
     def flagpoint(self, i, j, button):
         if button==1:
@@ -1618,7 +1636,7 @@ class Flagger:
         print "Therefore the Gaussian stddev should be %f and the mean should be 1" % (noise_scale)
         return p1,p2,noise_scale
 
-    def timestream_whole(self,bolonum=0,clear=True,timestream='data',fignum=4, **kwargs):
+    def timestream_whole(self,bolonum=0,clear=True,timestream='data',fignum=4,add_title=True, **kwargs):
         if timestream == 'data':
             wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
         elif self.tsplot_dict.has_key(timestream):
@@ -1633,6 +1651,15 @@ class Flagger:
         else:
             label = str(bolonum)
         plot(wholedata[:,bolonum],linewidth=0.5, label=label, **kwargs)
+        if label:
+            T=title('Bolometer %i' % bolonum)
+            T.set_y(1.05)
+        if clear:
+            gca().set_xlim(0,self.ncscans[-1,1])
+            ax=gca().twiny()
+            ax.set_xticks(self.ncscans[:,1])
+            ax.set_xticklabels(arange(self.nscans))
+            ax.set_xlim(0,self.ncscans[-1,1])
 
 
     def ordered_timestreams(self,  ordertype='astro', clear=True,
@@ -1804,8 +1831,11 @@ class Flagger:
 
         subplot(211)
         hist(self.scale_coeffs[OKscale],histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs',color='b',linewidth=2)
+        # indexing swaps axis order!?!
+        hist(self.scalearr[self.scannum,:,OKscale].mean(axis=1).ravel(),histtype='step',bins=linspace(hrange[0],hrange[1],nbins),label='Scale Coeffs (scan %i)' % self.scannum,color='r',linewidth=2)
         subplot(212)
         n1,l1,h1 =hist(self.weight_by_bolo[OKweight],histtype='step',bins=nbins,label='Weights',color='r',linewidth=2)
+        # what the hell?  indexing swaps axis order!!!
         n2,l2,h2 =hist(self.weight[f.scannum,:,OKweight].mean(axis=1).ravel(),
                 weights=ones(OKweight.sum()).ravel(),
                 histtype='step',bins=nbins,label='Weights (indiv scan)',color='g',linewidth=2)
@@ -1916,13 +1946,15 @@ class Flagger:
         print "Computing map took %f seconds" % (time.time() - t0)
         if showmap: self.showmap(**kwargs)
 
-    def print_mem_iter(self):
+    def print_mem_iter(self,extras=True):
 
         if self.needed_once_struct is not None:
             outfilename = self.mapstr.outmap[0]
             infilename = self.needed_once_struct.filenames[0]
 
             command = "mem_iter,'{infile}','{outfile}',/no_offsets,/pointing_model,niter=[13,13],dosave=2".format(outfile=outfilename,infile=infilename)
+            if extras:
+                command += ",/pre_expsub,/do_deline,/weight_scans"
 
             print command
             return command
@@ -2199,15 +2231,17 @@ if __name__ == "__main__":
               figure(6)
               clf()
               title("ac_bolos scaled")
-              for ii in range(f.nbolos):
-                  f.timestream_whole(ii,timestream='acbolos',clear=False,fignum=6)
+              f.timestream_whole(0,timestream='acbolos',clear=True,fignum=6,add_title=False)
+              for ii in range(1,f.nbolos):
+                  f.timestream_whole(ii,timestream='acbolos',clear=False,fignum=6,add_title=False)
               savefig('%s_acbolos_scaled.png' % prefix)
 
               figure(5)
               clf()
               title("ac_bolos unscaled")
+              f.timestream_whole(0,timestream='acbolos_noscale',clear=True,fignum=5,add_title=False)
               for ii in range(f.nbolos):
-                  f.timestream_whole(ii,timestream='acbolos_noscale',clear=False,fignum=5)
+                  f.timestream_whole(ii,timestream='acbolos_noscale',clear=False,fignum=5,add_title=False)
               savefig('%s_acbolos_noscale.png' % prefix)
 
           if options.weightgrid:

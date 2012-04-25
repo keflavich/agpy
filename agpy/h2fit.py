@@ -17,13 +17,15 @@ import re
 from agpy.mpfit import mpfit
 import gaussfitter
 
+import constants
 # define physical constants to high precision
 h=6.626068e-27
 c=2.99792e10
 k=1.3806503e-16
 e=4.803e-12
 
-tablepath = agpy.__path__[0]+"/h2fit/"
+#tablepath = agpy.__path__[0]+"/h2fit_support/"
+tablepath = sys.prefix+"/h2fit/"
 
 def h2level_energy(V,J):
     """ Returns the theoretical level energy as a function of the
@@ -98,46 +100,71 @@ def linename_to_restwl(linelistfile = tablepath+'linelist.txt',outfile=tablepath
 
 
 
-def aval(v,ju,jl):
-    """
-    Lookup table for Einstein-A value as a function of 
-    vibrational level, upper/lower J level
-    Values from: http://www.jach.hawaii.edu/UKIRT/astronomy/calib/spec_cal/h2_s.html
-    """
-    if v==1:
-        if jl==0 and ju-jl==2: return 2.53e-7 
-        elif jl==1 and ju-jl==2: return 3.47e-7 
-        elif jl==2 and ju-jl==2: return 3.98e-7 
-        elif jl==3 and ju-jl==2: return 4.21e-7 
-        elif jl==4 and ju-jl==2: return 4.19e-7 
-        elif jl==5 and ju-jl==2: return 3.96e-7 
-        elif jl==6 and ju-jl==2: return 3.54e-7 
-        elif jl==7 and ju-jl==2: return 2.98e-7 
-        elif jl==8 and ju-jl==2: return 2.34e-7 
-        elif jl==9 and ju-jl==2: return 1.68e-7 
-        elif jl==1 and ju-jl==0: return 4.29e-7 
-        elif jl==2 and ju-jl==0: return 3.03e-7 
-        elif jl==3 and ju-jl==0: return 2.78e-7 
-        elif jl==4 and ju-jl==0: return 2.65e-7 
-        else: return 0
-    elif v==2:
-        if jl==0 and ju-jl==2: return 3.68e-7 
-        elif jl==1 and ju-jl==2: return 4.98e-7 
-        elif jl==2 and ju-jl==2: return 5.60e-7 
-        elif jl==3 and ju-jl==2: return 5.77e-7 
-        elif jl==4 and ju-jl==2: return 5.57e-7 
-        else: return 0
-    elif v==3:
-        if jl==0 and ju-jl==2: return 3.88e-7 
-        elif jl==1 and ju-jl==2: return 5.14e-7 
-        elif jl==2 and ju-jl==2: return 5.63e-7 
-        elif jl==3 and ju-jl==2: return 5.63e-7 
-        elif jl==4 and ju-jl==2: return 5.22e-7 
-        elif jl==5 and ju-jl==2: return 4.50e-7 
-        else: return 0
-    else: return 0
+try:
+    h2table = readcol(tablepath+'h2pars.txt',asStruct=True,skipafter=1)
 
-aval_vect=vectorize(aval)
+    def aval(vu,ju,jl):
+        """
+        Lookup table for Einstein-A value as a function of 
+        vibrational level, upper/lower J level
+        Values from: http://www.jach.hawaii.edu/UKIRT/astronomy/calib/spec_cal/h2_s.html
+        """
+        if ju-jl==2:
+            trans = 'S'
+        elif ju-jl==-2:
+            trans = 'O'
+        elif ju-jl==0:
+            trans = 'Q'
+        else:
+            raise ValueError("delta-J must be -2,0,2")
+
+        if vu==0 and trans=='Q':
+            # strongly forbidden
+            return 0 
+
+        wh = (h2table.jl==jl) * (h2table.trans==trans) * (h2table.vu==vu)
+        if wh.sum() == 0:
+            return 0
+            #raise ValueError("No valid matches")
+
+        return (h2table.aval[wh]*1e-7)[0]
+
+        if v==1:
+            if jl==0 and ju-jl==2: return 2.53e-7 
+            elif jl==1 and ju-jl==2: return 3.47e-7 
+            elif jl==2 and ju-jl==2: return 3.98e-7 
+            elif jl==3 and ju-jl==2: return 4.21e-7 
+            elif jl==4 and ju-jl==2: return 4.19e-7 
+            elif jl==5 and ju-jl==2: return 3.96e-7 
+            elif jl==6 and ju-jl==2: return 3.54e-7 
+            elif jl==7 and ju-jl==2: return 2.98e-7 
+            elif jl==8 and ju-jl==2: return 2.34e-7 
+            elif jl==9 and ju-jl==2: return 1.68e-7 
+            elif jl==1 and ju-jl==0: return 4.29e-7 
+            elif jl==2 and ju-jl==0: return 3.03e-7 
+            elif jl==3 and ju-jl==0: return 2.78e-7 
+            elif jl==4 and ju-jl==0: return 2.65e-7 
+            else: return 0
+        elif v==2:
+            if jl==0 and ju-jl==2: return 3.68e-7 
+            elif jl==1 and ju-jl==2: return 4.98e-7 
+            elif jl==2 and ju-jl==2: return 5.60e-7 
+            elif jl==3 and ju-jl==2: return 5.77e-7 
+            elif jl==4 and ju-jl==2: return 5.57e-7 
+            else: return 0
+        elif v==3:
+            if jl==0 and ju-jl==2: return 3.88e-7 
+            elif jl==1 and ju-jl==2: return 5.14e-7 
+            elif jl==2 and ju-jl==2: return 5.63e-7 
+            elif jl==3 and ju-jl==2: return 5.63e-7 
+            elif jl==4 and ju-jl==2: return 5.22e-7 
+            elif jl==5 and ju-jl==2: return 4.50e-7 
+            else: return 0
+        else: return 0
+
+    aval_vect=vectorize(aval)
+except IOError:
+    pass
 
 try:
     # atran = pyfits.open('/Users/adam/observations/triplespec/Spextool2/data/atran2000.fits')
@@ -298,8 +325,8 @@ def modelspec(x,T,A,w,dx,op,Ak=0,extinction=False):
     model = x * 0
     A=abs(A)
     # assume width, shift given in velocity:
-    w = w*mean(x)/3e5
-    dx = dx*mean(x)/3e5
+    w = w*mean(x)/(c/1e5)
+    dx = dx*mean(x)/(c/1e5)
     for v in xrange(1,6):
         for j in xrange(1,14):
             if (j % 2):  # ortho/para multiplier
@@ -317,6 +344,43 @@ def modelspec(x,T,A,w,dx,op,Ak=0,extinction=False):
         Al = Ak * (x/22000.0)**(-1.75)
         model *= exp(-Al)
     return model
+
+def tau_of_N(microns, column, v0=0, temperature=20, width=1.0, velocity=0.0, orthopara=3):
+    """
+    Return the optical depth of an H2 line as a function of wavelength...
+    """
+    grounden = h2level_energy(0,0)
+    alllevelpop = np.sum([exp(-(h2level_energy(v,j)-grounden)/(k*temperature)) for v in xrange(0,6) for j in xrange(0,14)])
+    tautotal = microns*0
+    for vu in xrange(1,6):
+        for j in xrange(0,14):
+            if (j % 2):  # ortho/para multiplier
+                mult=orthopara
+            else: 
+                mult=1
+            # S branch
+            wl = restwl(vu,v0,j+2,j) 
+            offset = velocity/(c/1e5) * wl
+            w = width/(c/1e5) * wl
+            einA = aval(vu,j+2,j)
+            oscstrength = constants.electronmass * c / pi / constants.electroncharge**2 * (wl/1e4)**2 / (8*pi) * einA
+            column_i = column*(mult/(orthopara+1.)) * (2*j+1) * np.exp(-(h2level_energy(v0,j)-grounden)/(k*temperature)) / alllevelpop
+            tau_0 = column_i*oscstrength*(wl/1e4) / (width*1e5)
+            tau_nu = exp( - ( microns - wl - offset )**2 / (2*w**2) ) * tau_0
+            tautotal += tau_nu
+            
+            # Q branch
+            wl = restwl(vu,v0,j,j) 
+            offset = velocity/(c/1e5) * wl
+            w = width/(c/1e5) * wl
+            einA = aval(vu,j,j)
+            oscstrength = constants.electronmass * c / pi / constants.electroncharge**2 * (wl/1e4)**2 / (8*pi) * einA
+            column_i = column*(mult/(orthopara+1.)) * (2*j+1) * np.exp(-(h2level_energy(v0,j)-grounden)/(k*temperature)) / alllevelpop
+            tau_0 = column_i*oscstrength*(wl/1e4) / (width*1e5)
+            tau_nu = exp( - ( microns - wl - offset )**2 / (2*w**2) ) * tau_0
+            tautotal += tau_nu
+
+    return tautotal
 
 def testnone(x):
     return int(x != None)
