@@ -348,6 +348,7 @@ def modelspec(x,T,A,w,dx,op,Ak=0,extinction=False):
 def tau_of_N(microns, column, v0=0, temperature=20, width=1.0, velocity=0.0, orthopara=3):
     """
     Return the optical depth of an H2 line as a function of wavelength...
+    (absorption)
     """
     grounden = h2level_energy(0,0)
     alllevelpop = np.sum([exp(-(h2level_energy(v,j)-grounden)/(k*temperature)) for v in xrange(0,6) for j in xrange(0,14)])

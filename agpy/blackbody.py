@@ -63,7 +63,7 @@ def blackbody_wavelength(lam,temperature, scale=1.0, units='cgs',wavelength_unit
     # load constants in desired units
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
 
-    # convert nu to Hz
+    # convert lambd to cm/m
     lam = lam * wavelength_dict[wavelength_units] / (1e-2 if units=='cgs' else 1)
 
     I = 2*h*c**2 / lam**5 * (exp(h*c/(k*temperature*lam)) - 1)**-1
