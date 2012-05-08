@@ -410,10 +410,6 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 
 import numpy
 import types
-try:
-    import scipy.lib.blas
-except ImportError:
-    pass
 
 #    Original FORTRAN documentation
 #    **********
@@ -598,9 +594,6 @@ except ImportError:
 #    **********
 
 class mpfit:
-
-    blas_enorm32, = scipy.lib.blas.get_blas_funcs(['nrm2'],numpy.array([0],dtype=numpy.float32))
-    blas_enorm64, = scipy.lib.blas.get_blas_funcs(['nrm2'],numpy.array([0],dtype=numpy.float64))
 
 
     def __init__(self, fcn, xall=None, functkw={}, parinfo=None,
@@ -1013,10 +1006,8 @@ class mpfit:
         # the returned value, not by the precision of the input array
         if numpy.array([fvec]).dtype.itemsize>4:
             self.machar = machar(double=1)
-            self.blas_enorm = mpfit.blas_enorm64
         else:
             self.machar = machar(double=0)
-            self.blas_enorm = mpfit.blas_enorm32
         machep = self.machar.machep
         
         m = len(fvec)
@@ -1510,7 +1501,10 @@ class mpfit:
     
     
     def enorm(self, vec):
-        ans = self.blas_enorm(vec)
+        # removed scipy dependency
+        # see http://fseoane.net/blog/2011/computing-the-vector-norm/#comment-73197
+        # in particular, see http://i51.tinypic.com/2912tg8.png
+        ans = numpy.sqrt(numpy.dot(vec.T, vec))
         return ans
     
     
