@@ -3,6 +3,7 @@ import optparse
 import os,shutil
 import glob
 import tempfile
+import time
 tempfile.tempdir = '/Volumes/disk4/var/tmp'
 import sys
 #print sys.path
@@ -23,6 +24,8 @@ if __name__ == "__main__":
     parser.add_option("--exact","--exact_size","--exact-size","-X",default=True,action='store_true',help="Use exact_size=True?  Default True")
     parser.add_option("--outfile","--out","-o",default=None,help="Output file name")
     parser.add_option("--copy",default=False,action='store_true',help="Copy files instead of linking")
+    parser.add_option("--background_match",default=False,action='store_true',help="background_match images?")
+    parser.add_option("--tmpdir",default="tmp",help="Alternative name for temporary directory (default 'tmp')")
 
     parser.set_usage("%prog outfile=filename.fits *.fits combine=median")
     parser.set_description(
@@ -50,25 +53,35 @@ if __name__ == "__main__":
         
     print filelist
 
-    print "Creating temporary directory and hard-linking (not sym-linking) all files into it"
     #echo "Creating temporary directory and sym-linking all files into it"
-    os.mkdir('tmp/')
+    print "Creating temporary directory"
+    os.mkdir(options.tmpdir+"/")
     if options.copy:
+        print "Copying all files into %s" % options.tmpdir
         for fn in filelist:
-            shutil.copy(fn,'tmp/%s' % fn)
-        shutil.copy(options.header,'tmp/%s' % options.header)
+            shutil.copy(fn,'%s/%s' % (options.tmpdir,os.path.split(fn)[-1]))
+        shutil.copy(options.header,'%s/%s' % (options.tmpdir,os.path.split(options.header)[-1]))
     else:
+        print "Hard-linking (not sym-linking) all files into %s" % options.tmpdir
         for fn in filelist:
-            os.link(fn,'tmp/%s' % fn)
-        os.link(options.header,'tmp/%s' % options.header)
+            os.link(fn,'%s/%s' % (options.tmpdir,os.path.split(fn)[-1]))
+        os.link(options.header,'%s/%s' % (options.tmpdir, os.path.split(options.header)[-1]))
 
     olddir = os.getcwd()
-    os.chdir('tmp/')
+    os.chdir(options.tmpdir+'/')
     dir = os.getcwd()
-    print "Beginning montage operations: montage.wrappers.mosaic(%s,'%s/mosaic',header='%s/%s', exact_size=%s, combine=%s)" % (dir,dir,dir,options.header,options.exact,options.combine)
-    montage.wrappers.mosaic(dir,'%s/mosaic' % dir,header='%s/%s' % (dir,options.header), exact_size=options.exact, combine=options.combine)
+    print "Beginning montage operations: montage.wrappers.mosaic(%s,'%s/mosaic',header='%s/%s', exact_size=%s, combine=%s, background_match=%s)" % (dir,dir,dir,options.header,options.exact,options.combine,options.background_match)
+    montage.wrappers.mosaic(dir,'%s/mosaic' % dir,header='%s/%s' %
+            (dir,os.path.split(options.header)[-1]), exact_size=options.exact,
+            combine=options.combine, background_match=options.background_match)
 
-    if os.path.exists('tmp/mosaic/mosaic.fits'):
-        shutil.move('tmp/mosaic/mosaic.fits',options.outfile)
+    time.sleep(1)
+
+    os.chdir(olddir)
+    if os.path.exists(options.tmpdir+'/mosaic/mosaic.fits'):
+        shutil.move(options.tmpdir+'/mosaic/mosaic.fits',options.outfile)
+        print "Successfully created %s" % options.outfile
     else:
-        print "FAILURE: Did not find tmp/mosaic/mosaic.fits!"
+        print "WARNING: Did not delete %s/ because %s/mosaic/mosaic.fits was not found." % (options.tmpdir,options.tmpdir)
+
+    shutil.rmtree(options.tmpdir+'/')

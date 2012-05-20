@@ -74,7 +74,9 @@ def PCA_linear_fit(data1, data2, print_results=False, ignore_nans=True):
 
     return m,b
 
-def total_least_squares(data1, data2, print_results=False, ignore_nans=True, intercept=True):
+def total_least_squares(data1, data2, data1err=None, data2err=None,
+        print_results=False, ignore_nans=True, intercept=True,
+        return_error=False, inf=1e10):
     """
     Use Singular Value Decomposition to determine the Total Least Squares linear fit to the data.
     (e.g. http://en.wikipedia.org/wiki/Total_least_squares)
@@ -90,13 +92,31 @@ def total_least_squares(data1, data2, print_results=False, ignore_nans=True, int
 
     ignore_nans will remove NAN values from BOTH arrays before computing
 
+    Parameters
+    ----------
+    data1,data2 : np.ndarray
+        Vectors of the same length indicating the 'x' and 'y' vectors to fit
+    data1err,data2err : np.ndarray or None
+        Vectors of the same length as data1,data2 holding the 1-sigma error values
+
     """
 
     if ignore_nans:
         badvals = numpy.isnan(data1) + numpy.isnan(data2)
+        if data1err is not None:
+            badvals += numpy.isnan(data1err)
+        if data2err is not None:
+            badvals += numpy.isnan(data2err)
+        goodvals = True-badvals
+        if goodvals.sum() < 2:
+            if intercept:
+                return 0,0
+            else:
+                return 0
         if badvals.sum():
-            data1 = data1[True-badvals]
-            data2 = data2[True-badvals]
+            data1 = data1[goodvals]
+            data2 = data2[goodvals]
+
     
     if intercept:
         dm1 = data1.mean()
@@ -117,19 +137,59 @@ def total_least_squares(data1, data2, print_results=False, ignore_nans=True, int
     if varfrac < 50:
         raise ValueError("ERROR: SVD/TLS Linear Fit accounts for less than half the variance; this is impossible by definition.")
 
+    # this is performed after so that TLS gives a "guess"
+    if data1err is not None or data2err is not None:
+        try:
+            from scipy.odr import RealData,Model,ODR
+        except ImportError:
+            raise ImportError("Could not import scipy; cannot run Total Least Squares")
+
+        def linmodel(B,x):
+            if intercept:
+                return B[0]*x + B[1]
+            else:
+                return B[0]*x 
+
+        if data1err is not None:
+            data1err = data1err[goodvals]
+            data1err[data1err<=0] = inf
+        if data2err is not None:
+            data2err = data2err[goodvals]
+            data2err[data2err<=0] = inf
+
+        if any([data1.shape != other.shape for other in (data2,data1err,data2err)]):
+            raise ValueError("Data shapes do not match")
+
+        linear = Model(linmodel)
+        data = RealData(data1,data2,sx=data1err,sy=data2err)
+        b = data2.mean() - m*data1.mean()
+        beta0 = [m[0],b[0]] if intercept else [m[0]]
+        myodr = ODR(data,linear,beta0=beta0)
+        output = myodr.run()
+
+        if print_results:
+            output.pprint()
+
+        if return_error:
+            return numpy.concatenate([output.beta,output.sd_beta])
+        else:
+            return output.beta
+
+
+
     if intercept:
         b = data2.mean() - m*data1.mean()
         if print_results:
             print "TLS Best fit y = %g x + %g" % (m,b)
             print "The fit accounts for %0.3g%% of the variance." % (varfrac)
             print "Chi^2 = %g, N = %i" % (((data2-(data1*m+b))**2).sum(),data1.shape[0]-2)
-        return m,b
+        return m[0],b[0]
     else:
         if print_results:
             print "TLS Best fit y = %g x" % (m)
             print "The fit accounts for %0.3g%% of the variance." % (varfrac)
             print "Chi^2 = %g, N = %i" % (((data2-(data1*m))**2).sum(),data1.shape[0]-1)
-        return m
+        return m[0]
 
 
 def smooth_waterfall(arr,fwhm=4.0,unsharp=False):
@@ -183,24 +243,35 @@ def unpca_subtract(arr,ncomps):
     efuncarr[:,ncomps:] = 0
     return numpy.inner(efuncarr,evects)
 
-def pymc_linear_fit(data1, data2, print_results=False, intercept=True):
+def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
+        print_results=False, intercept=True, nsample=5000, burn=1000,
+        thin=10, return_MC=False):
     import pymc
 
-    def f(x=data1,slope=0.0,intercept=0.0):
-        return x*slope+intercept
+    xmu = pymc.distributions.Uninformative(name='x_observed',value=0)
+    if data1err is None:
+        xdata = pymc.distributions.Normal('x',mu=xmu,observed=True,value=data1,tau=1)
+    else:
+        xdata = pymc.distributions.Normal('x',mu=xmu,observed=True,value=data1,tau=1.0/data1err**2)
 
     d={'slope':pymc.distributions.Uninformative(name='slope',value=0),
        'intercept':pymc.distributions.Uninformative(name='intercept',value=0),
        }
 
-    funcdet = pymc.Deterministic(name='f',eval=f,parents=d,doc="FunctionModel1D function")
-    d['f'] = funcdet
+    @pymc.deterministic
+    def model(x=xdata,slope=d['slope'],intercept=d['intercept']):
+        return x*slope+intercept
 
-    datamodel = pymc.distributions.Normal('y',mu=funcdet,observed=True,value=data2,tau=1)
-    d['y'] = datamodel
+    d['f'] = model
+
+    if data2err is None:
+        ydata = pymc.distributions.Normal('y',mu=model,observed=True,value=data2,tau=1)
+    else:
+        ydata = pymc.distributions.Normal('y',mu=model,observed=True,value=data2,tau=1.0/data2err**2)
+    d['y'] = ydata
     
     MC = pymc.MCMC(d)
-    MC.sample(5000,burn=1000,thin=10)
+    MC.sample(nsample,burn=burn,thin=thin)
 
     MCs = MC.stats()
     m,b = MCs['slope']['mean'],MCs['intercept']['mean']
@@ -212,6 +283,8 @@ def pymc_linear_fit(data1, data2, print_results=False, intercept=True):
         print "b = %g +/- %g" % (b,eb)
         print "Chi^2 = %g, N = %i" % (((data2-(data1*m))**2).sum(),data1.shape[0]-1)
 
+    if return_MC: 
+        return MC
     return m,b
         
 
@@ -219,35 +292,82 @@ if __name__ == "__main__":
 
     from pylab import *
 
+    md,bd = {},{}
+
     xvals = numpy.linspace(0,100,100)
     yvals = numpy.linspace(0,100,100)
-    print "\nFirst test: m=1, b=0.  Polyfit: ",polyfit(xvals,yvals,1)
-    m,b = PCA_linear_fit(xvals,yvals,print_results=True)
-    m,b = total_least_squares(xvals,yvals,print_results=True)
-    m,b = pymc_linear_fit(xvals,yvals,print_results=True)
+    md['ideal'],bd['ideal'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0},)
+    md['ideal']['poly'],bd['ideal']['poly'] = polyfit(xvals,yvals,1)
+    md['ideal']['PCA'],bd['ideal']['PCA']   = PCA_linear_fit(xvals,yvals,print_results=True)
+    md['ideal']['TLS'],bd['ideal']['TLS']   = total_least_squares(xvals,yvals,print_results=True)
+    md['ideal']['pymc'],bd['ideal']['pymc'] = pymc_linear_fit(xvals,yvals,print_results=True)
 
-    print "\nSecond test: m=-1, b=0. Polyfit: ",polyfit(xvals,yvals*-1,1)
-    m,b = PCA_linear_fit(xvals,yvals*-1,print_results=True)
-    m,b = total_least_squares(xvals,yvals*-1,print_results=True)
-    m,b = pymc_linear_fit(xvals,yvals*-1,print_results=True)
+    md['neg'],bd['neg'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
+    md['neg']['poly'],bd['neg']['poly'] = polyfit(xvals,yvals*-1,1)
+    md['neg']['PCA'],bd['neg']['PCA']   = PCA_linear_fit(xvals,yvals*-1,print_results=True)
+    md['neg']['TLS'],bd['neg']['TLS']   = total_least_squares(xvals,yvals*-1,print_results=True)
+    md['neg']['pymc'],bd['neg']['pymc'] = pymc_linear_fit(xvals,yvals*-1,print_results=True)
 
-    print "\nThird test: m=1, b=1. Polyfit: ",polyfit(xvals,yvals+1,1)
-    m,b = PCA_linear_fit(xvals,yvals+1,print_results=True)
-    m,b = total_least_squares(xvals,yvals+1,print_results=True)
-    m,b = pymc_linear_fit(xvals,yvals+1,print_results=True)
+    md['intercept'],bd['intercept'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
+    md['intercept']['poly'],bd['intercept']['poly'] = polyfit(xvals,yvals+1,1)
+    md['intercept']['PCA'],bd['intercept']['PCA']   = PCA_linear_fit(xvals,yvals+1,print_results=True)
+    md['intercept']['TLS'],bd['intercept']['TLS']   = total_least_squares(xvals,yvals+1,print_results=True)
+    md['intercept']['pymc'],bd['intercept']['pymc'] = pymc_linear_fit(xvals,yvals+1,print_results=True)
 
-    print "\nFourth test: m~1, b~0. Polyfit: ",polyfit(xvals,yvals+random(100),1)
-    m,b = PCA_linear_fit(xvals,yvals+random(100),print_results=True)
-    m,b = total_least_squares(xvals,yvals+random(100),print_results=True)
-    m,b = pymc_linear_fit(xvals,yvals+random(100),print_results=True)
+    md['noise'],bd['noise'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
+    md['noise']['poly'],bd['noise']['poly'] = polyfit(xvals,yvals+random(100),1)
+    md['noise']['PCA'],bd['noise']['PCA']   = PCA_linear_fit(xvals,yvals+random(100),print_results=True)
+    md['noise']['TLS'],bd['noise']['TLS']   = total_least_squares(xvals,yvals+random(100),print_results=True)
+    md['noise']['pymc'],bd['noise']['pymc'] = pymc_linear_fit(xvals,yvals+random(100),print_results=True)
 
-    print "\nFourth test: m~~1, b~~0. Polyfit: ",polyfit(xvals,yvals+random(100)*50,1)
-    m,b = PCA_linear_fit(xvals,yvals+random(100)*50,print_results=True)
-    m,b = total_least_squares(xvals,yvals+random(100)*50,print_results=True)
-    m,b = pymc_linear_fit(xvals,yvals+random(100)*50,print_results=True)
+    md['highnoise'],bd['highnoise'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
+    md['highnoise']['poly'],bd['highnoise']['poly'] = polyfit(xvals,yvals+random(100)*50,1)
+    md['highnoise']['PCA'],bd['highnoise']['PCA']   = PCA_linear_fit(xvals,yvals+random(100)*50,print_results=True)
+    md['highnoise']['TLS'],bd['highnoise']['TLS']   = total_least_squares(xvals,yvals+random(100)*50,print_results=True)
+    md['highnoise']['pymc'],bd['highnoise']['pymc'] = pymc_linear_fit(xvals,yvals+random(100)*50,print_results=True)
 
+    md['random'],bd['random'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
     xr,yr = random(100),random(100)
-    print "\nFifth test: no linear fit. Polyfit: ",polyfit(xr,yr,1)
-    m,b = PCA_linear_fit(xr,yr,print_results=True)
-    m,b = total_least_squares(xr,yr,print_results=True)
-    m,b = pymc_linear_fit(xr,yr,print_results=True)
+    md['random']['poly'],bd['random']['poly'] = polyfit(xr,yr,1)
+    md['random']['PCA'],bd['random']['PCA']   = PCA_linear_fit(xr,yr,print_results=True)
+    md['random']['TLS'],bd['random']['TLS']   = total_least_squares(xr,yr,print_results=True)
+    md['random']['pymc'],bd['random']['pymc'] = pymc_linear_fit(xr,yr,print_results=True)
+
+    md['xnoise'],bd['xnoise'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
+    md['xnoise']['poly'],bd['xnoise']['poly'] = polyfit(xvals+random(100)*5,yvals+random(100)*5,1)
+    md['xnoise']['PCA'],bd['xnoise']['PCA']   = PCA_linear_fit(xvals+random(100)*5,yvals+random(100)*5,print_results=True)
+    md['xnoise']['TLS'],bd['xnoise']['TLS']   = total_least_squares(xvals+random(100)*5,yvals+random(100)*5,print_results=True)
+    md['xnoise']['pymc'],bd['xnoise']['pymc'] = pymc_linear_fit(xvals+random(100)*5,yvals+random(100)*5,print_results=True)
+
+    md['xhighnoise'],bd['xhighnoise'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
+    md['xhighnoise']['poly'],bd['xhighnoise']['poly'] = polyfit(xvals+random(100)*50,yvals+random(100)*50,1)
+    md['xhighnoise']['PCA'],bd['xhighnoise']['PCA']   = PCA_linear_fit(xvals+random(100)*50,yvals+random(100)*50,print_results=True)
+    md['xhighnoise']['TLS'],bd['xhighnoise']['TLS']   = total_least_squares(xvals+random(100)*50,yvals+random(100)*50,print_results=True)
+    md['xhighnoise']['pymc'],bd['xhighnoise']['pymc'] = pymc_linear_fit(xvals+random(100)*50,yvals+random(100)*50,print_results=True)
+
+    md['witherrors'],bd['witherrors'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0})
+    md['witherrors']['poly'],bd['witherrors']['poly'] = 0,0
+    md['witherrors']['PCA'],bd['witherrors']['PCA']   = 0,0
+    xerr,yerr = randn(100)/10.0+1.0+sqrt(xvals),randn(100)/10.0+1.0+sqrt(yvals)
+    x,y = xvals+xerr,yvals+yerr
+    md['witherrors']['TLS'],bd['witherrors']['TLS']   = total_least_squares(x,y,data1err=xerr,data2err=yerr,print_results=True)
+    md['witherrors']['pymc'],bd['witherrors']['pymc'] = pymc_linear_fit(x,y,data1err=xerr,data2err=yerr,print_results=True)
+
+    print "Slopes: "
+    toprow = (" "*20) + " ".join(["%20s" % k for k in md['ideal']])
+    print toprow
+    for colname,column in md.items():
+        print "%20s" % colname,
+        for rowname,row in column.items():
+            print "%20s" % row,
+        print
+            
+    print "Intercepts: "
+    toprow = (" "*20) + " ".join(["%20s" % k for k in bd['ideal']])
+    print toprow
+    for colname,column in bd.items():
+        print "%20s" % colname,
+        for rowname,row in column.items():
+            print "%20s" % row,
+        print
+            

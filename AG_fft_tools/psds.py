@@ -132,7 +132,8 @@ def pspec(psd2, return_index=True, wavenumber=False, return_stddev=False, azbins
 
     if return_index:
         if wavenumber:
-            return_vals = list((len(freq)/freq,zz))
+            return_vals = list(np.fft.fftfreq(zz.size*2)[:zz.size])
+            #return_vals = list((len(freq)/freq,zz))
         else:
             return_vals = list((freq/len(freq),zz))
     else:
