@@ -292,7 +292,7 @@ class plfit:
         self._alpha = best_alpha = alpha_of_xmin[best_index]
         self._xmin = best_xmin = xmins[best_index]
         self._ks = best_ks = ksvalues[best_index]
-        best_likelihood = discrete_likelihood(data, best_xmin, best_alpha)
+        self._likelihood = best_likelihood = discrete_likelihood(data, best_xmin, best_alpha)
 
         if finite:
             self._alpha = self._alpha*(n-1.)/n+1./n
