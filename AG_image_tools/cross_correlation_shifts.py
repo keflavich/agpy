@@ -1,4 +1,5 @@
 from AG_fft_tools import correlate2d
+import warnings
 import numpy as np
 
 def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=False, quiet=True, sigma_cut=False, **kwargs):
@@ -95,6 +96,19 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwarg
     ----------
     From http://solarmuri.ssl.berkeley.edu/~welsch/public/software/cross_cor_taylor.pro
 
+    Examples
+    --------
+    >>> import numpy as np
+    >>> im1 = np.zeros([10,10])
+    >>> im2 = np.zeros([10,10])
+    >>> im1[4,3] = 1
+    >>> im2[5,5] = 1
+    >>> import AG_image_tools
+    >>> yoff,xoff = AG_image_tools.cross_correlation_shifts(im1,im2)
+    >>> im1_aligned_to_im2 = np.roll(np.roll(im1,int(yoff),1),int(xoff),0)
+    >>> assert (im1_aligned_to_im2-im2).sum() == 0
+    
+
     """
 
     if not image1.shape == image2.shape:
@@ -110,6 +124,10 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwarg
     ylen,xlen = image1.shape
     xcen = xlen/2-1 
     ycen = ylen/2-1 
+
+    if ccorr.max() == 0:
+        warnings.warn("WARNING: No signal found!  Offset is defaulting to 0,0")
+        return 0,0
 
     if maxoff is not None:
         if verbose: print "Limiting maximum offset to %i" % maxoff
@@ -133,7 +151,7 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwarg
     shiftsubx=(fyy*fx-fy*fxy)/(fxy**2-fxx*fyy)
     shiftsuby=(fxx*fy-fx*fxy)/(fxy**2-fxx*fyy)
 
-    return -(xshift_int+shiftsubx),-(yshift_int+shiftsuby)
+    return -(xshift_int+shiftsubx)[0],-(yshift_int+shiftsuby)[0]
 
 def second_derivative(image):
     """

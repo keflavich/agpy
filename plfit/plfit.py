@@ -349,13 +349,14 @@ class plfit:
 
         return ax
 
-    def plotcdf(self,x=None,xmin=None,alpha=None,**kwargs):
+    def plotcdf(self, x=None, xmin=None, alpha=None, pointcolor='k',
+            pointmarker='+', **kwargs):
         """
         Plots CDF and powerlaw
         """
-        if not(x): x=self.data
-        if not(xmin): xmin=self._xmin
-        if not(alpha): alpha=self._alpha
+        if x is None: x=self.data
+        if xmin is None: xmin=self._xmin
+        if alpha is None: alpha=self._alpha
 
         x=numpy.sort(x)
         n=len(x)
@@ -372,7 +373,7 @@ class plfit:
         #plotx = pylab.linspace(q.min(),q.max(),1000)
         #ploty = (plotx/xmin)**(1-alpha) * nc
 
-        pylab.loglog(x,xcdf,marker='+',color='k',**kwargs)
+        pylab.loglog(x,xcdf,marker=pointmarker,color=pointcolor,**kwargs)
         #pylab.loglog(plotx,ploty,'r',**kwargs)
         pylab.loglog(q,fcdf_norm,'r',**kwargs)
 

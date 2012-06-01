@@ -126,14 +126,14 @@ def total_least_squares(data1, data2, data1err=None, data2err=None,
 
     arr = numpy.array([data1-dm1,data2-dm2]).T
 
-    u,s,v = numpy.linalg.svd(arr)
+    U,S,V = numpy.linalg.svd(arr, full_matrices=False)
 
     # v should be sorted.  
     # this solution should be equivalent to v[1,0] / -v[1,1]
     # but I'm using this: http://stackoverflow.com/questions/5879986/pseudo-inverse-of-sparse-matrix-in-python
-    m = v[-1,:-1]/-v[-1,-1]
+    M = V[-1,0]/-V[-1,-1]
 
-    varfrac = s[0]/s.sum()*100
+    varfrac = S[0]/S.sum()*100
     if varfrac < 50:
         raise ValueError("ERROR: SVD/TLS Linear Fit accounts for less than half the variance; this is impossible by definition.")
 
@@ -162,8 +162,8 @@ def total_least_squares(data1, data2, data1err=None, data2err=None,
 
         linear = Model(linmodel)
         data = RealData(data1,data2,sx=data1err,sy=data2err)
-        b = data2.mean() - m*data1.mean()
-        beta0 = [m[0],b[0]] if intercept else [m[0]]
+        B = data2.mean() - M*data1.mean()
+        beta0 = [M,B] if intercept else [M]
         myodr = ODR(data,linear,beta0=beta0)
         output = myodr.run()
 
@@ -178,18 +178,18 @@ def total_least_squares(data1, data2, data1err=None, data2err=None,
 
 
     if intercept:
-        b = data2.mean() - m*data1.mean()
+        B = data2.mean() - M*data1.mean()
         if print_results:
-            print "TLS Best fit y = %g x + %g" % (m,b)
+            print "TLS Best fit y = %g x + %g" % (M,B)
             print "The fit accounts for %0.3g%% of the variance." % (varfrac)
-            print "Chi^2 = %g, N = %i" % (((data2-(data1*m+b))**2).sum(),data1.shape[0]-2)
-        return m[0],b[0]
+            print "Chi^2 = %g, N = %i" % (((data2-(data1*M+B))**2).sum(),data1.shape[0]-2)
+        return M,B
     else:
         if print_results:
-            print "TLS Best fit y = %g x" % (m)
+            print "TLS Best fit y = %g x" % (M)
             print "The fit accounts for %0.3g%% of the variance." % (varfrac)
-            print "Chi^2 = %g, N = %i" % (((data2-(data1*m))**2).sum(),data1.shape[0]-1)
-        return m[0]
+            print "Chi^2 = %g, N = %i" % (((data2-(data1*M))**2).sum(),data1.shape[0]-1)
+        return M
 
 
 def smooth_waterfall(arr,fwhm=4.0,unsharp=False):
