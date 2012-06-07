@@ -245,8 +245,11 @@ def unpca_subtract(arr,ncomps):
 
 def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         print_results=False, intercept=True, nsample=5000, burn=1000,
-        thin=10, return_MC=False):
+        thin=10, return_MC=False, guess=None):
     import pymc
+
+    if guess is None:
+        guess = (0,0)
 
     xmu = pymc.distributions.Uninformative(name='x_observed',value=0)
     if data1err is None:
@@ -254,13 +257,18 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
     else:
         xdata = pymc.distributions.Normal('x',mu=xmu,observed=True,value=data1,tau=1.0/data1err**2)
 
-    d={'slope':pymc.distributions.Uninformative(name='slope',value=0),
-       'intercept':pymc.distributions.Uninformative(name='intercept',value=0),
+    d={'slope':pymc.distributions.Uninformative(name='slope',value=guess[0]),
        }
+    if intercept:
+        d['intercept'] = pymc.distributions.Uninformative(name='intercept',value=guess[1])
 
-    @pymc.deterministic
-    def model(x=xdata,slope=d['slope'],intercept=d['intercept']):
-        return x*slope+intercept
+        @pymc.deterministic
+        def model(x=xdata,slope=d['slope'],intercept=d['intercept']):
+            return x*slope+intercept
+    else:
+        @pymc.deterministic
+        def model(x=xdata,slope=d['slope']):
+            return x*slope
 
     d['f'] = model
 
@@ -274,18 +282,27 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
     MC.sample(nsample,burn=burn,thin=thin)
 
     MCs = MC.stats()
-    m,b = MCs['slope']['mean'],MCs['intercept']['mean']
-    em,eb = MCs['slope']['standard deviation'],MCs['intercept']['standard deviation']
+    m,em = MCs['slope']['mean'],MCs['slope']['standard deviation']
+    if intercept: 
+        b,eb = MCs['intercept']['mean'],MCs['intercept']['standard deviation']
 
     if print_results:
-        print "MCMC Best fit y = %g x + %g" % (m,b)
+        print "MCMC Best fit y = %g x" % (m),
+        if intercept: 
+            print " + %g" % (b)
+        else:
+            print ""
         print "m = %g +/- %g" % (m,em)
-        print "b = %g +/- %g" % (b,eb)
+        if intercept:
+            print "b = %g +/- %g" % (b,eb)
         print "Chi^2 = %g, N = %i" % (((data2-(data1*m))**2).sum(),data1.shape[0]-1)
 
     if return_MC: 
         return MC
-    return m,b
+    if intercept:
+        return m,b
+    else:
+        return m
         
 
 if __name__ == "__main__":
