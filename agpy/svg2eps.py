@@ -34,11 +34,6 @@ if __name__ == "__main__":
         if options.noepscrop: epscrop=""
         else: epscrop = "-dEPSCrop"
 
-        temp = tempfile.NamedTemporaryFile(delete=False)
-
-        command1 = "gsvg -dNOPAUSE -sDEVICE=ps2write -sOutputFile=%s" % (temp.name)
-        command2 = "gs   -dNOPAUSE -sDEVICE=epswrite %s" % (epscrop)
-#        command = "gs -dBATCH -sDEVICE=png16m -r%i %s -dNOPAUSE" % (options.resolution,epscrop)
 
 #        if options.multipage:
 #            outfile = re.sub("\.e?ps","_%d.png",filename)
@@ -48,9 +43,17 @@ if __name__ == "__main__":
             outfile = re.sub("\.svg$",".eps",filename)
         else:
             outfile = options.outfile
+        ps_outfile = re.sub("\.eps",".ps",outfile)
+
+        print "outfile: %s  ps_outfile: %s" % (outfile,ps_outfile)
+
+        command1 = "gsvg -dNOPAUSE -sDEVICE=ps2write -sOutputFile=%s" % (ps_outfile)
+        command2 = "ps2eps -f %s" % (ps_outfile)
+        #command2 = "gs   -dBATCH -dNOPAUSE -sDEVICE=epswrite %s" % (epscrop)
+#        command = "gs -dBATCH -sDEVICE=png16m -r%i %s -dNOPAUSE" % (options.resolution,epscrop)
 
         command1 += " %s" % filename
-        command2 += " -sOutputFile=%s %s" % (outfile, temp.name)
+        #command2 += " -sOutputFile=%s %s" % (outfile, ps_outfile)
 
         if options.silence_gs:
             command1 += " > /dev/null"
@@ -66,7 +69,6 @@ if __name__ == "__main__":
             if verbose > 1: print "rm %s" % filename
             os.remove(filename)
 
-        os.unlink(temp.name)
 
 
 
