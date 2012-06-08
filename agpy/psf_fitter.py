@@ -199,17 +199,22 @@ def psffit(data,err=None,params=[],autoderiv=True,return_all=False,circle=True,
         return f
 
                     
-    parinfo = [ 
-                {'n':1,'value':params[1],'limits':[minpars[1],maxpars[1]],'limited':[limitedmin[1],limitedmax[1]],'fixed':fixed[1],'parname':"AMPLITUDE",'error':0},
-                {'n':2,'value':params[2],'limits':[minpars[2],maxpars[2]],'limited':[limitedmin[2],limitedmax[2]],'fixed':fixed[2],'parname':"XSHIFT",'error':0},
-                {'n':3,'value':params[3],'limits':[minpars[3],maxpars[3]],'limited':[limitedmin[3],limitedmax[3]],'fixed':fixed[3],'parname':"YSHIFT",'error':0},
-                {'n':4,'value':params[4],'limits':[minpars[4],maxpars[4]],'limited':[limitedmin[4],limitedmax[4]],'fixed':fixed[4],'parname':"XWIDTH",'error':0} ]
-    if vheight == 1:
+    parinfo = [ ]
+    if vheight:
         parinfo.insert(0,{'n':0,'value':params[0],'limits':[minpars[0],maxpars[0]],'limited':[limitedmin[0],limitedmax[0]],'fixed':fixed[0],'parname':"HEIGHT",'error':0})
-    if circle == 0:
-        parinfo.append({'n':5,'value':params[5],'limits':[minpars[5],maxpars[5]],'limited':[limitedmin[5],limitedmax[5]],'fixed':fixed[5],'parname':"YWIDTH",'error':0})
-        if rotate == 1:
-            parinfo.append({'n':6,'value':params[6],'limits':[minpars[6],maxpars[6]],'limited':[limitedmin[6],limitedmax[6]],'fixed':fixed[6],'parname':"ROTATION",'error':0})
+        ind = 1
+    else:
+        ind = 0
+
+    parinfo.append({'n':0+ind,'value':params[0+ind],'limits':[minpars[0+ind],maxpars[0+ind]],'limited':[limitedmin[0+ind],limitedmax[0+ind]],'fixed':fixed[0+ind],'parname':"AMPLITUDE",'error':0})
+    parinfo.append({'n':1+ind,'value':params[1+ind],'limits':[minpars[1+ind],maxpars[1+ind]],'limited':[limitedmin[1+ind],limitedmax[1+ind]],'fixed':fixed[1+ind],'parname':"XSHIFT",'error':0})
+    parinfo.append({'n':2+ind,'value':params[2+ind],'limits':[minpars[2+ind],maxpars[2+ind]],'limited':[limitedmin[2+ind],limitedmax[2+ind]],'fixed':fixed[2+ind],'parname':"YSHIFT",'error':0})
+    parinfo.append({'n':3+ind,'value':params[3+ind],'limits':[minpars[3+ind],maxpars[3+ind]],'limited':[limitedmin[3+ind],limitedmax[3+ind]],'fixed':fixed[3+ind],'parname':"XWIDTH",'error':0})
+
+    if not(circle):
+        parinfo.append({'n':4+ind,'value':params[4+ind],'limits':[minpars[4+ind],maxpars[4+ind]],'limited':[limitedmin[4+ind],limitedmax[4+ind]],'fixed':fixed[4+ind],'parname':"YWIDTH",'error':0})
+        if rotate:
+            parinfo.append({'n':5+ind,'value':params[5+ind],'limits':[minpars[5+ind],maxpars[5+ind]],'limited':[limitedmin[5+ind],limitedmax[5+ind]],'fixed':fixed[5+ind],'parname':"ROTATION",'error':0})
 
     if extra_pars:
         for P in extra_pars:
@@ -220,7 +225,7 @@ def psffit(data,err=None,params=[],autoderiv=True,return_all=False,circle=True,
         # efficient and useful.  I only bothered putting it here because I was
         # instructed to do so for a class project - please ask if you would
         # like this feature implemented
-        raise ValueError("I'm sorry, I haven't implemented this feature yet.")
+        raise NotImplementedError("I'm sorry, I haven't implemented this feature yet.")
     else:
 #        p, cov, infodict, errmsg, success = optimize.leastsq(errorfunction,\
 #                params, full_output=1)

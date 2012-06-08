@@ -340,7 +340,7 @@ def modelspec(x,T,A,w,dx,op,Ak=0,extinction=False):
             wl = restwl(v,v-1,j,j) * 10**4
             model += A*mult*(2*(j)+1)*aval(v,j,j)*exp(-h2level_energy(v,j)/(k*T)) * exp( - ( x - wl - dx )**2 / (2*w**2) )
     if extinction:
-        # alpha=1.8 comes from Martin & Whittet 1990.  alpha=1.75 from Rieke and Lebofsky 1985
+        # alpha=1.8 comes from Martin & Whittet 1990.  alpha=1.75 from Rieke and Lebofsky 1985 ( but is not in the paper; is just referred to in Martin & Whittet )
         Al = Ak * (x/22000.0)**(-1.75)
         model *= exp(-Al)
     return model
