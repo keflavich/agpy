@@ -253,29 +253,34 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
 
     xmu = pymc.distributions.Uninformative(name='x_observed',value=0)
     if data1err is None:
-        xdata = pymc.distributions.Normal('x',mu=xmu,observed=True,value=data1,tau=1)
+        xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
+                value=data1, tau=1, trace=False)
     else:
-        xdata = pymc.distributions.Normal('x',mu=xmu,observed=True,value=data1,tau=1.0/data1err**2)
+        xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
+                value=data1, tau=1.0/data1err**2, trace=False)
 
-    d={'slope':pymc.distributions.Uninformative(name='slope',value=guess[0]),
+    d={'slope':pymc.distributions.Uninformative(name='slope', value=guess[0]), 
        }
     if intercept:
-        d['intercept'] = pymc.distributions.Uninformative(name='intercept',value=guess[1])
+        d['intercept'] = pymc.distributions.Uninformative(name='intercept',
+                value=guess[1])
 
-        @pymc.deterministic
+        @pymc.deterministic(trace=False)
         def model(x=xdata,slope=d['slope'],intercept=d['intercept']):
             return x*slope+intercept
     else:
-        @pymc.deterministic
+        @pymc.deterministic(trace=False)
         def model(x=xdata,slope=d['slope']):
             return x*slope
 
     d['f'] = model
 
     if data2err is None:
-        ydata = pymc.distributions.Normal('y',mu=model,observed=True,value=data2,tau=1)
+        ydata = pymc.distributions.Normal('y', mu=model, observed=True,
+                value=data2, tau=1, trace=False)
     else:
-        ydata = pymc.distributions.Normal('y',mu=model,observed=True,value=data2,tau=1.0/data2err**2)
+        ydata = pymc.distributions.Normal('y', mu=model, observed=True,
+                value=data2, tau=1.0/data2err**2, trace=False)
     d['y'] = ydata
     
     MC = pymc.MCMC(d)
@@ -388,3 +393,8 @@ if __name__ == "__main__":
             print "%20s" % row,
         print
             
+
+    print "PyMC linear tests"
+    MC1 = pymc_linear_fit(x,y,intercept=False,print_results=True,return_MC=True)
+    MC2 = pymc_linear_fit(x,y,xerr,yerr,intercept=False,print_results=True,return_MC=True)
+
