@@ -100,6 +100,8 @@ def airy(inpars, circle=True, rotate=False, vheight=True, shape=None, fwhm=False
             yp = y
         rr = numpy.sqrt(((rcen_x-xp)/width_x)**2+
              ((rcen_y-yp)/width_y)**2)
+        # airy first zero: linspace(3.5,4,10000)[argmin((scipy.special.j1(linspace(3.5,4,10000))/linspace(3.5,4,10000))**2)]
+        # or scipy.special.jn_zeros(1,1)
         # http://en.wikipedia.org/wiki/Airy_disk
         airy_func = (2.0 * scipy.special.j1(rr) / rr)**2
         airy_func[rr==0] = 1.0

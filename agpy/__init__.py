@@ -47,6 +47,6 @@ import pymc_plotting
 # import all of the functions but not the modules...
 __all__ = ['readcol', 'gaussfitter', 'kdist', 'reg_gal2cel', 'posang',
     'densitymap', 'downsample', 'correlate2d', 'psds', 'convolve', 'radialprofile',
-    'constants' 'gal2cel', 'convolve', 'smooth', 'azimuthalAverage',
+    'constants','gal2cel', 'convolve', 'smooth', 'azimuthalAverage',
     'azimuthalAverageBins', 'kdist', 'vector_kdist', 'moments', 'twodgaussian',
     'gaussfit', 'onedgaussian', 'onedgaussfit']
