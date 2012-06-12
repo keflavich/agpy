@@ -256,8 +256,10 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
                 value=data1, tau=1, trace=False)
     else:
+        xtau = pymc.distributions.Uninformative(name='x_tau',
+                value=1.0/data1err**2, observed=True, trace=False)
         xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
-                value=data1, tau=1.0/data1err**2, trace=False)
+                value=data1, tau=xtau, trace=False)
 
     d={'slope':pymc.distributions.Uninformative(name='slope', value=guess[0]), 
        }
@@ -279,8 +281,10 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         ydata = pymc.distributions.Normal('y', mu=model, observed=True,
                 value=data2, tau=1, trace=False)
     else:
+        ytau = pymc.distributions.Uninformative(name='y_tau',
+                value=1.0/data2err**2, observed=True, trace=False)
         ydata = pymc.distributions.Normal('y', mu=model, observed=True,
-                value=data2, tau=1.0/data2err**2, trace=False)
+                value=data2, tau=ytau, trace=False)
     d['y'] = ydata
     
     MC = pymc.MCMC(d)
