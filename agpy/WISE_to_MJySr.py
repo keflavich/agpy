@@ -32,6 +32,11 @@ def WISE_to_MJySr(filename, outfilename=None, clobber=False):
     Convert a WISE image from DN to MJy/Sr as per
     http://wise2.ipac.caltech.edu/docs/release/allsky/expsup/sec2_3f.html
 
+    *WARNING* The WISE documentation says that the images cannot be calibrated
+    to surface brightness!  Flux measurements extracted from the WISE data are
+    likely to be incorrect as a result of these modifications!  But, for
+    qualitative purposes, it should be fine.
+
     Parameters
     ----------
     filename - string
