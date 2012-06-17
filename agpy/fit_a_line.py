@@ -1,10 +1,9 @@
 """
-=========
-PCA Tools
-=========
+==========
+Fit A Line
+==========
 
-A set of tools for PCA analysis, singular value decomposition,
-total least squares, and other linear fitting methods.
+A set of tools for simple line fitting.
 
 Running this code independently tests the fitting functions with different
 types of random data.
@@ -12,21 +11,6 @@ types of random data.
 """
 import numpy
 
-  
-def efuncs(arr, return_others=False):
-    """
-    Determine eigenfunctions of an array for use with
-    PCA cleaning
-    """
-    if hasattr(arr,'filled'):
-        arr = arr.filled(0)
-    covmat = numpy.dot(arr.T,arr)
-    evals,evects = numpy.linalg.eig(covmat)
-    efuncarr = numpy.dot(arr,evects)
-    if return_others:
-        return efuncarr,covmat,evals,evects
-    else:
-        return efuncarr
 
 def PCA_linear_fit(data1, data2, print_results=False, ignore_nans=True):
     """
@@ -192,57 +176,6 @@ def total_least_squares(data1, data2, data1err=None, data2err=None,
         return M
 
 
-def smooth_waterfall(arr,fwhm=4.0,unsharp=False):
-    """
-    Smooth a waterfall plot.
-
-    If unsharp set, remove the smoothed component
-
-    Input array should have dimensions [timelen, nbolos]
-    """
-
-    timelen,nbolos = arr.shape
-    kernel = numpy.exp(-numpy.linspace(-timelen/2,timelen/2,timelen)**2/
-            (2.0*fwhm/numpy.sqrt(8*numpy.log(2))))
-    kernel /= kernel.sum()
-    kernelfft = numpy.fft.fft(kernel)
-    arrfft = numpy.fft.fft(arr,axis=0)
-    arrconv = numpy.fft.fftshift(
-            numpy.fft.ifft(arrfft*
-            numpy.outer(kernelfft,numpy.ones(nbolos)), 
-            axis=0).real,axes=(0,))
-    if unsharp:
-        return arr-arrconv
-    else:
-        return arrconv
-
-def pca_subtract(arr,ncomps):
-    """
-    Compute the eigenfunctions and values of correlated data, then subtract off
-    the *ncomps* most correlated components, transform back to the original
-    space, and return that.
-    """
-    if hasattr(arr,'filled'):
-        arr = arr.filled(0)
-    covmat = numpy.dot(arr.T,arr)
-    evals,evects = numpy.linalg.eig(covmat)
-    efuncarr = numpy.dot(arr,evects)
-    efuncarr[:,0:ncomps] = 0
-    return numpy.inner(efuncarr,evects)
-
-def unpca_subtract(arr,ncomps):
-    """
-    Like pca_subtract, except `keep` the *ncomps* most correlated components
-    and reject the others
-    """
-    if hasattr(arr,'filled'):
-        arr = arr.filled(0)
-    covmat = numpy.dot(arr.T,arr)
-    evals,evects = numpy.linalg.eig(covmat)
-    efuncarr = numpy.dot(arr,evects)
-    efuncarr[:,ncomps:] = 0
-    return numpy.inner(efuncarr,evects)
-
 def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         print_results=False, intercept=True, nsample=5000, burn=1000,
         thin=10, return_MC=False, guess=None):
@@ -313,13 +246,95 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
     else:
         return m
         
+def pymc_linear_fit_withoutliers(data1, data2, data1err=None, data2err=None,
+        print_results=False, intercept=True, nsample=5000, burn=1000,
+        thin=10, return_MC=False, guess=None, verbose=0):
+    """
+    Use pymc to fit a line to data with outliers assuming outliers
+    come from a broad, uniform distribution that cover all the data
+    """
+    import pymc
+
+    if guess is None:
+        guess = (0,0)
+
+    xmu = pymc.distributions.Uninformative(name='x_observed',value=0)
+    if data1err is None:
+        xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
+                value=data1, tau=1, trace=False)
+    else:
+        xtau = pymc.distributions.Uninformative(name='x_tau',
+                value=1.0/data1err**2, observed=True, trace=False)
+        xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
+                value=data1, tau=xtau, trace=False)
+
+    d={'slope':pymc.distributions.Uninformative(name='slope', value=guess[0]), 
+        #d['badvals'] = pymc.distributions.Binomial('bad',len(data2),0.5,value=[False]*len(data2))
+        #d['badx'] = pymc.distributions.Uniform('badx',min(data1-data1err),max(data1+data1err),value=data1)
+        'badvals':pymc.distributions.DiscreteUniform('bad',0,1,value=[False]*len(data2)),
+        'bady':pymc.distributions.Uniform('bady',min(data2-data2err),max(data2+data2err),value=data2),
+       }
+    if intercept:
+        d['intercept'] = pymc.distributions.Uninformative(name='intercept',
+                value=guess[1])
+
+        @pymc.deterministic(trace=False)
+        def model(x=xdata,slope=d['slope'],intercept=d['intercept'],
+                badvals=d['badvals'], bady=d['bady']):
+            return (x*slope+intercept) * (True-badvals) + badvals*bady
+
+    else:
+
+        @pymc.deterministic(trace=False)
+        def model(x=xdata,slope=d['slope'], badvals=d['badvals'], bady=d['bady']):
+            return x*slope*(True-badvals) + badvals*bady
+
+    d['f'] = model
+
+    if data2err is None:
+        ydata = pymc.distributions.Normal('y', mu=model, observed=True,
+                value=data2, tau=1, trace=False)
+    else:
+        ytau = pymc.distributions.Uninformative(name='y_tau',
+                value=1.0/data2err**2, observed=True, trace=False)
+        ydata = pymc.distributions.Normal('y', mu=model, observed=True,
+                value=data2, tau=ytau, trace=False) 
+    d['y'] = ydata
+    
+    MC = pymc.MCMC(d)
+    MC.sample(nsample,burn=burn,thin=thin,verbose=verbose)
+
+    MCs = MC.stats()
+    m,em = MCs['slope']['mean'],MCs['slope']['standard deviation']
+    if intercept: 
+        b,eb = MCs['intercept']['mean'],MCs['intercept']['standard deviation']
+
+    if print_results:
+        print "MCMC Best fit y = %g x" % (m),
+        if intercept: 
+            print " + %g" % (b)
+        else:
+            print ""
+        print "m = %g +/- %g" % (m,em)
+        if intercept:
+            print "b = %g +/- %g" % (b,eb)
+        print "Chi^2 = %g, N = %i" % (((data2-(data1*m))**2).sum(),data1.shape[0]-1)
+
+    if return_MC: 
+        return MC
+    if intercept:
+        return m,b
+    else:
+        return m
+        
+
 
 if __name__ == "__main__":
 
     from pylab import *
 
     md,bd = {},{}
-
+    """
     xvals = numpy.linspace(0,100,100)
     yvals = numpy.linspace(0,100,100)
     md['ideal'],bd['ideal'] = ({'PCA':0,'TLS':0, 'poly':0, 'pymc':0},{'PCA':0,'TLS':0, 'poly':0, 'pymc':0},)
@@ -401,6 +416,7 @@ if __name__ == "__main__":
     print "PyMC linear tests"
     MC1 = pymc_linear_fit(x,y,intercept=False,print_results=True,return_MC=True)
     MC2 = pymc_linear_fit(x,y,xerr,yerr,intercept=False,print_results=True,return_MC=True)
+    """
 
     hoggdata = np.array([
         [1,201,592,61,9,-0.84],
@@ -424,6 +440,8 @@ if __name__ == "__main__":
         [19,218,533,16,6,-0.78],
         [20,146,344,22,5,-0.56],
         ])
+    xdata,ydata = hoggdata[:,1],hoggdata[:,2]
+    xerr,yerr = hoggdata[:,4],hoggdata[:,3]
 
     linear_fitters = [total_least_squares, PCA_linear_fit, pymc_linear_fit]
 
@@ -439,3 +457,36 @@ if __name__ == "__main__":
             print method.__name__,method(hoggdata[:,1],hoggdata[:,2], data2err=hoggdata[:,3], data1err=hoggdata[:,4])
         except TypeError:
             pass
+
+    from pylab import *
+
+    figure(1)
+    clf()
+    errorbar(xdata, ydata, xerr=xerr, yerr=yerr, marker='.', linestyle='none')
+    MC = pymc_linear_fit_withoutliers(xdata, ydata, data1err=xerr, data2err=yerr, return_MC=True)
+    MC.sample(50000,burn=10000,verbose=1)
+
+    mmean = MC.stats()['slope']['mean']
+    bmean = MC.stats()['intercept']['mean']
+    plot(linspace(0,300),linspace(0,300)*mmean+bmean,color='k',linewidth=2)
+
+
+    for m,b in zip(MC.trace('slope')[-100:],MC.trace('intercept')[-100:]):
+        plot(linspace(0,300),linspace(0,300)*m+b, color='k', alpha=0.05)
+
+    scatter(xdata[MC.badvals.value.astype('bool')],
+            ydata[MC.badvals.value.astype('bool')], color='r')
+
+    from agpy import pymc_plotting
+    import pymc
+    figure(2)
+    clf()
+    pymc_plotting.hist2d(MC,'slope','intercept',fignum=2,bins=50)
+
+    figure(3)
+    clf()
+    pymc.Matplot.plot(MC.slope,new=False)
+    figure(4)
+    clf()
+    pymc.Matplot.plot(MC.intercept,new=False)
+
