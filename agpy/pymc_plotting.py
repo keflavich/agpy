@@ -1,11 +1,26 @@
 import numpy as np
 import pylab
+import matplotlib
+import pymc
 
 def find_percentile(data, pctile):
     sorted_data = np.sort(data.ravel())
     accum_data = sorted_data.cumsum()
     pctiles = accum_data / accum_data.max() * 100.
     return sorted_data[np.argmin(np.abs(pctiles-pctile))]
+
+def errellipse(MC, varname1, varname2, ax=None):
+    N = pymc.NormApprox(MC)
+    N.fit()
+    E =  matplotlib.patches.Ellipse(N.mu[N.__dict__[varname1],
+        N.__dict__[varname2]], N.C[N.__dict__[varname1]],
+        N.C[N.__dict__[varname2]], 
+        (N.C[N.__dict__[varname1], N.__dict__[varname2]][0,1] /
+            N.C[N.__dict__[varname1]] * 90.)[0],
+        facecolor='none', edgecolor='black')
+    if ax is None:
+        ax=pylab.gca()
+    ax.add_artist(E)
 
 def hist2d(MC, varname1, varname2, varslice=None,
         percentiles=[0.0027,0.0455,0.3173,0.5,0.75],
@@ -15,6 +30,7 @@ def hist2d(MC, varname1, varname2, varslice=None,
         contourcmd=pylab.contourf,
         clear=False,
         colorbar=True,
+        doerrellipse=True,
         **kwargs):
     """
     Create a 2D histogram of the MCMC data over some Trace range
@@ -45,6 +61,10 @@ def hist2d(MC, varname1, varname2, varslice=None,
         cb = pylab.colorbar(); 
         cb.ax.set_yticks(levels); 
         cb.ax.set_yticklabels(ticklabels)
+
+    if doerrellipse:
+        errellipse(MC,varname1,varname2)
+
 
 def gkde_contours(MC, varname1, varname2, varslice=None,
         percentiles=[0.0027,0.0455,0.3173,0.5,0.75],
