@@ -162,8 +162,34 @@ try:
     def fit_blackbody(xdata, flux, guesses=(0,0), err=None,
             blackbody_function=blackbody, quiet=True, **kwargs):
         """
-        guesses = Temperature, Arbitrary Scale
-        OR Temperature, Beta, Arbitrary Scale
+        Parameters
+        ----------
+        xdata : array
+            Array of the X-values (frequency, wavelength) of the data
+        flux : array
+            The fluxes corresponding to the xdata values
+        guesses : (Temperature,Scale) or (Temperature,Beta,Scale)
+            The input guesses.  3 parameters are used for greybody 
+            fitting, two for temperature fitting.
+        blackbody_function: function
+            Must take x-axis (e.g. frequency), temperature, scale, and then
+            optionally beta args 
+        quiet : bool
+            quiet flag passed to mpfit
+
+        Examples
+        --------
+        >>> wavelength = array([20,70,160,250,350,500,850,1100])
+        >>> flux = modified_blackbody_wavelength(wavelength, 15, beta=1.75,
+                wavelength_units='microns', normalize=False, logN=22, logscale=16)
+        >>> err = 0.1 * flux
+        >>> flux += np.random.randn(len(wavelength)) * err
+        >>> tguess, bguess, nguess = 20.,2.,21.5
+        >>> mp = fit_blackbody(wavelength, flux, err=err,
+                 blackbody_function=modified_blackbody_wavelength,
+                 logscale=16, guesses=(tguess, bguess, nguess),
+                 wavelength_units='microns')
+        >>> print mp.params
         """
 
         def mpfitfun(x,y,err):
@@ -181,6 +207,61 @@ try:
 
         return mp
 except ImportError:
+    pass
+
+try:
+    import lmfit
+    def fit_blackbody_lmfit(xdata, flux, guesses=(0,0), err=None,
+            blackbody_function=blackbody, quiet=True, **kwargs):
+        """
+        Parameters
+        ----------
+        xdata : array
+            Array of the X-values (frequency, wavelength) of the data
+        flux : array
+            The fluxes corresponding to the xdata values
+        guesses : (Temperature,Scale) or (Temperature,Beta,Scale)
+            The input guesses.  3 parameters are used for greybody 
+            fitting, two for temperature fitting.
+        blackbody_function: function
+            Must take x-axis (e.g. frequency), temperature, scale, and then
+            optionally beta args 
+        quiet : bool
+            quiet flag passed to mpfit
+
+        kwargs are past to blackbody function
+
+        Examples
+        --------
+        >>> import lmfit
+        >>> wavelength = array([20,70,160,250,350,500,850,1100])
+        >>> flux = modified_blackbody_wavelength(wavelength, 15, beta=1.75,
+                wavelength_units='microns', normalize=False, logN=22, logscale=16)
+        >>> err = 0.1 * flux
+        >>> flux += np.random.randn(len(wavelength)) * err
+        >>> parameters = lmfit.Parameters(dict([ (n,lmfit.Parameter(x)) for n,x
+                in zip(('T','beta','N'),(20.,2.,21.5)) ]))
+        >>> lm = fit_blackbody_lmfit(wavelength, flux, err=err,
+                 blackbody_function=modified_blackbody_wavelength, logscale=16,
+                 guesses=parameters,
+                 wavelength_units='microns')
+        >>> print lm.params
+        """
+
+        def lmfitfun(x,y,err):
+            if err is None:
+                def f(p): return (y-blackbody_function(x, *[p[par].value for par in p],
+                    normalize=False, **kwargs))
+            else:
+                def f(p): return (y-blackbody_function(x, *[p[par].value for par in p],
+                    normalize=False, **kwargs))/err
+            return f
+
+        minimizer = lmfit.minimize( lmfitfun(xdata,np.array(flux),err),
+                guesses)
+
+        return minimizer
+except:
     pass
 
 try:
