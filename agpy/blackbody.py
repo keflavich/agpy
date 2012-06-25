@@ -393,39 +393,44 @@ if __name__=="__main__":
             pylab.errorbar(wavelength, input_flux, err, linestyle='none')
             pylab.plot(wavelength, recovered_flux)
 
-    pylab.figure(100)
-    pylab.clf()
-    for ii,(errlevel,wavelength) in enumerate(itertools.product(errlevels,wavelengths)):
-        flux = modified_blackbody_wavelength(wavelength, temperature,
-                beta=beta, wavelength_units='microns', normalize=False, logN=column,
-                logscale=16)
-        err = flux*errlevel
-
-        bbmc = fit_blackbody_montecarlo(wavelength, flux,
-                blackbody_function=modified_blackbody_wavelength,
-                return_MC=True, wavelength_units='microns', nsamples=1,
-                scale_guess=nguess, beta_guess=bguess, temperature_guess=tguess,
-                scale_keyword='logN', max_scale=30, err=err, logscale=16,
-                burn=0)
-        mps = []
-        pylab.figure(ii)
+    for kk,errlevel in enumerate(errlevels):
+        pylab.figure(100+kk)
         pylab.clf()
-        pylab.plot(temperature,beta,'kx')
-        betas,betaerr,temps,temperr = [],[],[],[]
-        for jj in xrange(50):
-            flux = bbmc.flux.rand()
-            mp = fit_blackbody(wavelength, flux, err=err,
+        for ii,(wavelength) in enumerate(wavelengths):
+            flux = modified_blackbody_wavelength(wavelength, temperature,
+                    beta=beta, wavelength_units='microns', normalize=False, logN=column,
+                    logscale=16)
+            err = flux*errlevel
+            err[wavelength<1100] = flux[wavelength<1100]*0.02
+
+            bbmc = fit_blackbody_montecarlo(wavelength, flux,
                     blackbody_function=modified_blackbody_wavelength,
-                    logscale=16, guesses=(tguess, bguess, nguess), wavelength_units='microns')
-            
-            mps.append(mp)
-            
-            temps.append(mp.params[0])
-            betas.append(mp.params[1])
-            betaerr.append(mp.perror[1])
-            temperr.append(mp.perror[0])
-        pylab.errorbar(temps,betas,xerr=temperr, yerr=betaerr, linestyle='none')
-        pylab.figure(100)
-        print "%s sn=%f  beta=%f+/-%f" % (wavelength[-1],1/errlevel,np.mean(betas),np.std(betas))
-        pylab.hist(betas,alpha=0.25,label="%s sn=%f" % (wavelength[-1],1/errlevel),histtype='stepfilled')
-        pylab.legend(loc='best')
+                    return_MC=True, wavelength_units='microns', nsamples=1,
+                    scale_guess=nguess, beta_guess=bguess, temperature_guess=tguess,
+                    scale_keyword='logN', max_scale=30, err=err, logscale=16,
+                    burn=0)
+            mps = []
+            pylab.figure(kk)
+            pylab.clf()
+            pylab.plot(temperature,beta,'kx')
+            betas,betaerr,temps,temperr = [],[],[],[]
+            for jj in xrange(500):
+                flux = bbmc.flux.rand()
+                mp = fit_blackbody(wavelength, flux, err=err,
+                        blackbody_function=modified_blackbody_wavelength,
+                        logscale=16, guesses=(tguess, bguess, nguess), wavelength_units='microns')
+                
+                mps.append(mp)
+                
+                temps.append(mp.params[0])
+                betas.append(mp.params[1])
+                betaerr.append(mp.perror[1])
+                temperr.append(mp.perror[0])
+            pylab.errorbar(temps,betas,xerr=temperr, yerr=betaerr, linestyle='none')
+            pylab.figure(100+kk)
+            print "%s sn=%f  beta=%f+/-%f" % (wavelength[-1],1/errlevel,np.mean(betas),np.std(betas))
+            pylab.hist(betas,alpha=0.5,label="Longest Wavelength %s $\\mu m$ S/N=%0.1f" % (wavelength[-1],1/errlevel),histtype='stepfilled',bins=20)
+            if ii==0:
+                pylab.vlines(beta,*pylab.gca().get_ylim(),linestyle='--',color='k',label="Input value $\\beta=%f$" % beta)
+            pylab.legend(loc='best')
+            pylab.savefig("/Users/adam/agpy/tests/longwav%i_sn%i_Herschelsn50_bb_test.png" % (wavelength[-1],1/errlevel))
