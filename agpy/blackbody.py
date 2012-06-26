@@ -235,15 +235,22 @@ try:
 
         Examples
         --------
-        >>> import lmfit
         >>> wavelength = array([20,70,160,250,350,500,850,1100])
         >>> flux = modified_blackbody_wavelength(wavelength, 15, beta=1.75,
                 wavelength_units='microns', normalize=False, logN=22, logscale=16)
         >>> err = 0.1 * flux
         >>> flux += np.random.randn(len(wavelength)) * err
+        >>> tguess, bguess, nguess = 20.,2.,21.5
+        >>> lm = fit_blackbody_lmfit(wavelength, flux, err=err,
+                 blackbody_function=modified_blackbody_wavelength, logscale=16,
+                 guesses=(tguess,bguess,nguess),
+                 wavelength_units='microns')
+        >>> print lm.params
+        
+        >>> # If you want to fit for a fixed beta, do this:
         >>> parameters = lmfit.Parameters(dict([ (n,lmfit.Parameter(x)) for n,x
                 in zip(('T','beta','N'),(20.,2.,21.5)) ]))
-        >>> # If you want to fit for a fixed beta, do this:
+        >>> import lmfit
         >>> parameters['beta'].vary = False
         >>> lm = fit_blackbody_lmfit(wavelength, flux, err=err,
                  blackbody_function=modified_blackbody_wavelength, logscale=16,
@@ -260,6 +267,10 @@ try:
                 def f(p): return (y-blackbody_function(x, *[p[par].value for par in p],
                     normalize=False, **kwargs))/err
             return f
+
+        if not isinstance(guesses,lmfit.Parameters):
+            guesses = lmfit.Parameters(dict([ (n,lmfit.Parameter(x)) for n,x
+                in zip(('T','beta','N'),guesses) ]))
 
         minimizer = lmfit.minimize( lmfitfun(xdata,np.array(flux),err),
                 guesses)
