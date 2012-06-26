@@ -78,7 +78,7 @@ def blackbody_wavelength(lam,temperature, scale=1.0,
     else:
         return I * scale
 
-def modified_blackbody(nu,temperature,beta=1.75, logscale=0.0, logN=22,
+def modified_blackbody(nu,temperature,beta=1.75, logN=22, logscale=0.0, 
         muh2=2.8, units='cgs',frequency_units='Hz', kappa0=4.0, nu0=505e9,
         normalize=max, dusttogas=100.):
     """
