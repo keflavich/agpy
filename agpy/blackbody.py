@@ -181,7 +181,8 @@ try:
         --------
         >>> wavelength = array([20,70,160,250,350,500,850,1100])
         >>> flux = modified_blackbody_wavelength(wavelength, 15, beta=1.75,
-                wavelength_units='microns', normalize=False, logN=22, logscale=16)
+                logN=22, wavelength_units='microns', normalize=False,
+                logscale=16)
         >>> err = 0.1 * flux
         >>> flux += np.random.randn(len(wavelength)) * err
         >>> tguess, bguess, nguess = 20.,2.,21.5
@@ -242,6 +243,8 @@ try:
         >>> flux += np.random.randn(len(wavelength)) * err
         >>> parameters = lmfit.Parameters(dict([ (n,lmfit.Parameter(x)) for n,x
                 in zip(('T','beta','N'),(20.,2.,21.5)) ]))
+        >>> # If you want to fit for a fixed beta, do this:
+        >>> parameters['beta'].vary = False
         >>> lm = fit_blackbody_lmfit(wavelength, flux, err=err,
                  blackbody_function=modified_blackbody_wavelength, logscale=16,
                  guesses=parameters,
