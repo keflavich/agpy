@@ -211,6 +211,7 @@ except ImportError:
 
 try:
     import lmfit
+    import numpy as np
     def fit_blackbody_lmfit(xdata, flux, guesses=(0,0), err=None,
             blackbody_function=blackbody, quiet=True, **kwargs):
         """
@@ -261,7 +262,19 @@ try:
                 guesses)
 
         return minimizer
-except:
+except ImportError:
+    pass
+
+try:
+    import pymodelfit
+
+    # FAILS:
+    # SyntaxError: can't have kwargs in model function
+    #class pmf_blackbody(pymodelfit.FunctionModel1DAuto):
+    #    def f(self, x, T=20.0, scale=1.0, beta=1.5,
+    #            blackbody_function=blackbody, **kwargs):
+    #        return blackbody_function(x, T, scale, beta=beta)
+except ImportError:
     pass
 
 try:

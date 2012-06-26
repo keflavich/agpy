@@ -4,7 +4,6 @@ import os,shutil
 import glob
 import tempfile
 import time
-tempfile.tempdir = '/Volumes/disk4/var/tmp'
 import sys
 #print sys.path
 #sys.path.remove('')
@@ -26,6 +25,7 @@ if __name__ == "__main__":
     parser.add_option("--copy",default=False,action='store_true',help="Copy files instead of linking")
     parser.add_option("--background_match",default=False,action='store_true',help="background_match images?")
     parser.add_option("--tmpdir",default="tmp",help="Alternative name for temporary directory (default 'tmp')")
+    parser.add_option("--tmpdrive",default='/Volumes/disk4/var/tmp',help="The temporary directory in which to do coadding (important that it is on the same physical HD)")
 
     parser.set_usage("%prog outfile=filename.fits *.fits combine=median")
     parser.set_description(
@@ -44,6 +44,8 @@ if __name__ == "__main__":
 
     options,args = parser.parse_args()
 
+    tempfile.tempdir = options.tmpdrive
+    
     if options.outfile is None:
         raise ValueError("Must specify outfile name")
 
