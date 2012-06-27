@@ -23,9 +23,13 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=Fa
         noise correlation?
     """
     import montage
-    import pyfits
+    try:
+        import astropy.io.fits as pyfits
+        import astropy.wcs as pywcs
+    except ImportError:
+        import pyfits
+        import pywcs
     import tempfile
-    import pywcs
 
     header = pyfits.getheader(fitsfile1)
     temp_headerfile = tempfile.NamedTemporaryFile()

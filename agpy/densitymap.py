@@ -1,5 +1,6 @@
 """
 Build a density map out of a list of coordinates
+(easier to just use np.histogram2d)
 """
 
 try:
