@@ -36,7 +36,7 @@ def get_data(glon,glat,radius=20,save=True,overwrite=False,get_images=True):
     return cleancat
 
 
-def make_densitymap(cat, pixsize=7.2, save_prefix="densmap_", overwrite=False):
+def make_densitymap(cat, pixsize=7.2, save_prefix="densmap_", kband_cut=17, overwrite=False):
     """
     Create point source density maps in glon/glat
 
@@ -57,6 +57,7 @@ def make_densitymap(cat, pixsize=7.2, save_prefix="densmap_", overwrite=False):
             42) * (cat[band+'ERRBITS'] > -1) * ((cat['PRIORSEC'] ==
                 cat['FRAMESETID']) + (cat['PRIORSEC']==0))
             * (cat[band+'PPERRBITS']!=64) * (cat[band+'PPERRBITS'] < 60) #70000)
+            * (cat['K_1APERMAG1']<kband_cut)
             )
         lonK=cat['L'][mask]
         latK=cat['B'][mask]

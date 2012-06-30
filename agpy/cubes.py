@@ -13,7 +13,10 @@ from math import acos,atan2,tan
 import numpy
 import copy
 import os
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
 import tempfile
 import posang # agpy code
 try:

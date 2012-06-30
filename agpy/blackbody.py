@@ -299,6 +299,7 @@ try:
             blackbody_function=blackbody, quiet=True, return_MC=False,
             nsamples=5000, burn=1000, min_temperature=0, max_temperature=100,
             scale_keyword='scale', max_scale=1e60,
+            multivariate=False,
             **kwargs):
         """
         Parameters
@@ -361,11 +362,12 @@ try:
         d['bb_model'] = bb_model
 
         if err is None:
-            d['flux'] = pymc.distributions.Normal('flux', mu=d['bb_model'], tau=1.,
-                    value=flux, observed=True)
+            d['err'] = pymc.distributions.Uninformative('error',value=1.)
         else:
-            d['flux'] = pymc.distributions.Normal('flux', mu=d['bb_model'], tau=1./err**2,
-                    value=flux, observed=True)
+            d['err'] = pymc.distributions.Uninformative('error',value=err,observed=True)
+
+        d['flux'] = pymc.distributions.Normal('flux', mu=d['bb_model'], tau=1./d['err']**2,
+                value=flux, observed=True)
 
         #print d.keys()
         MC = pymc.MCMC(d)
