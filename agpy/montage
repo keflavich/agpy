@@ -13,8 +13,9 @@ if mypath in sys.path:
 import montage
 
 
-def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr', exact_size=True, combine='median',
-        getheader=False, copy=False, background_match=False, tmpdrive="/Volumes/disk4/var/tmp/"):
+def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr',
+        exact_size=True, combine='median', getheader=False, copy=False,
+        background_match=False, tmpdrive="/Volumes/disk4/var/tmp/"):
     """
 Usage: montage outfile=filename.fits *.fits combine=median
 
@@ -46,6 +47,8 @@ Options:
     """
 
     filelist = []
+    if type(args) is str:
+        raise TypeError("Args must be a list of glob expressions")
     for a in args:
         filelist += glob.glob(a)
         
@@ -68,9 +71,9 @@ Options:
     olddir = os.getcwd()
     os.chdir(tmpdir+'/')
     dir = os.getcwd()
-    print "Beginning montage operations: montage.wrappers.mosaic(%s,'%s/mosaic',header='%s/%s', exact_size=%s, combine=%s, background_match=%s)" % (dir,dir,dir,header,exact,combine,background_match)
+    print "Beginning montage operations: montage.wrappers.mosaic(%s,'%s/mosaic',header='%s/%s', exact_size=%s, combine=%s, background_match=%s)" % (dir,dir,dir,header,exact_size,combine,background_match)
     montage.wrappers.mosaic(dir,'%s/mosaic' % dir,header='%s/%s' %
-            (dir,os.path.split(header)[-1]), exact_size=exact,
+            (dir,os.path.split(header)[-1]), exact_size=exact_size,
             combine=combine, background_match=background_match)
 
     time.sleep(1)
