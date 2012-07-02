@@ -92,7 +92,7 @@ def modified_blackbody(nu,temperature,beta=1.75, logN=22, logscale=0.0,
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
     mh = unitdict[units]['mh']
 
-    kappanu = kappa0 * dusttogas * (nu/nu0)**beta
+    kappanu = kappa0 / dusttogas * (nu/nu0)**beta
     # numpy apparently can't multiply floats and longs
     tau  = muh2 * mh * kappanu * 10.0**logN
 
@@ -524,7 +524,7 @@ if __name__=="__main__":
             pylab.clf()
             pylab.plot(temperature,beta,'kx')
             betas,betaerr,temps,temperr = [],[],[],[]
-            for jj in xrange(500):
+            for jj in xrange(5):
                 flux = bbmc.flux.rand()
                 mp = fit_blackbody(wavelength, flux, err=err,
                         blackbody_function=modified_blackbody_wavelength,
@@ -543,4 +543,4 @@ if __name__=="__main__":
             if ii==0:
                 pylab.vlines(beta,*pylab.gca().get_ylim(),linestyle='--',color='k',label="Input value $\\beta=%f$" % beta)
             pylab.legend(loc='best')
-            pylab.savefig("/Users/adam/agpy/tests/longwav%i_sn%i_Herschelsn50_bb_test.png" % (wavelength[-1],1/errlevel))
+            #pylab.savefig("/Users/adam/agpy/tests/longwav%i_sn%i_Herschelsn50_bb_test.png" % (wavelength[-1],1/errlevel))
