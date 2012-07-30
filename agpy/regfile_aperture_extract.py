@@ -1,7 +1,11 @@
-import pyregion
-import pyfits
+try:
+    import astropy.wcs as pywcs
+    import astropy.io.fits as pyfits
+except ImportError:
+    import pyfits
+    import pywcs
 import numpy as np
-import pywcs
+import pyregion
 from agpy.region_positions import *
 
 def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None, PPBEAM=1.0, debug=False, print_nulls=False):
