@@ -4,10 +4,11 @@ try:
 except ImportError:
     print "Region Photometry requires pyregion"
 try:
-    import pyfits
+    import astropy.io.fits as pyfits
+    import astropy.wcs as pywcs
 except ImportError:
-    print "Region photometry requires pyfits"
-import pyfits
+    import pyfits
+    import pywcs
 import numpy
 from agpy import mad
 

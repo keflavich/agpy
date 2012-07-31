@@ -1,8 +1,12 @@
 #!/usr/bin/env python -W ignore::DeprecationWarning
 #!/Library/Frameworks/Python.framework/Versions/2.6/bin/python
+try:
+    import astropy.io.fits as pyfits
+    import astropy.wcs as pywcs
+except ImportError:
+    import pyfits
+    import pywcs
 import pyregion
-import pyfits
-import pywcs
 import ds9
 import numpy
 import sys
