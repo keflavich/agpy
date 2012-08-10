@@ -5,6 +5,7 @@ except ImportError:
     import pyfits
     import pywcs
 import numpy as np
+np.seterr(all='ignore')
 import pyregion
 from agpy.region_positions import *
 try:
@@ -40,6 +41,7 @@ def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None,
 
     if photut and not photut_ok:
         photut = False
+        print "photutils is not loaded"
     if photut: 
         dsqueeze = data.squeeze()
 
@@ -65,9 +67,9 @@ def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None,
         regL.append(reg)
         if not photut:
             innerap = regL.get_mask(hdu=hdu)
-        if innerap.sum() == 0:
-            print "Skipped a source that was in the boundaries: ",reg
-            continue
+            if innerap.sum() == 0:
+                print "Skipped a source that was in the boundaries: ",reg
+                continue
         regL[0].coord_list[2] = outeraprad/3600.0  # set outer aperture (background) to R=100"
         #regL.append(reg) # I think this turns two circles into a panda?
         if not photut:
@@ -79,9 +81,9 @@ def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None,
             outerappix = outeraprad / 3600. / np.abs(wcs.wcs.get_cdelt()[0]) / 2.
             total = photutils.aperture_circular(dsqueeze, xc, yc, innerappix)
             outer = photutils.aperture_circular(dsqueeze, xc, yc, outerappix)
-            background = (outer-inner) / ((outerappix**2-innerappix**2)*np.pi)
+            background = (outer-total) / ((outerappix**2-innerappix**2)*np.pi)
             backmean = background
-            backstd = 0
+            backstd = np.nan
         else:
             total = data[innerap].sum()
             background = np.median(data[backreg])
@@ -92,20 +94,24 @@ def get_fluxes(regfile, outfile, inneraprad=35, outeraprad=60, hdu=None,
 
         if backstd > total or total < 0:
             print "%s set to zero" % reg.attr[1]['text']
-            total = 0
-            total_backsub  = 0
-            total_mbacksub = 0
+            total = np.float(0)
+            total_backsub  = np.float(0)
+            total_mbacksub = np.float(0)
         else:
             if photut:
-                total_backsub = total_mbacksub = outer-inner
+                total_backsub = total_mbacksub = outer-total
             else:
                 total_backsub  = total - innerap.sum() * background
                 total_mbacksub = total - innerap.sum() * backmean
+
+        if total_backsub == 0:
+            total_backsub = -np.inf
 
         print "%16s" % sourcename,"".join("%16.5g" % f 
                 for f in [total/PPBEAM,total_backsub/PPBEAM,total_mbacksub/PPBEAM,total,total_backsub,background,backmean,backstd,backstd/total_backsub])
         print >>outf,"%16s" % sourcename,"".join("%16.5g" % f 
                 for f in [total/PPBEAM,total_backsub/PPBEAM,total_mbacksub/PPBEAM,total,total_backsub,background,backmean,backstd,backstd/total_backsub])
 
+    print "Done with %s" % outfile
     outf.close()
 

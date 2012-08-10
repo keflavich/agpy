@@ -10,6 +10,7 @@ except ImportError:
     import pyfits
     import pywcs
 import numpy
+numpy.seterr(all='ignore')
 from agpy import mad
 
 def region_photometry(regionfile,fitsfilename,outfile='/dev/tty',doprint=True):
