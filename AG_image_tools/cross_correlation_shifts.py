@@ -106,6 +106,12 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         understand how to make these agree with simulations.
         The analytic estimate comes from
         http://adsabs.harvard.edu/abs/2003MNRAS.342.1291Z
+        At high signal-to-noise, the analytic version overestimates the error
+        by a factor of about 1.8, while the gaussian version overestimates
+        error by about 1.15.  At low s/n, they both UNDERestimate the error.
+        The transition zone occurs at a *total* S/N ~ 1000 (i.e., the total
+        signal in the map divided by the standard deviation of the map - 
+        it depends on how many pixels have signal)
 
     **kwargs are passed to correlate2d, which in turn passes them to convolve.
     The available options include image padding for speed and ignoring NaNs.
@@ -203,7 +209,6 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
 
         if return_error:
             ccorrn = ccorr / eccorr**2 / ccorr.size #/ (errim1.mean()*errim2.mean()) #/ eccorr**2
-            print np.min(ccorrn),np.max(ccorrn)
             exshift = (np.abs(-1 * ccorrn.size * fxx/ccorrn[ymax,xmax] *
                     (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) [0]
             eyshift = (np.abs(-1 * ccorrn.size * fyy/ccorrn[ymax,xmax] *
@@ -262,6 +267,7 @@ try:
 
     shifts = [1,1.5,-1.25,8.2,10.1]
     sizes = [99,100,101]
+    amps = [5.,10.,50.,100.,500.,1000.]
     gaussfits = (True,False)
 
     def make_offset_images(xsh,ysh,imsize, width=3.0, amp=1000.0, noiseamp=1.0,
@@ -314,6 +320,32 @@ try:
             for ii in xrange(nfits)]
 
         return offsets
+
+    @pytest.mark.parametrize(('xsh','ysh','imsize','amp','gaussfit'),list(itertools.product(shifts,shifts,sizes,amps,gaussfits)))
+    def run_tests(xsh, ysh, imsize, amp, gaussfit, nfits=1000, maxoff=20):
+        fitted_shifts = np.array(do_n_fits(nfits, xsh, ysh, imsize, amp=amp, maxoff=maxoff))
+        errors = fitted_shifts.std(axis=0)
+        x,y,ex,ey = cross_correlation_shifts(
+                *make_offset_images(xsh, ysh, imsize, amp=amp)[:2],
+                gaussfit=gaussfit, maxoff=maxoff, return_error=True,
+                errim1=np.ones([imsize,imsize]),
+                errim2=np.ones([imsize,imsize]))
+        print "StdDev: %10.3g,%10.3g  Measured: %10.3g,%10.3g  Difference: %10.3g, %10.3g  Diff/Real: %10.3g,%10.3g" % (
+            errors[0],errors[1], ex,ey,errors[0]-ex,errors[1]-ey,
+            (errors[0]-ex)/errors[0], (errors[1]-ey)/errors[1])
+
+        return errors[0],errors[1],ex,ey
+
+    def determine_error_offsets():
+        """
+        Experiment to determine how wrong the error estimates are
+        (WHY are they wrong?  Still don't understand)
+        """
+        # analytic
+        A = np.array([run_tests(1.5,1.5,50,a,False,nfits=200) for a in np.logspace(1.5,3,30)]);
+        G = np.array([run_tests(1.5,1.5,50,a,True,nfits=200) for a in np.logspace(1.5,3,30)]);
+        print "Analytic offset: %g" % (( (A[:,3]/A[:,1]).mean() + (A[:,2]/A[:,0]).mean() )/2. )
+        print "Gaussian offset: %g" % (( (G[:,3]/G[:,1]).mean() + (G[:,2]/G[:,0]).mean() )/2. )
         
 
 except ImportError:
