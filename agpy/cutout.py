@@ -5,9 +5,13 @@ Cutout
 
 Generate a cutout image from a .fits file
 """
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+    import astropy.wcs as pywcs
+except ImportError:
+    import pyfits
+    import pywcs
 import numpy
-import pywcs
 import coords
 try:
     import montage

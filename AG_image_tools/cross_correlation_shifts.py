@@ -1,4 +1,5 @@
 from AG_fft_tools import correlate2d
+from agpy import gaussfitter
 import warnings
 import numpy as np
 
@@ -73,7 +74,7 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=Fa
         return xoff,yoff,xoff_wcs,yoff_wcs
     
 
-def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwargs):
+def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, gaussfit=False, **kwargs):
     """ Use cross-correlation and a 2nd order taylor expansion to measure the
     offset between two images
 
@@ -142,20 +143,34 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, **kwarg
     else:
         ymax,xmax = np.nonzero(ccorr == ccorr.max())
 
-    xshift_int = xmax-xcen
-    yshift_int = ymax-ycen
+    if gaussfit:
+        pars,epars = gaussfitter.gaussfit(subccorr,return_all=True)
+        xshift = pars[2] - maxoff
+        yshift = pars[3] - maxoff
+        # this isn't right - the measurement errors definitely affect the errors here
+        exshift = epars[2]
+        eyshift = epars[3]
 
-    local_values = ccorr[ymax-1:ymax+2,xmax-1:xmax+2]
+        return xshift,yshift,exshift,eyshift
+    else:
 
-    d1y,d1x = np.gradient(local_values)
-    d2y,d2x,dxy = second_derivative(local_values)
+        xshift_int = xmax-xcen
+        yshift_int = ymax-ycen
 
-    fx,fy,fxx,fyy,fxy = d1x[1,1],d1y[1,1],d2x[1,1],d2y[1,1],dxy[1,1]
+        local_values = ccorr[ymax-1:ymax+2,xmax-1:xmax+2]
 
-    shiftsubx=(fyy*fx-fy*fxy)/(fxy**2-fxx*fyy)
-    shiftsuby=(fxx*fy-fx*fxy)/(fxy**2-fxx*fyy)
+        d1y,d1x = np.gradient(local_values)
+        d2y,d2x,dxy = second_derivative(local_values)
 
-    return -(xshift_int+shiftsubx)[0],-(yshift_int+shiftsuby)[0]
+        fx,fy,fxx,fyy,fxy = d1x[1,1],d1y[1,1],d2x[1,1],d2y[1,1],dxy[1,1]
+
+        shiftsubx=(fyy*fx-fy*fxy)/(fxy**2-fxx*fyy)
+        shiftsuby=(fxx*fy-fx*fxy)/(fxy**2-fxx*fyy)
+
+        xshift = -(xshift_int+shiftsubx)[0]
+        yshift = -(yshift_int+shiftsuby)[0]
+
+        return xshift,yshift
 
 def second_derivative(image):
     """
@@ -203,9 +218,10 @@ try:
 
     shifts = [1,1.5,-1.25,8.2,10.1]
     sizes = [99,100,101]
+    gaussfits = (True,False)
 
-    @pytest.mark.parametrize(('xsh','ysh','imsize'),list(itertools.product(shifts,shifts,sizes)))
-    def test_shifts(xsh,ysh,imsize):
+    @pytest.mark.parametrize(('xsh','ysh','imsize','gaussfit'),list(itertools.product(shifts,shifts,sizes,gaussfits)))
+    def test_shifts(xsh,ysh,imsize,gaussfit):
         width = 3.0
         amp = 1000.0
         noiseamp = 1.0
@@ -219,8 +235,12 @@ try:
         tolerance = 3. * 1./np.sqrt(2*np.pi*width**2*amp/noiseamp)
 
         new_image = np.random.randn(imsize,imsize)*noiseamp + amp*np.exp(-((X-xsh)**2+(Y-ysh)**2)/(2.*width**2))
-        xoff,yoff = cross_correlation_shifts(image,new_image)
-        print xoff,yoff,np.abs(xoff-xsh),np.abs(yoff-ysh) 
+        if gaussfit:
+            xoff,yoff,exoff,eyoff = cross_correlation_shifts(image,new_image)
+            print xoff,yoff,np.abs(xoff-xsh),np.abs(yoff-ysh),exoff,eyoff
+        else:
+            xoff,yoff = cross_correlation_shifts(image,new_image)
+            print xoff,yoff,np.abs(xoff-xsh),np.abs(yoff-ysh) 
         assert np.abs(xoff-xsh) < tolerance
         assert np.abs(yoff-ysh) < tolerance
 

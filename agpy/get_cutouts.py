@@ -2,8 +2,12 @@
 Make cutouts with all available data of a given position
 """
 import glob
-import pyfits
-import pywcs
+try:
+    import astropy.io.fits as pyfits
+    import astropy.wcs as pywcs
+except ImportError:
+    import pyfits
+    import pywcs
 import coords
 import os
 import agpy.cubes,agpy.grep,agpy.cutout
@@ -23,7 +27,8 @@ def findimages(xc, yc, searchpath, coordsys='celestial', verbose=False,
     for fn in imlist:
         try: 
             head = pyfits.getheader(fn)
-        except: # generic exception; there are lots of ways file reading could fail but I don't care
+        except Exception as ex: # generic exception; there are lots of ways file reading could fail but I don't care
+            print ex
             continue
         head = agpy.cubes.flatten_header( head )
         if coords_in_image(xc,yc,head,coordsys=coordsys):
@@ -150,7 +155,7 @@ standard_dirs = [
         '/Volumes/disk2/data/bally_CO/',
         '/Volumes/disk2/data/bgps/releases/IPAC/',
         '/Volumes/disk2/data/bgps/releases/v2.0/',
-        '/Volumes/disk2/data/bgps/releases/v2.0/August2011/',
+        '/Volumes/disk2/data/bgps/releases/v2.0/final/',
         '/Volumes/disk2/data/c2d/',
         '/Volumes/disk2/data/cara/csfiles/',
         '/Volumes/disk2/data/cara/glimpsev3/',

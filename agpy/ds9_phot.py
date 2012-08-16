@@ -10,6 +10,7 @@ import pyregion
 import ds9
 import numpy
 import sys
+import re
 
 def ds9_photometry(xpapoint):
     D = ds9.ds9(xpapoint)
@@ -26,8 +27,15 @@ def ds9_photometry(xpapoint):
     hdr = pf[0].header
     wcs = pywcs.WCS(hdr)
     try:
-        bmaj = float(hdr['BMAJ'])
-        bmin = float(hdr['BMIN'])
+        try:
+            bmaj = float(hdr['BMAJ'])
+            bmin = float(hdr['BMIN'])
+        except KeyError:
+            # VLA imfits
+            for k,v in hdr.iteritems():
+                if numpy.iterable(v) and "BMAJ" in v:
+                    bmaj = float(v.split()[3])
+                    bmin = float(v.split()[5])
         try:
             cd1 = wcs.wcs.cd[0,0]
             cd2 = wcs.wcs.cd[1,1]

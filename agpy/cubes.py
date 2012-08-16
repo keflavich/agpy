@@ -15,8 +15,13 @@ import copy
 import os
 try:
     import astropy.io.fits as pyfits
+    import astropy.wcs as pywcs
 except ImportError:
     import pyfits
+    try:
+        import pywcs
+    except ImportError:
+        print "cubes.py requires pywcs for some subimage_integ,aper_wordl2pix,getspec, and coords_in_image"
 import tempfile
 import posang # agpy code
 try:
@@ -44,8 +49,9 @@ def flatten_header(header):
     header must be a pyfits.Header instance
     """
 
-    if not isinstance(header,pyfits.Header):
-        raise Exception("flatten_header requires a pyfits.Header instance")
+    # astropy.io.fits != pyfits -> sadness
+    #if not hasattr(header,'copy')
+    #    raise Exception("flatten_header requires a pyfits.Header instance")
 
     newheader = header.copy()
 
@@ -519,7 +525,8 @@ try:
     import montage 
 
     def rotcrop_cube(x1, y1, x2, y2, cubename, outname, xwidth=25, ywidth=25,
-            in_system='galactic',  out_system='equatorial', clobber=True):
+            in_system='galactic',  out_system='equatorial', clobber=True, 
+            newheader=None, xcen=None, ycen=None):
         """
         Crop a data cube and then rotate it with montage
 
@@ -527,20 +534,24 @@ try:
 
         cubefile = pyfits.open(cubename)
 
-        pos1 = coords.Position([x1,y1],system=in_system)
-        pos2 = coords.Position([x2,y2],system=in_system)
+        if xcen is None and ycen is None:
+            pos1 = coords.Position([x1,y1],system=in_system)
+            pos2 = coords.Position([x2,y2],system=in_system)
 
-        if cubefile[0].header.get('CTYPE1')[:2] == 'RA':
-            x1,y1 = pos1.j2000()
-            x2,y2 = pos2.j2000()
-            coord_system = 'celestial'
-        elif  cubefile[0].header.get('CTYPE1')[:2] == 'GLON':
-            x1,y1 = pos1.galactic()
-            x2,y2 = pos2.galactic()
-            coord_system = 'galactic'
+            if cubefile[0].header.get('CTYPE1')[:2] == 'RA':
+                x1,y1 = pos1.j2000()
+                x2,y2 = pos2.j2000()
+                coord_system = 'celestial'
+            elif  cubefile[0].header.get('CTYPE1')[:4] == 'GLON':
+                x1,y1 = pos1.galactic()
+                x2,y2 = pos2.galactic()
+                coord_system = 'galactic'
 
-        xcen = (x1+x2)/2.0
-        ycen = (y1+y2)/2.0
+            xcen = (x1+x2)/2.0
+            ycen = (y1+y2)/2.0
+            print xcen,ycen,xwidth,ywidth,coord_system
+        else:
+            coord_system = in_system
 
         sc = subcube(cubefile[0].data, xcen, xwidth, ycen, ywidth, 
                 widthunits='pixels', units="wcs", header=cubefile[0].header,
@@ -552,29 +563,38 @@ try:
         
         pa = posang.posang(x1,y1,x2,y2,system=coord_system) - 90
 
-        newheader = sc.header.copy()
-        cd11 = newheader.get('CDELT1') if newheader.get('CDELT1') else newheader.get('CD1_1')
-        cd22 = newheader.get('CDELT2') if newheader.get('CDELT2') else newheader.get('CD2_2')
-        cd12 = newheader.get('CD1_2') if newheader.get('CD1_2') else 0.0
-        cd21 = newheader.get('CD2_1') if newheader.get('CD2_1') else 0.0
-        cdelt = numpy.sqrt(cd11**2+cd12**2)
+        if newheader is None:
+            newheader = sc.header.copy()
+            cd11 = newheader.get('CDELT1') if newheader.get('CDELT1') else newheader.get('CD1_1')
+            cd22 = newheader.get('CDELT2') if newheader.get('CDELT2') else newheader.get('CD2_2')
+            cd12 = newheader.get('CD1_2') if newheader.get('CD1_2') else 0.0
+            cd21 = newheader.get('CD2_1') if newheader.get('CD2_1') else 0.0
+            cdelt = numpy.sqrt(cd11**2+cd12**2)
 
-        tempheader = tempfile.mktemp(suffix='.hdr')
-        ycensign = "+" if numpy.sign(ycen) >= 0 else "-"
-        montage.mHdr("%s %1s%s" % (xcen, ycensign, numpy.abs(ycen)), xwidth*cdelt,
-                tempheader, system=out_system, height=ywidth*cdelt,
-                pix_size=cdelt*3600.0, rotation=pa)
-        os.system("sed -i bck '/END/d' %s" % (tempheader))
-        newheader2 = pyfits.Header()
-        newheader2.fromTxtFile(tempheader)
-        for key in ('CRPIX3','CRVAL3','CDELT3','CD3_3','CUNIT3','WCSTYPE3','CTYPE3'):
-            if newheader.get(key):
-                newheader2.update(key,newheader.get(key))
-        if newheader.get('CD3_3') and newheader2.get('CDELT3') is None:
-            newheader2.update('CDELT3',newheader.get('CD3_3'))
-        newheader2.toTxtFile(tempheader,clobber=True)
-        #if newheader2.get('CDELT3') is None:
-        #    raise Exception("No CD3_3 or CDELT3 in header.")
+            tempheader = tempfile.mktemp(suffix='.hdr')
+            ycensign = "+" if numpy.sign(ycen) >= 0 else "-"
+            montage.mHdr("%s %1s%s" % (xcen, ycensign, numpy.abs(ycen)), xwidth*cdelt,
+                    tempheader, system=out_system, height=ywidth*cdelt,
+                    pix_size=cdelt*3600.0, rotation=pa)
+            os.system("sed -i bck '/END/d' %s" % (tempheader))
+            newheader2 = pyfits.Header()
+            newheader2.fromTxtFile(tempheader)
+            #newheader2.fromtextfile(tempheader)
+            for key in ('CRPIX3','CRVAL3','CDELT3','CD3_3','CUNIT3','WCSTYPE3','CTYPE3'):
+                if newheader.get(key):
+                    newheader2.update(key,newheader.get(key))
+            if newheader.get('CD3_3') and newheader2.get('CDELT3') is None:
+                newheader2.update('CDELT3',newheader.get('CD3_3'))
+            newheader2.toTxtFile(tempheader,clobber=True)
+            #if newheader2.get('CDELT3') is None:
+            #    raise Exception("No CD3_3 or CDELT3 in header.")
+        else:
+            if isinstance(newheader,str):
+                newheader2 = pyfits.Header()
+                newheader2.fromTxtFile(newheader)
+            tempheader = tempfile.mktemp(suffix='.hdr')
+            newheader2.toTxtFile(tempheader,clobber=True)
+
 
         montage.wrappers.reproject_cube(tempcube,outname,header=tempheader,clobber=clobber)
         #print "\n",outname

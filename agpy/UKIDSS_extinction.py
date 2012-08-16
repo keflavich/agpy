@@ -10,7 +10,7 @@ except ImportError:
     import pyfits
     import pywcs
 
-def get_data(glon,glat,radius=20,save=True,overwrite=False,get_images=True):
+def get_data(glon,glat,radius=20,save=True,overwrite=False,get_images=True,directory='./'):
     """
     Download UKIDSS data at specified GLON/GLAT with specified size
 
@@ -28,6 +28,7 @@ def get_data(glon,glat,radius=20,save=True,overwrite=False,get_images=True):
     """
 
     R = ukidss.UKIDSSQuery()
+    R.directory = directory
     if get_images:
         images = R.get_image_gal(glon,glat,size=radius,save=save,overwrite=overwrite)
     cat = R.get_catalog_gal(glon,glat,radius=radius,save=save,overwrite=overwrite)[0][1]
@@ -52,6 +53,9 @@ def make_densitymap(cat, pixsize=7.2, save_prefix="densmap_", kband_cut=17, over
     """
 
     jhk = []
+    lon,lat = {},{}
+    lonmin,latmin = np.inf,np.inf
+    lonmax,latmax = -np.inf,-np.inf
     for band in ('J','H','K_1'):
         mask = ((cat[band+'CLASS']!=-9999) * (cat[band+'ERRBITS'] <
             42) * (cat[band+'ERRBITS'] > -1) * ((cat['PRIORSEC'] ==
@@ -59,13 +63,26 @@ def make_densitymap(cat, pixsize=7.2, save_prefix="densmap_", kband_cut=17, over
             * (cat[band+'PPERRBITS']!=64) * (cat[band+'PPERRBITS'] < 60) #70000)
             * (cat['K_1APERMAG1']<kband_cut)
             )
-        lonK=cat['L'][mask]
-        latK=cat['B'][mask]
+        lon[band]=cat['L'][mask]
+        lat[band]=cat['B'][mask]
+        lonmin = min(lonmin,lon[band].min())
+        latmin = min(latmin,lat[band].min())
+        lonmax = max(lonmax,lon[band].max())
+        latmax = max(latmax,lat[band].max())
 
-        binsize = pixsize
-        mapsize = np.array( [(lonK.max()-lonK.min()),(latK.max()-latK.min())] )
-        mapsize_pix = (mapsize)/(binsize/3600.)
-        H,histlon,histlat = np.histogram2d(lonK,latK,bins=mapsize_pix)
+    mapsize = np.array( [lonmax-lonmin,latmax-latmin] )
+    binsize = pixsize
+    mapsize_pix = (mapsize)/(binsize/3600.)
+
+    for band in ('J','H','K_1'):
+        mask = ((cat[band+'CLASS']!=-9999) * (cat[band+'ERRBITS'] <
+            42) * (cat[band+'ERRBITS'] > -1) * ((cat['PRIORSEC'] ==
+                cat['FRAMESETID']) + (cat['PRIORSEC']==0))
+            * (cat[band+'PPERRBITS']!=64) * (cat[band+'PPERRBITS'] < 60) #70000)
+            * (cat['K_1APERMAG1']<kband_cut)
+            )
+
+        H,histlon,histlat = np.histogram2d(lon[band],lat[band],bins=mapsize_pix)
 
         F = pyfits.PrimaryHDU()
         F.header.update('CRPIX1',mapsize_pix[1]/2.+1)
@@ -82,7 +99,7 @@ def make_densitymap(cat, pixsize=7.2, save_prefix="densmap_", kband_cut=17, over
 
     return jhk
 
-def get_image(glon,glat,radius=20,save=True,overwrite=False):
+def get_image(glon,glat,radius=20,save=True,overwrite=False,directory='./'):
     """
     Download Bolocam image data at specified GLON/GLAT with specified size
 
@@ -95,9 +112,12 @@ def get_image(glon,glat,radius=20,save=True,overwrite=False):
         Size of cutout (symmetric) in arcminutes
     save : bool
         Save FITS?
+    directory : string
+        Directory in which to save file
     """
 
-    return magpis.get_magpis_image_gal(glon, glat, size=radius, save=save, overwrite=overwrite)
+    return magpis.get_magpis_image_gal(glon, glat, size=radius, save=save,
+            overwrite=overwrite, directory=directory)
 
 def get_contours(fitsfile, av=10.):
     """
@@ -139,22 +159,28 @@ def histeq(im,nbr_bins=256):
    return im2.reshape(im.shape)#, cdf
 
 
-def show_contours_on_extinction(contours, jhk, color='k'):
+def show_contours_on_extinction(contours, jhk, color='c'):
     """
     Given contours from get_contours and a list of JHK images from make_densitymap, plot things
     """
 
     header = jhk[0].header
-    rgb = ([im.data for im in jhk])
-    alpha = np.array(rgb).sum(axis=0)
-    alpha /= alpha.max()
-    alpha *= 0.5
-    alpha += 0.5
-    alpha[:]=1
+    J,H,K = ([im.data for im in jhk])
+    if J.shape != K.shape:
+        J = np.zeros(K.shape)
+    if H.shape != K.shape:
+        H = np.zeros(K.shape)
+    rgb = ([K,H,J])
+    #alpha = np.array(rgb).sum(axis=0)
+    #alpha /= alpha.max()
+    #alpha *= 0.5
+    #alpha += 0.5
+    alpha = np.ones(K.shape)
     #alpha = histeq(alpha)
     rgb.append(alpha)
     rgb = np.array(rgb).T
-    rgb[:,:,:3] /= 10.
+    #rgb[:,:,0],rgb[:,:,2] = rgb[:,:,2],rgb[:,:,0]
+    rgb[:,:,:3] /= 5.
 
     wcs = pywcs.WCS(header)
     xglon,yglat = wcs.wcs_pix2world( np.array(zip(np.arange(wcs.naxis1),np.arange(wcs.naxis2))), 0 ).T
@@ -176,8 +202,9 @@ if __name__ == "__main__":
     if not 'glon' in locals():
         glon = 10.62
         glat = -0.38
-        radius = 20
-    cat = get_data(glon,glat,radius=radius,overwrite=True,get_images=False)
+        radius = 10
+        get_images=False
+    cat = get_data(glon,glat,radius=radius,overwrite=True,get_images=get_images)
     jhk = make_densitymap(cat,overwrite=True,save_prefix="G%07.3f%+08.3f_densmap_" % (glon,glat))
     bgps = get_image(glon,glat,radius=radius,overwrite=True)
     contours = get_contours(bgps)

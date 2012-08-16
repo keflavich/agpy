@@ -226,6 +226,9 @@ class Struct(object):
         """
         self.__dict__[name] = data
 
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
 def readff(s,format):
     """
     Fixed-format reader

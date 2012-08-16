@@ -1592,13 +1592,13 @@ class Flagger:
         def f(x,p):
             return 10**(p[1])*x**(p[0])
         if None not in (p1in,p2in,p0in):
-            plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0in),color='r')
-            plot(xfreq[xfreq<plbreak],f(xfreq[xfreq<plbreak],p1in),color='r')
-            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2in),color='r')
+            plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0in),color='r', label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0in[1],p0in[0]), linestyle="-")
+            plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1in),color='r', label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1in[1],p1in[0]), linestyle="--")
+            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2in),color='r', label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2in[1],p2in[0]), linestyle=":")
         if doplot: 
-            P = plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0))[0]
-            plot(xfreq[xfreq<plbreak],f(xfreq[xfreq<plbreak],p1),color=P.get_color())
-            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2),color=P.get_color())
+            P = plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0), label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0[1],p0[0]))[0]
+            plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1),color=P.get_color(), label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1[1],p1[0]))
+            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2),color=P.get_color(), label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2[1],p2[0]))
         print "Best powerlaw fit: P = 10^%0.3f freq^%0.3f   { freq < %0.2f" % (p1[1],p1[0],plbreak)
         print "                       10^%0.3f freq^%0.3f   { freq >= %0.2f" % (p2[1],p2[0],plbreak)
         print "                       10^%0.3f freq^%0.3f   { freq < %0.2f" % (p0[1],p0[0],0.02)
@@ -2279,6 +2279,24 @@ if __name__ == "__main__":
               print "Median(ppars2[0,:]) = %f" % median(ppars2[0,:])
               print "Median(ppars2[1,:]) = %f" % median(ppars2[1,:])
               print "WARNING! This likely only applies to astrosignal, NOT ac_bolos!"
+
+              figure(4)
+              clf()
+              datashape = f.powerspectra_whole.shape[0]
+              xfreq = fftfreq(datashape,d=f.sample_interval)[1:datashape/2]
+              psw = f.powerspectra_whole.mean(axis=1)
+              loglog(xfreq, psw[1:psw.size/2], linewidth=0.5, color='k')
+                
+              f.broken_powerfit(ii,timestream='ac_bolos',replotspec=False,
+                      doplot=False,
+                      p0in=[median(ppars0[0,:]),median(ppars0[1,:])],
+                      p1in=[median(ppars1[0,:]),median(ppars1[1,:])],
+                      p2in=[median(ppars2[0,:]),median(ppars2[1,:])],
+                      )
+              L = legend(loc='upper right')
+              xlabel("Frequency (Hz)")
+              ylabel("Power (Jy$^2$)")
+              savefig(f.fileprefix+"_PowerSpectrumFit.png")
 
           if options.compute_expfit:
               ppars1 = zeros([2,f.nbolos])
