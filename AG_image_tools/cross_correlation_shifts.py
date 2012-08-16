@@ -74,7 +74,9 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=Fa
         return xoff,yoff,xoff_wcs,yoff_wcs
     
 
-def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, gaussfit=False, **kwargs):
+def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
+        maxoff=None, verbose=False, gaussfit=False, return_error=False,
+        **kwargs):
     """ Use cross-correlation and a 2nd order taylor expansion to measure the
     offset between two images
 
@@ -87,12 +89,23 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, gaussfi
         The reference image
     image2: np.ndarray
         The offset image.  Must have the same shape as image1
+    errim1: np.ndarray [optional]
+        The pixel-by-pixel error on the reference image
+    errim2: np.ndarray [optional]
+        The pixel-by-pixel error on the offset image.  
     maxoff: int
         Maximum allowed offset (in pixels).  Useful for low s/n images that you
         know are reasonably well-aligned, but might find incorrect offsets due to 
         edge noise
     verbose: bool
         Print out extra messages?
+    gaussfit : bool
+        Use a Gaussian fitter to fit the peak of the cross-correlation?
+    return_error: bool
+        Return an estimate of the error on the shifts.  WARNING: I still don't
+        understand how to make these agree with simulations.
+        The analytic estimate comes from
+        http://adsabs.harvard.edu/abs/2003MNRAS.342.1291Z
 
     **kwargs are passed to correlate2d, which in turn passes them to convolve.
     The available options include image padding for speed and ignoring NaNs.
@@ -120,15 +133,15 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, gaussfi
         raise ValueError("Images must have same shape.")
 
     quiet = kwargs.pop('quiet') if 'quiet' in kwargs else not verbose
-    ccorr = correlate2d(image1,image2,quiet=quiet,**kwargs)
+    ccorr = (correlate2d(image1,image2,quiet=quiet,**kwargs) / image1.size)
     # allow for NaNs set by convolve (i.e., ignored pixels)
     ccorr[ccorr!=ccorr] = 0
     if ccorr.shape != image1.shape:
         raise ValueError("Cross-correlation image must have same shape as input images.  This can only be violated if you pass a strange kwarg to correlate2d.")
 
     ylen,xlen = image1.shape
-    xcen = xlen/2-1 
-    ycen = ylen/2-1 
+    xcen = xlen/2-(1-xlen%2) 
+    ycen = ylen/2-(1-xlen%2) 
 
     if ccorr.max() == 0:
         warnings.warn("WARNING: No signal found!  Offset is defaulting to 0,0")
@@ -142,16 +155,31 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, gaussfi
         ymax = ymax+ycen-maxoff
     else:
         ymax,xmax = np.nonzero(ccorr == ccorr.max())
+        subccorr = ccorr
+
+    if return_error:
+        if errim1 is None:
+            errim1 = np.ones(ccorr.shape) * image1[image1==image1].std() 
+        if errim2 is None:
+            errim2 = np.ones(ccorr.shape) * image2[image2==image2].std() 
+        eccorr =( (correlate2d(errim1**2, image2**2,quiet=quiet,**kwargs)+
+                   correlate2d(errim2**2, image1**2,quiet=quiet,**kwargs))**0.5 
+                   / image1.size)
+        if maxoff is not None:
+            subeccorr = eccorr[ycen-maxoff:ycen+maxoff+1,xcen-maxoff:xcen+maxoff+1]
+        else:
+            subeccorr = eccorr
 
     if gaussfit:
-        pars,epars = gaussfitter.gaussfit(subccorr,return_all=True)
-        xshift = pars[2] - maxoff
-        yshift = pars[3] - maxoff
-        # this isn't right - the measurement errors definitely affect the errors here
-        exshift = epars[2]
-        eyshift = epars[3]
+        if return_error:
+            pars,epars = gaussfitter.gaussfit(subccorr,err=subeccorr,return_all=True)
+            exshift = epars[2]
+            eyshift = epars[3]
+        else:
+            pars,epars = gaussfitter.gaussfit(subccorr,return_all=True)
+        xshift = maxoff - pars[2] if maxoff is not None else xcen - pars[2]
+        yshift = maxoff - pars[3] if maxoff is not None else ycen - pars[3]
 
-        return xshift,yshift,exshift,eyshift
     else:
 
         xshift_int = xmax-xcen
@@ -170,6 +198,22 @@ def cross_correlation_shifts(image1, image2, maxoff=None, verbose=False, gaussfi
         xshift = -(xshift_int+shiftsubx)[0]
         yshift = -(yshift_int+shiftsuby)[0]
 
+        # http://adsabs.harvard.edu/abs/2003MNRAS.342.1291Z
+        # Zucker error
+
+        if return_error:
+            ccorrn = ccorr / eccorr**2 / ccorr.size #/ (errim1.mean()*errim2.mean()) #/ eccorr**2
+            print np.min(ccorrn),np.max(ccorrn)
+            exshift = (np.abs(-1 * ccorrn.size * fxx/ccorrn[ymax,xmax] *
+                    (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) [0]
+            eyshift = (np.abs(-1 * ccorrn.size * fyy/ccorrn[ymax,xmax] *
+                    (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) [0]
+            if np.isnan(exshift):
+                raise ValueError("Error: NAN error!")
+
+    if return_error:
+        return xshift,yshift,exshift,eyshift
+    else:
         return xshift,yshift
 
 def second_derivative(image):
@@ -220,21 +264,24 @@ try:
     sizes = [99,100,101]
     gaussfits = (True,False)
 
-    @pytest.mark.parametrize(('xsh','ysh','imsize','gaussfit'),list(itertools.product(shifts,shifts,sizes,gaussfits)))
-    def test_shifts(xsh,ysh,imsize,gaussfit):
-        width = 3.0
-        amp = 1000.0
-        noiseamp = 1.0
+    def make_offset_images(xsh,ysh,imsize, width=3.0, amp=1000.0, noiseamp=1.0,
+            xcen=50, ycen=50):
         image = np.random.randn(imsize,imsize) * noiseamp
         Y, X = np.indices([imsize, imsize])
-        X -= 50
-        Y -= 50
+        X -= xcen
+        Y -= ycen
         new_r = np.sqrt(X*X+Y*Y)
         image += amp*np.exp(-(new_r)**2/(2.*width**2))
 
         tolerance = 3. * 1./np.sqrt(2*np.pi*width**2*amp/noiseamp)
 
         new_image = np.random.randn(imsize,imsize)*noiseamp + amp*np.exp(-((X-xsh)**2+(Y-ysh)**2)/(2.*width**2))
+
+        return image, new_image, tolerance
+
+    @pytest.mark.parametrize(('xsh','ysh','imsize','gaussfit'),list(itertools.product(shifts,shifts,sizes,gaussfits)))
+    def test_shifts(xsh,ysh,imsize,gaussfit):
+        image,new_image,tolerance = make_offset_images(xsh, ysh, imsize)
         if gaussfit:
             xoff,yoff,exoff,eyoff = cross_correlation_shifts(image,new_image)
             print xoff,yoff,np.abs(xoff-xsh),np.abs(yoff-ysh),exoff,eyoff
@@ -243,6 +290,31 @@ try:
             print xoff,yoff,np.abs(xoff-xsh),np.abs(yoff-ysh) 
         assert np.abs(xoff-xsh) < tolerance
         assert np.abs(yoff-ysh) < tolerance
+
+    def do_n_fits(nfits, xsh, ysh, imsize, gaussfit=False, maxoff=None,
+            **kwargs):
+        """
+        Test code
+
+        Parameters
+        ----------
+        nfits : int
+            Number of times to perform fits
+        xsh : float
+            X shift from input to output image
+        ysh : float
+            Y shift from input to output image
+        imsize : int
+            Size of image (square)
+        """
+        offsets = [
+            cross_correlation_shifts( 
+                *make_offset_images(xsh, ysh, imsize, **kwargs)[:2],
+                gaussfit=gaussfit, maxoff=maxoff)
+            for ii in xrange(nfits)]
+
+        return offsets
+        
 
 except ImportError:
     pass
