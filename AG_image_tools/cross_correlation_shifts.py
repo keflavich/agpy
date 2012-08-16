@@ -185,6 +185,8 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
             pars,epars = gaussfitter.gaussfit(subccorr,return_all=True)
         xshift = maxoff - pars[2] if maxoff is not None else xcen - pars[2]
         yshift = maxoff - pars[3] if maxoff is not None else ycen - pars[3]
+        if verbose: 
+            print "Gaussian fit pars: ",xshift,yshift,epars[2],epars[3],pars[4],pars[5],epars[4],epars[5]
 
     else:
 
