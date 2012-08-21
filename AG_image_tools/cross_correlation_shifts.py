@@ -76,7 +76,7 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=Fa
 
 def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         maxoff=None, verbose=False, gaussfit=False, return_error=False,
-        **kwargs):
+        zeromean=True, **kwargs):
     """ Use cross-correlation and a 2nd order taylor expansion to measure the
     offset between two images
 
@@ -97,6 +97,8 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         Maximum allowed offset (in pixels).  Useful for low s/n images that you
         know are reasonably well-aligned, but might find incorrect offsets due to 
         edge noise
+    zeromean : bool
+        Subtract the mean from each image before performing cross-correlation?
     verbose: bool
         Print out extra messages?
     gaussfit : bool
@@ -138,6 +140,10 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
     if not image1.shape == image2.shape:
         raise ValueError("Images must have same shape.")
 
+    if zeromean:
+        image1 = image1 - (image1[image1==image1].mean())
+        image2 = image2 - (image2[image2==image2].mean())
+
     quiet = kwargs.pop('quiet') if 'quiet' in kwargs else not verbose
     ccorr = (correlate2d(image1,image2,quiet=quiet,**kwargs) / image1.size)
     # allow for NaNs set by convolve (i.e., ignored pixels)
@@ -147,7 +153,7 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
 
     ylen,xlen = image1.shape
     xcen = xlen/2-(1-xlen%2) 
-    ycen = ylen/2-(1-xlen%2) 
+    ycen = ylen/2-(1-ylen%2) 
 
     if ccorr.max() == 0:
         warnings.warn("WARNING: No signal found!  Offset is defaulting to 0,0")
@@ -156,11 +162,11 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
     if maxoff is not None:
         if verbose: print "Limiting maximum offset to %i" % maxoff
         subccorr = ccorr[ycen-maxoff:ycen+maxoff+1,xcen-maxoff:xcen+maxoff+1]
-        ymax,xmax = np.nonzero(subccorr == subccorr.max())
+        ymax,xmax = np.unravel_index(subccorr.argmax(), subccorr.shape)
         xmax = xmax+xcen-maxoff
         ymax = ymax+ycen-maxoff
     else:
-        ymax,xmax = np.nonzero(ccorr == ccorr.max())
+        ymax,xmax = np.unravel_index(ccorr.argmax(), ccorr.shape)
         subccorr = ccorr
 
     if return_error:
@@ -203,8 +209,8 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         shiftsubx=(fyy*fx-fy*fxy)/(fxy**2-fxx*fyy)
         shiftsuby=(fxx*fy-fx*fxy)/(fxy**2-fxx*fyy)
 
-        xshift = -(xshift_int+shiftsubx)[0]
-        yshift = -(yshift_int+shiftsuby)[0]
+        xshift = -(xshift_int+shiftsubx)
+        yshift = -(yshift_int+shiftsuby)
 
         # http://adsabs.harvard.edu/abs/2003MNRAS.342.1291Z
         # Zucker error
@@ -212,9 +218,9 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         if return_error:
             ccorrn = ccorr / eccorr**2 / ccorr.size #/ (errim1.mean()*errim2.mean()) #/ eccorr**2
             exshift = (np.abs(-1 * ccorrn.size * fxx/ccorrn[ymax,xmax] *
-                    (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) [0]
+                    (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) 
             eyshift = (np.abs(-1 * ccorrn.size * fyy/ccorrn[ymax,xmax] *
-                    (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) [0]
+                    (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) 
             if np.isnan(exshift):
                 raise ValueError("Error: NAN error!")
 
@@ -262,6 +268,71 @@ def second_derivative(image):
 
     return dxx,dyy,dxy
 
+def chi2_shift(im1, im2, err=None, mode='wrap', maxoff=None, **kwargs):
+    """
+    Determine the best fit offset using `scipy.ndimage.map_coordinates` to
+    shift the offset image.
+
+    Parameters
+    ----------
+        im1
+        im2
+        mode : 'wrap','constant','reflect','nearest'
+            Option to pass to map_coordinates for determining what to do with
+            shifts outside of the boundaries.  
+        maxoff : None or int
+            If set, crop the data after shifting before determining chi2
+            (this is a good thing to use; not using it can result in weirdness
+            involving the boundaries)
+
+    """
+    #xc = correlate2d(im1,im2, boundary=boundary)
+    #ac1peak = (im1**2).sum()
+    #ac2peak = (im2**2).sum()
+    #chi2 = ac1peak - 2*xc + ac2peak
+
+    if not im1.shape == im2.shape:
+        raise ValueError("Images must have same shape.")
+
+    if np.any(np.isnan(im1)):
+        im1 = im1.copy()
+        im1[im1!=im1] = 0
+    if np.any(np.isnan(im2)):
+        im2 = im2.copy()
+        if err is not None:
+            err[im2!=im2] = np.inf
+        im2[im2!=im2] = 0
+
+    im1 = im1-im1.mean()
+    im2 = im2-im2.mean()
+    yy,xx = np.indices(im1.shape)
+    ylen,xlen = im1.shape
+    xcen = xlen/2-(1-xlen%2) 
+    ycen = ylen/2-(1-ylen%2) 
+    import scipy.ndimage,scipy.optimize
+    def chi2(p, **kwargs):
+        xsh,ysh = p
+        shifted_img = scipy.ndimage.map_coordinates(im2, [yy+ysh,xx+xsh], mode=mode, **kwargs)
+        if maxoff is not None:
+            xslice = slice(xcen-maxoff,xcen+maxoff,None)
+            yslice = slice(ycen-maxoff,ycen+maxoff,None)
+            # divide by sqrt(number of samples) = sqrt(maxoff**2)
+            residuals = np.ravel((im1[yslice,xslice]-shifted_img[yslice,xslice])) / maxoff
+        else:
+            xslice = slice(None)
+            yslice = slice(None)
+            residuals = np.abs(np.ravel((im1-shifted_img))) / im1.size**0.5
+        if err is None:
+            return residuals
+        else:
+            shifted_err = scipy.ndimage.map_coordinates(err, [yy+ysh,xx+xsh], mode=mode, **kwargs)
+            return residuals / shifted_err[slice,slice] 
+
+    bestfit,cov,info,msg,ier = scipy.optimize.leastsq(chi2, [0.5,0.5], full_output=1)
+    return bestfit[0],bestfit[1],cov[0,0],cov[1,1]
+
+
+
 try:
     import pytest
     import itertools
@@ -287,6 +358,33 @@ try:
 
         return image, new_image, tolerance
 
+    def make_extended(imsize, powerlaw=2.0):
+        yy,xx = np.indices((imsize,imsize))
+        cen = imsize/2-(1-imsize%2) 
+        yy -= cen
+        xx -= cen
+        rr = (xx**2+yy**2)**0.5
+        
+        powermap = (np.random.randn(imsize,imsize) * rr**(-powerlaw)+
+            np.random.randn(imsize,imsize) * rr**(-powerlaw) * 1j)
+        powermap[powermap!=powermap] = 0
+
+        newmap = np.abs(np.fft.fftshift(np.fft.fft2(powermap)))
+
+        return newmap
+
+    def make_offset_extended(img, xsh, ysh, noise=1.0, mode='wrap'):
+        import scipy
+        yy,xx = np.indices(img.shape,dtype='float')
+        yy-=ysh
+        xx-=xsh
+        noise = np.random.randn(*img.shape)*noise
+        newimage = scipy.ndimage.map_coordinates(img+noise, [yy,xx], mode=mode)
+
+        return newimage
+
+
+
     @pytest.mark.parametrize(('xsh','ysh','imsize','gaussfit'),list(itertools.product(shifts,shifts,sizes,gaussfits)))
     def test_shifts(xsh,ysh,imsize,gaussfit):
         image,new_image,tolerance = make_offset_images(xsh, ysh, imsize)
@@ -300,7 +398,7 @@ try:
         assert np.abs(yoff-ysh) < tolerance
 
     def do_n_fits(nfits, xsh, ysh, imsize, gaussfit=False, maxoff=None,
-            **kwargs):
+            return_error=False, **kwargs):
         """
         Test code
 
@@ -318,12 +416,43 @@ try:
         offsets = [
             cross_correlation_shifts( 
                 *make_offset_images(xsh, ysh, imsize, **kwargs)[:2],
-                gaussfit=gaussfit, maxoff=maxoff)
+                gaussfit=gaussfit, maxoff=maxoff, return_error=return_error)
             for ii in xrange(nfits)]
 
         return offsets
 
-    @pytest.mark.parametrize(('xsh','ysh','imsize','amp','gaussfit'),list(itertools.product(shifts,shifts,sizes,amps,gaussfits)))
+    def do_n_extended_fits(nfits, xsh, ysh, imsize,  gaussfit=False,
+            maxoff=None, return_error=False, powerlaw=2.0, noise=1.0,
+            unsharp_mask=False, smoothfactor=5, chi2=False, **kwargs):
+        image = make_extended(imsize, powerlaw=powerlaw)
+
+        if chi2:
+            fitfunc = chi2_shift
+        else:
+            fitfunc = cross_correlation_shifts
+
+        if unsharp_mask:
+            from AG_fft_tools import smooth
+            offsets = []
+            for ii in xrange(nfits):
+                inim = image-smooth(image,smoothfactor)
+                offim = make_offset_extended(image, xsh, ysh, noise=noise, **kwargs)
+                offim -= smooth(offim,smoothfactor)
+                offsets.append( fitfunc( inim, offim, gaussfit=gaussfit,
+                        maxoff=maxoff, return_error=return_error) )
+        else:
+            offsets = [
+                fitfunc( 
+                    image,
+                    make_offset_extended(image, xsh, ysh, noise=noise, **kwargs),
+                    gaussfit=gaussfit, maxoff=maxoff, return_error=return_error)
+                for ii in xrange(nfits)]
+
+        return offsets
+
+
+    #@pytest.mark.parametrize(('xsh','ysh','imsize','amp','gaussfit'),
+    #        list(itertools.product(shifts,shifts,sizes,amps,gaussfits)))
     def run_tests(xsh, ysh, imsize, amp, gaussfit, nfits=1000, maxoff=20):
         fitted_shifts = np.array(do_n_fits(nfits, xsh, ysh, imsize, amp=amp, maxoff=maxoff))
         errors = fitted_shifts.std(axis=0)
@@ -332,11 +461,28 @@ try:
                 gaussfit=gaussfit, maxoff=maxoff, return_error=True,
                 errim1=np.ones([imsize,imsize]),
                 errim2=np.ones([imsize,imsize]))
-        print "StdDev: %10.3g,%10.3g  Measured: %10.3g,%10.3g  Difference: %10.3g, %10.3g  Diff/Real: %10.3g,%10.3g" % (
-            errors[0],errors[1], ex,ey,errors[0]-ex,errors[1]-ey,
-            (errors[0]-ex)/errors[0], (errors[1]-ey)/errors[1])
+        print "StdDev: %10.3g,%10.3g  Measured: %10.3g,%10.3g "+\
+                " Difference: %10.3g, %10.3g  Diff/Real: %10.3g,%10.3g" % (
+                errors[0],errors[1], ex,ey,errors[0]-ex,errors[1]-ey,
+                (errors[0]-ex)/errors[0], (errors[1]-ey)/errors[1])
 
         return errors[0],errors[1],ex,ey
+
+    def plot_tests(nfits=25,xsh=1.75,ysh=1.75, imsize=64, amp=10., **kwargs):
+        x,y,ex,ey = np.array(do_n_fits(nfits, xsh, ysh, imsize, amp,
+            maxoff=12., return_error=True, **kwargs)).T
+        from pylab import *
+        plot([xsh],[ysh],'kd',markersize=20)
+        errorbar(x,y,xerr=ex,yerr=ey,linestyle='none')
+
+    def plot_extended_tests(nfits=25,xsh=1.75,ysh=1.75, imsize=64, noise=1.0,
+            maxoff=12., **kwargs):
+        x,y,ex,ey = np.array(do_n_extended_fits(nfits, xsh, ysh, imsize, 
+            maxoff=maxoff, return_error=True, noise=noise, **kwargs)).T
+        print x,y
+        from pylab import *
+        plot([xsh],[ysh],'kd',markersize=20)
+        errorbar(x,y,xerr=ex,yerr=ey,linestyle='none')
 
     def determine_error_offsets():
         """
