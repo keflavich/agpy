@@ -3,6 +3,245 @@ from agpy import gaussfitter
 import warnings
 import numpy as np
 
+def shift(data, deltax, deltay, phase=0):
+    """
+    FFT-based sub-pixel image shift
+    http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation/content/html/efficient_subpixel_registration.html
+    """
+    ny,nx = data.shape
+    Nx = np.fft.ifftshift(np.linspace(-np.fix(nx/2),np.ceil(nx/2)-1,nx))
+    Ny = np.fft.ifftshift(np.linspace(-np.fix(ny/2),np.ceil(ny/2)-1,ny))
+    Nx,Ny = np.meshgrid(Nx,Ny)
+    gg = np.fft.ifft( np.fft.fft(data)* np.exp(1j*2*np.pi*(-deltax*Nx/nx-deltay*Ny/ny)) * np.exp(-1j*phase) )
+    return gg
+
+def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False):
+    """
+    Efficient subpixel image registration by crosscorrelation. This code
+    gives the same precision as the FFT upsampled cross correlation in a
+    small fraction of the computation time and with reduced memory 
+    requirements. It obtains an initial estimate of the crosscorrelation peak
+    by an FFT and then refines the shift estimation by upsampling the DFT
+    only in a small neighborhood of that estimate by means of a 
+    matrix-multiply DFT. With this procedure all the image points are used to
+    compute the upsampled crosscorrelation.
+    Manuel Guizar - Dec 13, 2007
+
+    Portions of this code were taken from code written by Ann M. Kowalczyk 
+    and James R. Fienup. 
+    J.R. Fienup and A.M. Kowalczyk, "Phase retrieval for a complex-valued 
+    object by using a low-resolution image," J. Opt. Soc. Am. A 7, 450-458 
+    (1990).
+
+    Citation for this algorithm:
+    Manuel Guizar-Sicairos, Samuel T. Thurman, and James R. Fienup, 
+    "Efficient subpixel image registration algorithms," Opt. Lett. 33, 
+    156-158 (2008).
+
+    Inputs
+    buf1ft    Fourier transform of reference image, 
+           DC in (1,1)   [DO NOT FFTSHIFT]
+    buf2ft    Fourier transform of image to register, 
+           DC in (1,1) [DO NOT FFTSHIFT]
+    usfac     Upsampling factor (integer). Images will be registered to 
+           within 1/usfac of a pixel. For example usfac = 20 means the
+           images will be registered within 1/20 of a pixel. (default = 1)
+
+    Outputs
+    output =  [error,diffphase,net_row_shift,net_col_shift]
+    error     Translation invariant normalized RMS error between f and g
+    diffphase     Global phase difference between the two images (should be
+               zero if images are non-negative).
+    net_row_shift net_col_shift   Pixel shifts between images
+    Greg      (Optional) Fourier transform of registered version of buf2ft,
+           the global phase difference is compensated for.
+    """
+
+    # this function is translated from matlab, so I'm just going to pretend
+    # it is matlab/pylab
+    from numpy import *
+    from numpy.fft import *
+
+    # Compute error for no pixel shift
+    if usfac == 0:
+        CCmax = sum(sum(buf1ft * conj(buf2ft))); 
+        rfzero = sum(abs(buf1ft)**2);
+        rgzero = sum(abs(buf2ft)**2); 
+        error = 1.0 - CCmax * conj(CCmax)/(rgzero*rfzero); 
+        error = sqrt(abs(error));
+        diffphase=arctan2(imag(CCmax),real(CCmax)); 
+        output=[error,diffphase];
+            
+    # Whole-pixel shift - Compute crosscorrelation by an IFFT and locate the
+    # peak
+    elif usfac == 1:
+        [m,n]=shape(buf1ft);
+        CC = ifft2(buf1ft * conj(buf2ft));
+        [max1,loc1] = CC.max(axis=0), CC.argmax(axis=0)
+        [max2,loc2] = max1.max(),max1.argmax()
+        rloc=loc1[loc2];
+        cloc=loc2;
+        CCmax=CC[rloc,cloc]; 
+        rfzero = sum(abs(buf1ft)**2)/(m*n);
+        rgzero = sum(abs(buf2ft)**2)/(m*n); 
+        error = 1.0 - CCmax * conj(CCmax)/(rgzero*rfzero);
+        error = sqrt(abs(error));
+        diffphase=arctan2(imag(CCmax),real(CCmax)); 
+        md2 = fix(m/2); 
+        nd2 = fix(n/2);
+        if rloc > md2:
+            row_shift = rloc - m;
+        else:
+            row_shift = rloc;
+
+        if cloc > nd2:
+            col_shift = cloc - n;
+        else:
+            col_shift = cloc;
+        output=[error,diffphase,row_shift,col_shift];
+        
+    # Partial-pixel shift
+    else:
+        
+        # First upsample by a factor of 2 to obtain initial estimate
+        # Embed Fourier data in a 2x larger array
+        [m,n]=shape(buf1ft);
+        mlarge=m*2;
+        nlarge=n*2;
+        CClarge=zeros([mlarge,nlarge]);
+        #CClarge[m-fix(m/2):m+fix((m-1)/2)+1,n-fix(n/2):n+fix((n-1)/2)+1] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+        CClarge[mlarge/4:mlarge/4*3,nlarge/4:nlarge/4*3] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+      
+        # Compute crosscorrelation and locate the peak 
+        CC = ifft2(ifftshift(CClarge)); # Calculate cross-correlation
+        rloc,cloc = np.unravel_index(CC.argmax(), CC.shape)
+        CCmax = CC.max()
+        #[max1,loc1] = CC.max(axis=0), CC.argmax(axis=0)
+        #[max2,loc2] = max1.max(),max1.argmax()
+        #rloc=loc1[loc2];
+        #cloc=loc2;
+        #CCmax=CC[rloc,cloc];
+        
+        # Obtain shift in original pixel grid from the position of the
+        # crosscorrelation peak 
+        [m,n] = shape(CC); md2 = fix(m/2); nd2 = fix(n/2);
+        if rloc > md2 :
+            row_shift = rloc - m;
+        else:
+            row_shift = rloc;
+        if cloc > nd2:
+            col_shift = cloc - n;
+        else:
+            col_shift = cloc;
+        row_shift=row_shift/2.;
+        col_shift=col_shift/2.;
+
+        # If upsampling > 2, then refine estimate with matrix multiply DFT
+        if usfac > 2:
+            #%% DFT computation %%%
+            # Initial shift estimate in upsampled grid
+            row_shift = round(row_shift*usfac)/usfac; 
+            col_shift = round(col_shift*usfac)/usfac;     
+            dftshift = fix(ceil(usfac*1.5)/2); #% Center of output array at dftshift+1
+            print dftshift, row_shift, col_shift, usfac*1.5
+            # Matrix multiply DFT around the current shift estimate
+            upsampled = dftups(buf2ft * conj(buf1ft),
+                    ceil(usfac*1.5),
+                    ceil(usfac*1.5), 
+                    usfac, 
+                    dftshift-row_shift*usfac,
+                    dftshift-col_shift*usfac)
+            CC = conj(upsampled)/(md2*nd2*usfac**2);
+            # Locate maximum and map back to original pixel grid 
+            rloc,cloc = np.unravel_index(CC.argmax(), CC.shape)
+            CCmax = CC.max()
+            #[max1,loc1] = CC.max(axis=0), CC.argmax(axis=0)
+            #[max2,loc2] = max1.max(),max1.argmax()
+            #rloc=loc1[loc2];
+            #cloc=loc2;
+            #CCmax = CC[rloc,cloc];
+            rg00 = dftups(buf1ft * conj(buf1ft),1,1,usfac)/(md2*nd2*usfac**2);
+            rf00 = dftups(buf2ft * conj(buf2ft),1,1,usfac)/(md2*nd2*usfac**2);  
+            rloc = rloc - dftshift;
+            cloc = cloc - dftshift;
+            print rloc,row_shift,cloc,col_shift,dftshift
+            row_shift = row_shift + rloc/usfac;
+            col_shift = col_shift + cloc/usfac;    
+            print rloc,row_shift,cloc,col_shift
+
+        # If upsampling = 2, no additional pixel shift refinement
+        else:    
+            rg00 = sum(sum( buf1ft * conj(buf1ft) ))/m/n;
+            rf00 = sum(sum( buf2ft * conj(buf2ft) ))/m/n;
+        error = 1.0 - CCmax * conj(CCmax)/(rg00*rf00);
+        error = sqrt(abs(error));
+        diffphase=arctan2(imag(CCmax),real(CCmax));
+        # If its only one row or column the shift along that dimension has no
+        # effect. We set to zero.
+        if md2 == 1:
+            row_shift = 0;
+        if nd2 == 1:
+            col_shift = 0;
+        output=[error,diffphase,row_shift,col_shift];
+
+    # Compute registered version of buf2ft
+    if (return_registered):
+        if (usfac > 0):
+            nr,nc=shape(buf2ft);
+            Nr = np.fft.ifftshift(np.linspace(-np.fir(nr/2),np.ceil(nr/2)-1,nr))
+            Nc = np.fft.ifftshift(np.linspace(-np.fic(nc/2),np.ceil(nc/2)-1,nc))
+            [Nc,Nr] = meshgrid(Nc,Nr);
+            Greg = buf2ft * exp(1j*2*pi*(-row_shift*Nr/nr-col_shift*Nc/nc));
+            Greg = Greg*exp(1j*diffphase);
+        elif (usfac == 0):
+            Greg = buf2ft*exp(1j*diffphase);
+        output.append(Greg)
+
+    return output
+
+def dftups(inp,nor=None,noc=None,usfac=1,roff=0,coff=0):
+    """
+    Upsampled DFT by matrix multiplies, can compute an upsampled DFT in just
+    a small region.
+    usfac         Upsampling factor (default usfac = 1)
+    [nor,noc]     Number of pixels in the output upsampled DFT, in
+                  units of upsampled pixels (default = size(in))
+    roff, coff    Row and column offsets, allow to shift the output array to
+                  a region of interest on the DFT (default = 0)
+    Recieves DC in upper left corner, image center must be in (1,1) 
+    Manuel Guizar - Dec 13, 2007
+    Modified from dftus, by J.R. Fienup 7/31/06
+
+    This code is intended to provide the same result as if the following
+    operations were performed
+      - Embed the array "in" in an array that is usfac times larger in each
+        dimension. ifftshift to bring the center of the image to (1,1).
+      - Take the FFT of the larger array
+      - Extract an [nor, noc] region of the result. Starting with the 
+        [roff+1 coff+1] element.
+
+    It achieves this result by computing the DFT in the output array without
+    the need to zeropad. Much faster and memory efficient than the
+    zero-padded FFT approach if [nor noc] are much smaller than [nr*usfac nc*usfac]
+    """
+    # this function is translated from matlab, so I'm just going to pretend
+    # it is matlab/pylab
+    from numpy import *
+    from numpy.fft import *
+
+    nr,nc=shape(inp);
+    # Set defaults
+    if noc is None: noc=nc;
+    if nor is None: nor=nr;
+    # Compute kernels and obtain DFT by matrix products
+    kernc=exp((-1j*2*pi/(nc*usfac))*( ifftshift(arange(nc)).T[:,newaxis] - floor(nc/2) )*( arange(noc) - coff )[newaxis,:]);
+    kernr=exp((-1j*2*pi/(nr*usfac))*( arange(nor).T - roff )[:,newaxis]*( ifftshift(arange(nr)) - floor(nr/2)  )[newaxis,:]);
+    #kernc=exp((-i*2*pi/(nc*usfac))*( ifftshift([0:nc-1]).' - floor(nc/2) )*( [0:noc-1] - coff ));
+    #kernr=exp((-i*2*pi/(nr*usfac))*( [0:nor-1].' - roff )*( ifftshift([0:nr-1]) - floor(nr/2)  ));
+    out=np.dot(np.dot(kernr,inp),kernc);
+    return out 
+
+
 def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=False, quiet=True, sigma_cut=False, **kwargs):
     """
     Determine the shift between two FITS images using the cross-correlation
@@ -374,12 +613,13 @@ try:
         return newmap
 
     def make_offset_extended(img, xsh, ysh, noise=1.0, mode='wrap'):
-        import scipy
+        import scipy, scipy.ndimage
         yy,xx = np.indices(img.shape,dtype='float')
         yy-=ysh
         xx-=xsh
         noise = np.random.randn(*img.shape)*noise
-        newimage = scipy.ndimage.map_coordinates(img+noise, [yy,xx], mode=mode)
+        #newimage = scipy.ndimage.map_coordinates(img+noise, [yy,xx], mode=mode)
+        newimage = np.abs(shift(img+noise, xx, yy))
 
         return newimage
 
@@ -423,8 +663,17 @@ try:
 
     def do_n_extended_fits(nfits, xsh, ysh, imsize,  gaussfit=False,
             maxoff=None, return_error=False, powerlaw=2.0, noise=1.0,
-            unsharp_mask=False, smoothfactor=5, chi2=False, **kwargs):
+            unsharp_mask=False, smoothfactor=5, chi2=False, zeropad=0,
+            **kwargs):
         image = make_extended(imsize, powerlaw=powerlaw)
+        if zeropad > 0:
+            newsize = [s+zeropad for s in image.shape]
+            ylen,xlen = newsize
+            xcen = xlen/2-(1-xlen%2) 
+            ycen = ylen/2-(1-ylen%2) 
+            newim = np.zeros(newsize)
+            newim[ycen-image.shape[0]/2:ycen+image.shape[0]/2, xcen-image.shape[1]/2:xcen+image.shape[1]/2] = image
+            image = newim
 
         if chi2:
             fitfunc = chi2_shift
@@ -476,7 +725,7 @@ try:
         errorbar(x,y,xerr=ex,yerr=ey,linestyle='none')
 
     def plot_extended_tests(nfits=25,xsh=1.75,ysh=1.75, imsize=64, noise=1.0,
-            maxoff=12., **kwargs):
+            maxoff=12., zeropad=64, **kwargs):
         x,y,ex,ey = np.array(do_n_extended_fits(nfits, xsh, ysh, imsize, 
             maxoff=maxoff, return_error=True, noise=noise, **kwargs)).T
         print x,y
