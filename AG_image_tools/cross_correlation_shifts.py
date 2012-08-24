@@ -15,6 +15,30 @@ def shift(data, deltax, deltay, phase=0):
     gg = np.fft.ifft( np.fft.fft(data)* np.exp(1j*2*np.pi*(-deltax*Nx/nx-deltay*Ny/ny)) * np.exp(-1j*phase) )
     return gg
 
+def register(im1, im2, usfac=1, return_registered=False):
+    """
+    """
+    if not im1.shape == im2.shape:
+        raise ValueError("Images must have same shape.")
+
+    if np.any(np.isnan(im1)):
+        im1 = im1.copy()
+        im1[im1!=im1] = 0
+    if np.any(np.isnan(im2)):
+        im2 = im2.copy()
+        im2[im2!=im2] = 0
+
+    im1fft = np.fft.fft2(im1)
+    im2fft = np.fft.fft2(im2)
+
+    output = dftregistration(im1fft,im2fft,usfac=usfac, return_registered=return_registered)
+
+    if return_registered:
+        output[-1] = np.abs(np.fft.ifftshift(np.fft.ifft2(output[-1])))
+
+    return output
+
+
 def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False):
     """
     Efficient subpixel image registration by crosscorrelation. This code
@@ -98,7 +122,8 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False):
             col_shift = cloc - n;
         else:
             col_shift = cloc;
-        output=[error,diffphase,row_shift,col_shift];
+        #output=[error,diffphase,row_shift,col_shift];
+        output=[row_shift,col_shift]
         
     # Partial-pixel shift
     else:
@@ -143,14 +168,18 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False):
             row_shift = round(row_shift*usfac)/usfac; 
             col_shift = round(col_shift*usfac)/usfac;     
             dftshift = fix(ceil(usfac*1.5)/2); #% Center of output array at dftshift+1
-            print dftshift, row_shift, col_shift, usfac*1.5
+            #print dftshift, row_shift, col_shift, usfac*1.5
             # Matrix multiply DFT around the current shift estimate
-            upsampled = dftups(buf2ft * conj(buf1ft),
+            upsampled = dftups(
+                    np.fft.ifftshift(buf2ft * conj(buf1ft)),
                     ceil(usfac*1.5),
                     ceil(usfac*1.5), 
                     usfac, 
-                    dftshift-row_shift*usfac,
-                    dftshift-col_shift*usfac)
+                    -row_shift*usfac,
+                    -col_shift*usfac)
+            from pylab import *
+            subplot(121); imshow(np.abs(np.fft.fftshift(buf2ft * conj(buf1ft))))
+            subplot(122); imshow(np.abs(dftups(np.fft.fftshift(buf2ft*conj(buf1ft)),ceil(usfac*1.5),ceil(usfac*1.5),usfac)))
             CC = conj(upsampled)/(md2*nd2*usfac**2);
             # Locate maximum and map back to original pixel grid 
             rloc,cloc = np.unravel_index(CC.argmax(), CC.shape)
@@ -164,10 +193,10 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False):
             rf00 = dftups(buf2ft * conj(buf2ft),1,1,usfac)/(md2*nd2*usfac**2);  
             rloc = rloc - dftshift;
             cloc = cloc - dftshift;
-            print rloc,row_shift,cloc,col_shift,dftshift
+            #print rloc,row_shift,cloc,col_shift,dftshift
             row_shift = row_shift + rloc/usfac;
             col_shift = col_shift + cloc/usfac;    
-            print rloc,row_shift,cloc,col_shift
+            #print rloc,row_shift,cloc,col_shift
 
         # If upsampling = 2, no additional pixel shift refinement
         else:    
@@ -182,14 +211,15 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False):
             row_shift = 0;
         if nd2 == 1:
             col_shift = 0;
-        output=[error,diffphase,row_shift,col_shift];
+        #output=[error,diffphase,row_shift,col_shift];
+        output=[row_shift,col_shift]
 
     # Compute registered version of buf2ft
     if (return_registered):
         if (usfac > 0):
             nr,nc=shape(buf2ft);
-            Nr = np.fft.ifftshift(np.linspace(-np.fir(nr/2),np.ceil(nr/2)-1,nr))
-            Nc = np.fft.ifftshift(np.linspace(-np.fic(nc/2),np.ceil(nc/2)-1,nc))
+            Nr = np.fft.ifftshift(np.linspace(-np.fix(nr/2),np.ceil(nr/2)-1,nr))
+            Nc = np.fft.ifftshift(np.linspace(-np.fix(nc/2),np.ceil(nc/2)-1,nc))
             [Nc,Nr] = meshgrid(Nc,Nr);
             Greg = buf2ft * exp(1j*2*pi*(-row_shift*Nr/nr-col_shift*Nc/nc));
             Greg = Greg*exp(1j*diffphase);
@@ -241,6 +271,22 @@ def dftups(inp,nor=None,noc=None,usfac=1,roff=0,coff=0):
     out=np.dot(np.dot(kernr,inp),kernc);
     return out 
 
+def upsample_ft_raw(buf1ft,buf2ft):
+
+    from numpy import *
+    from numpy.fft import *
+
+    [m,n]=shape(buf1ft);
+    mlarge=m*2;
+    nlarge=n*2;
+    CClarge=zeros([mlarge,nlarge]);
+    #CClarge[m-fix(m/2):m+fix((m-1)/2)+1,n-fix(n/2):n+fix((n-1)/2)+1] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+    CClarge[mlarge/4:mlarge/4*3,nlarge/4:nlarge/4*3] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+  
+    # Compute crosscorrelation and locate the peak 
+    CC = ifft2(ifftshift(CClarge)); # Calculate cross-correlation
+    
+    return CC
 
 def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=False, quiet=True, sigma_cut=False, **kwargs):
     """
@@ -661,6 +707,33 @@ try:
 
         return offsets
 
+    def do_n_fits_register(nfits, xsh, ysh, imsize, usfac=10,
+            return_error=False, **kwargs):
+        """
+        Test code
+
+        Parameters
+        ----------
+        nfits : int
+            Number of times to perform fits
+        xsh : float
+            X shift from input to output image
+        ysh : float
+            Y shift from input to output image
+        imsize : int
+            Size of image (square)
+        """
+        offsets = []
+        for ii in xrange(nfits):
+            im1,im2,temp = make_offset_images(xsh, ysh, imsize, **kwargs)
+            xoff,yoff,reg = register(
+                im1, im2,
+                return_registered=True, usfac=usfac)
+            chi2 = ((im1-reg)**2).sum() / im1.size
+            offsets.append([xoff,yoff,chi2])
+
+        return offsets
+
     def do_n_extended_fits(nfits, xsh, ysh, imsize,  gaussfit=False,
             maxoff=None, return_error=False, powerlaw=2.0, noise=1.0,
             unsharp_mask=False, smoothfactor=5, chi2=False, zeropad=0,
@@ -716,6 +789,7 @@ try:
                 (errors[0]-ex)/errors[0], (errors[1]-ey)/errors[1])
 
         return errors[0],errors[1],ex,ey
+
 
     def plot_tests(nfits=25,xsh=1.75,ysh=1.75, imsize=64, amp=10., **kwargs):
         x,y,ex,ey = np.array(do_n_fits(nfits, xsh, ysh, imsize, amp,
