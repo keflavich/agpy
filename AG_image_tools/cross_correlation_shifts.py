@@ -108,10 +108,7 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error
     elif usfac == 1:
         [m,n]=shape(buf1ft);
         CC = ifft2(buf1ft * conj(buf2ft));
-        [max1,loc1] = CC.max(axis=0), CC.argmax(axis=0)
-        [max2,loc2] = max1.max(),max1.argmax()
-        rloc=loc1[loc2];
-        cloc=loc2;
+        rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
         CCmax=CC[rloc,cloc]; 
         rfzero = sum(abs(buf1ft)**2)/(m*n);
         rgzero = sum(abs(buf2ft)**2)/(m*n); 
@@ -135,7 +132,7 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error
     # Partial-pixel shift
     else:
         
-        if DEBUG: from pylab import *
+        if DEBUG: import pylab
         # First upsample by a factor of 2 to obtain initial estimate
         # Embed Fourier data in a 2x larger array
         [m,n]=shape(buf1ft);
@@ -144,73 +141,79 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error
         CClarge=zeros([mlarge,nlarge], dtype='complex');
         #CClarge[m-fix(m/2):m+fix((m-1)/2)+1,n-fix(n/2):n+fix((n-1)/2)+1] = fftshift(buf1ft) * conj(fftshift(buf2ft));
         CClarge[round(mlarge/4.):round(mlarge/4.*3),round(nlarge/4.):round(nlarge/4.*3)] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+        # note that matlab uses fix which is trunc... ?
       
         # Compute crosscorrelation and locate the peak 
         CC = ifft2(ifftshift(CClarge)); # Calculate cross-correlation
-        rloc,cloc = np.unravel_index(CC.argmax(), CC.shape)
-        CCmax = CC.max()
+        rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
+        CCmax = CC[rloc,cloc]
 
         if DEBUG:
-            figure(1)
-            clf()
-            subplot(131)
-            imshow(real(CC))
-            subplot(132)
-            ups = dftups((buf1ft) * conj((buf2ft)),mlarge,nlarge,2,-7,-4)
-            imshow(real(((ups))))
-            subplot(133)
-            imshow(real(CC)/real(ups)); colorbar()
-            print rloc,cloc
-            print np.unravel_index(ups.argmax(),ups.shape)
+            pylab.figure(1)
+            pylab.clf()
+            pylab.subplot(131)
+            pylab.imshow(real(CC)); pylab.title("Cross-Correlation (upsampled 2x)")
+            pylab.subplot(132)
+            ups = dftups((buf1ft) * conj((buf2ft)),mlarge,nlarge,2,0,0); pylab.title("dftups upsampled 2x")
+            pylab.imshow(real(((ups))))
+            pylab.subplot(133)
+            pylab.imshow(real(CC)/real(ups)); pylab.title("Ratio upsampled/dftupsampled")
+            print "Upsample by 2 peak: ",rloc,cloc," using dft version: ",np.unravel_index(abs(ups).argmax(), ups.shape)
+            #print np.unravel_index(ups.argmax(),ups.shape)
         
         # Obtain shift in original pixel grid from the position of the
         # crosscorrelation peak 
-        [m,n] = shape(CC); md2 = fix(m/2); nd2 = fix(n/2);
+        [m,n] = shape(CC); md2 = trunc(m/2); nd2 = trunc(n/2);
         if rloc > md2 :
-            row_shift = rloc - m;
+            row_shift2 = rloc - m;
         else:
-            row_shift = rloc;
+            row_shift2 = rloc;
         if cloc > nd2:
-            col_shift = cloc - n;
+            col_shift2 = cloc - n;
         else:
-            col_shift = cloc;
-        row_shift=row_shift/2.;
-        col_shift=col_shift/2.;
+            col_shift2 = cloc;
+        row_shift2=row_shift2/2.;
+        col_shift2=col_shift2/2.;
+        if DEBUG: print "row_shift/col_shift from ups2: ",row_shift2,col_shift2
 
         # If upsampling > 2, then refine estimate with matrix multiply DFT
         if usfac > 2:
             #%% DFT computation %%%
             # Initial shift estimate in upsampled grid
             zoom_factor=1.5
-            # DEBUG print row_shift, col_shift
-            row_shift = round(row_shift*usfac)/usfac; 
-            col_shift = round(col_shift*usfac)/usfac;     
-            dftshift = fix(ceil(usfac*zoom_factor)/2); #% Center of output array at dftshift+1
-            # DEBUG print dftshift, row_shift, col_shift, usfac*zoom_factor
+            if DEBUG: print row_shift2, col_shift2
+            row_shift0 = round(row_shift2*usfac)/usfac; 
+            col_shift0 = round(col_shift2*usfac)/usfac;     
+            dftshift = trunc(ceil(usfac*zoom_factor)/2); #% Center of output array at dftshift+1
+            if DEBUG: print 'dftshift,rs,cs,zf:',dftshift, row_shift0, col_shift0, usfac*zoom_factor
             # Matrix multiply DFT around the current shift estimate
+            roff = dftshift-row_shift0*usfac
+            coff = dftshift-col_shift0*usfac
             upsampled = dftups(
                     (buf2ft * conj(buf1ft)),
                     ceil(usfac*zoom_factor),
                     ceil(usfac*zoom_factor), 
                     usfac, 
-                    dftshift-row_shift*usfac,
-                    dftshift-col_shift*usfac)
+                    roff,
+                    coff)
             #CC = conj(dftups(buf2ft.*conj(buf1ft),ceil(usfac*1.5),ceil(usfac*1.5),usfac,...
             #    dftshift-row_shift*usfac,dftshift-col_shift*usfac))/(md2*nd2*usfac^2);
             CC = conj(upsampled)/(md2*nd2*usfac**2);
             if DEBUG:
-                figure(2)
-                clf()
-                subplot(221)
-                imshow(abs(upsampled))
-                subplot(222)
-                imshow(abs(CC))
-                from pylab import *
-                subplot(223); imshow(np.abs(np.fft.fftshift(buf2ft * conj(buf1ft))))
-                subplot(224); imshow(np.abs(dftups(np.fft.fftshift(buf2ft*conj(buf1ft)),ceil(usfac*1.5),ceil(usfac*1.5),usfac)))
+                pylab.figure(2)
+                pylab.clf()
+                pylab.subplot(221)
+                pylab.imshow(abs(upsampled)); pylab.title('upsampled')
+                pylab.subplot(222)
+                pylab.imshow(abs(CC)); pylab.title('CC upsampled')
+                pylab.subplot(223); pylab.imshow(np.abs(np.fft.fftshift(np.fft.ifft2(buf2ft * conj(buf1ft))))); pylab.title('xc')
+                yy,xx = np.indices([m*usfac,n*usfac],dtype='float')
+                pylab.contour(yy/usfac/2.-0.5+1,xx/usfac/2.-0.5-1, np.abs(dftups((buf2ft*conj(buf1ft)),m*usfac,n*usfac,usfac)))
+                pylab.subplot(224); pylab.imshow(np.abs(dftups((buf2ft*conj(buf1ft)),ceil(usfac*zoom_factor),ceil(usfac*zoom_factor),usfac))); pylab.title('unshifted ups')
             # Locate maximum and map back to original pixel grid 
-            rloc,cloc = np.unravel_index(CC.argmax(), CC.shape)
-            CCmax = CC.max()
+            rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape) 
+            rloc0,cloc0 = np.unravel_index(abs(CC).argmax(), CC.shape) 
+            CCmax = CC[rloc,cloc]
             #[max1,loc1] = CC.max(axis=0), CC.argmax(axis=0)
             #[max2,loc2] = max1.max(),max1.argmax()
             #rloc=loc1[loc2];
@@ -218,18 +221,25 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error
             #CCmax = CC[rloc,cloc];
             rg00 = dftups(buf1ft * conj(buf1ft),1,1,usfac)/(md2*nd2*usfac**2);
             rf00 = dftups(buf2ft * conj(buf2ft),1,1,usfac)/(md2*nd2*usfac**2);  
-            # DEBUG print rloc,row_shift,cloc,col_shift,dftshift
-            rloc = rloc - dftshift;
-            cloc = cloc - dftshift;
-            # DEBUG print rloc,row_shift,cloc,col_shift,dftshift
-            row_shift = row_shift + rloc/usfac;
-            col_shift = col_shift + cloc/usfac;    
-            # DEBUG print rloc/usfac,row_shift,cloc/usfac,col_shift
+            #if DEBUG: print rloc,row_shift,cloc,col_shift,dftshift
+            rloc = rloc - dftshift #+ 1 # +1 # questionable/failed hack + 1;
+            cloc = cloc - dftshift #+ 1 # -1 # questionable/failed hack - 1;
+            #if DEBUG: print rloc,row_shift,cloc,col_shift,dftshift
+            row_shift = row_shift0 + rloc/usfac;
+            col_shift = col_shift0 + cloc/usfac;    
+            #if DEBUG: print rloc/usfac,row_shift,cloc/usfac,col_shift
+            if DEBUG: print "Off by: ",(0.25 - float(rloc)/usfac)*usfac , (-0.25 - float(cloc)/usfac)*usfac 
+            if DEBUG: print "correction was: ",rloc/usfac, cloc/usfac
+            if DEBUG: print "Coordinate went from",row_shift2,col_shift2,"to",row_shift0,col_shift0,"to", row_shift, col_shift
+            if DEBUG: print "dftsh - usfac:", dftshift-usfac
+            if DEBUG: print  rloc,cloc,row_shift,col_shift,CCmax,dftshift,rloc0,cloc0
 
         # If upsampling = 2, no additional pixel shift refinement
         else:    
             rg00 = sum(sum( buf1ft * conj(buf1ft) ))/m/n;
             rf00 = sum(sum( buf2ft * conj(buf2ft) ))/m/n;
+            row_shift = row_shift2
+            col_shift = col_shift2
         error = 1.0 - CCmax * conj(CCmax)/(rg00*rf00);
         error = sqrt(abs(error));
         diffphase=arctan2(imag(CCmax),real(CCmax));
@@ -288,32 +298,35 @@ def dftups(inp,nor=None,noc=None,usfac=1,roff=0,coff=0):
     """
     # this function is translated from matlab, so I'm just going to pretend
     # it is matlab/pylab
-    from numpy import *
-    from numpy.fft import *
+    from numpy.fft import ifftshift
+    from numpy import pi,newaxis,floor
 
-    nr,nc=shape(inp);
+    nr,nc=np.shape(inp);
     # Set defaults
     if noc is None: noc=nc;
     if nor is None: nor=nr;
     # Compute kernels and obtain DFT by matrix products
-    kernc=exp((-1j*2*pi/(nc*usfac))*( ifftshift(arange(nc)).T[:,newaxis] - floor(nc/2) )*( arange(noc) - coff )[newaxis,:]);
-    kernr=exp((-1j*2*pi/(nr*usfac))*( arange(nor).T - roff )[:,newaxis]*( ifftshift(arange(nr)) - floor(nr/2)  )[newaxis,:]);
+    kernc=np.exp((-1j*2*pi/(nc*usfac))*( ifftshift(np.arange(nc) - floor(nc/2)).T[:,newaxis] )*( np.arange(noc) - coff  )[newaxis,:]);
+    kernr=np.exp((-1j*2*pi/(nr*usfac))*( np.arange(nor).T - roff )[:,newaxis]*( ifftshift(np.arange(nr)) - floor(nr/2) )[newaxis,:]);
     #kernc=exp((-i*2*pi/(nc*usfac))*( ifftshift([0:nc-1]).' - floor(nc/2) )*( [0:noc-1] - coff ));
     #kernr=exp((-i*2*pi/(nr*usfac))*( [0:nor-1].' - roff )*( ifftshift([0:nr-1]) - floor(nr/2)  ));
     out=np.dot(np.dot(kernr,inp),kernc);
+    #return np.roll(np.roll(out,-1,axis=0),-1,axis=1)
     return out 
 
-def upsample_ft_raw(buf1ft,buf2ft):
+def upsample_ft_raw(buf1ft,buf2ft,zoomfac=2):
 
-    from numpy import *
-    from numpy.fft import *
+    from numpy.fft import ifft2,ifftshift,fftshift
+    from numpy import conj
 
-    [m,n]=shape(buf1ft);
-    mlarge=m*2;
-    nlarge=n*2;
-    CClarge=zeros([mlarge,nlarge]);
+    [m,n]=np.shape(buf1ft);
+    mlarge=m*zoomfac;
+    nlarge=n*zoomfac;
+    CClarge=np.zeros([mlarge,nlarge], dtype='complex');
     #CClarge[m-fix(m/2):m+fix((m-1)/2)+1,n-fix(n/2):n+fix((n-1)/2)+1] = fftshift(buf1ft) * conj(fftshift(buf2ft));
-    CClarge[mlarge/4:mlarge/4*3,nlarge/4:nlarge/4*3] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+    #CClarge[mlarge/4:mlarge/4*3,nlarge/4:nlarge/4*3] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+    CClarge[round(mlarge/(zoomfac*2.)):round(mlarge/(zoomfac*2.)*3),round(nlarge/(zoomfac*2.)):round(nlarge/(zoomfac*2.)*3)] = fftshift(buf1ft) * conj(fftshift(buf2ft));
+        # note that matlab uses fix which is trunc... ?
   
     # Compute crosscorrelation and locate the peak 
     CC = ifft2(ifftshift(CClarge)); # Calculate cross-correlation
@@ -771,6 +784,7 @@ try:
             maxoff=None, return_error=False, powerlaw=2.0, noise=1.0,
             unsharp_mask=False, smoothfactor=5, zeropad=0,
             shift_func=cross_correlation_shifts, sfkwargs={},
+            doplot=False,
             **kwargs):
         image = make_extended(imsize, powerlaw=powerlaw)
         if zeropad > 0:
@@ -794,12 +808,13 @@ try:
         else:
             offsets = []
             offim = make_offset_extended(image, xsh, ysh, noise=noise, **kwargs)
-            from pylab import *
-            figure(3); subplot(221); imshow(image-image.mean()); subplot(222); imshow(offim-offim.mean())
-            #subplot(223); imshow((abs(fft2(image-image.mean())*conj(fft2(offim-offim.mean())))))
-            subplot(223); imshow(abs(ifft2((fft2(image)*conj(fft2(offim))))))
-            subplot(224); imshow(abs(ifft2((fft2(image-image.mean())*conj(fft2(offim-offim.mean()))))))
-            draw()
+            if doplot:
+                import pylab
+                pylab.figure(3); pylab.subplot(221); pylab.imshow(image-image.mean()); pylab.subplot(222); pylab.imshow(offim-offim.mean())
+                #subplot(223); pylab.imshow((abs(fft2(image-image.mean())*conj(fft2(offim-offim.mean())))))
+                pylab.subplot(223); pylab.imshow(abs(ifft2((fft2(image)*conj(fft2(offim))))))
+                pylab.subplot(224); pylab.imshow(abs(ifft2((fft2(image-image.mean())*conj(fft2(offim-offim.mean()))))))
+                draw()
             for ii in xrange(nfits):
                 offsets.append( shift_func( 
                     image,
@@ -831,18 +846,18 @@ try:
     def plot_tests(nfits=25,xsh=1.75,ysh=1.75, imsize=64, amp=10., **kwargs):
         x,y,ex,ey = np.array(do_n_fits(nfits, xsh, ysh, imsize, amp,
             maxoff=12., return_error=True, **kwargs)).T
-        from pylab import *
-        plot([xsh],[ysh],'kd',markersize=20)
-        errorbar(x,y,xerr=ex,yerr=ey,linestyle='none')
+        import pylab
+        pylab.plot([xsh],[ysh],'kd',markersize=20)
+        pylab.errorbar(x,y,xerr=ex,yerr=ey,linestyle='none')
 
     def plot_extended_tests(nfits=25,xsh=1.75,ysh=1.75, imsize=64, noise=1.0,
             maxoff=12., zeropad=64, **kwargs):
         x,y,ex,ey = np.array(do_n_extended_fits(nfits, xsh, ysh, imsize, 
             maxoff=maxoff, return_error=True, noise=noise, **kwargs)).T
         print x,y
-        from pylab import *
-        plot([xsh],[ysh],'kd',markersize=20)
-        errorbar(x,y,xerr=ex,yerr=ey,linestyle='none')
+        import pylab
+        pylab.plot([xsh],[ysh],'kd',markersize=20)
+        pylab.errorbar(x,y,xerr=ex,yerr=ey,linestyle='none')
 
     def determine_error_offsets():
         """
@@ -855,6 +870,71 @@ try:
         print "Analytic offset: %g" % (( (A[:,3]/A[:,1]).mean() + (A[:,2]/A[:,0]).mean() )/2. )
         print "Gaussian offset: %g" % (( (G[:,3]/G[:,1]).mean() + (G[:,2]/G[:,0]).mean() )/2. )
         
+    def test_upsample(imsize, usfac=2, xsh=2.25, ysh=2.25, noise=0.1, **kwargs):
+        image = make_extended(imsize)
+        offim = make_offset_extended(image, xsh, ysh, noise=noise, **kwargs)
+
+        raw_us = upsample_ft_raw(np.fft.fft2(image-image.mean()), np.fft.fft2(offim-offim.mean()), zoomfac=usfac)
+        dftus = dftups(np.fft.fft2(image-image.mean())*np.conj( np.fft.fft2(offim-offim.mean())), imsize*usfac, imsize*usfac, usfac, 0, 0)
+
+        import pylab
+        pylab.clf()
+        pylab.subplot(221); pylab.imshow(abs(raw_us))
+        pylab.subplot(222); pylab.imshow(abs(dftus[::-1,::-1]))
+        pylab.subplot(223); pylab.imshow(abs(dftus[::-1,::-1]/dftus.max()-raw_us/raw_us.max()))
+        pylab.subplot(224); pylab.imshow(abs(dftus[::-1,::-1])); pylab.contour(raw_us)
+
+    def accuracy_plot(xsh=2.25,ysh=-1.35,amp=10000,width=1,imsize=100,usf_range=[1,100]):
+        testg,testgsh,T = make_offset_images(xsh,ysh,imsize,amp=amp,width=width)
+        offsets = []
+        for usf in xrange(*usf_range): 
+            dy,dx = dftregistration(np.fft.fft2(testg),np.fft.fft2(testgsh),usfac=usf); 
+            # offsets are negative...
+            offsets.append([xsh+dx,ysh+dy])
+
+        import pylab
+        dr = (np.array(offsets)**2).sum(axis=1)**0.5
+        pylab.plot(np.arange(*usf_range), dr, label="A=%0.1g w=%0.1g" % (amp,width))
+        pylab.plot(np.arange(*usf_range), 1./np.arange(*usf_range), 'k--', label="Theoretical")
+
+    def accuracy_plot_extended(xsh=2.25,ysh=-1.35,noise=0.1,imsize=100,usf_range=[1,100]):
+        offsets = []
+        for usf in xrange(*usf_range): 
+            dy,dx = do_n_extended_fits(1,xsh,ysh, imsize, shift_func=register,sfkwargs={'usfac':usf},noise=noise)[0]
+            offsets.append([xsh+dx,ysh+dy])
+
+        import pylab
+        dr = (np.array(offsets)**2).sum(axis=1)**0.5
+        pylab.plot(np.arange(*usf_range), dr, label="noise=%0.2g" % (noise))
+        pylab.plot(np.arange(*usf_range), 1./np.arange(*usf_range), 'k--', label="Theoretical")
 
 except ImportError:
     pass
+
+if __name__ == "__main__":
+    print "Showing some nice plots"
+
+    from pylab import *
+    figure(1)
+    clf()
+    accuracy_plot(amp=10000)
+    accuracy_plot(amp=1000)
+    accuracy_plot(amp=100)
+    accuracy_plot(amp=20)
+    accuracy_plot(width=2., amp=10000)
+    accuracy_plot(width=2., amp=1000)
+    accuracy_plot(width=2., amp=100)
+    legend(loc='best')
+    xlabel("Upsample Factor")
+    ylabel("Real offset - measured offset")
+
+    figure(2)
+    clf()
+    title("Extended Structure")
+    accuracy_plot_extended(noise=10**-2)
+    accuracy_plot_extended(noise=10**-1)
+    accuracy_plot_extended(noise=10**-0)
+    legend(loc='best')
+    xlabel("Upsample Factor")
+    ylabel("Real offset - measured offset")
+
