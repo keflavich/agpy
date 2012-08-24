@@ -6,11 +6,13 @@ from convolve_nd import convolvend as convolve
 def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         silent=True, psf_pad=True, interp_nan=False, nwidths='max',
         min_nwidths=6, return_kernel=False, normalize_kernel=np.sum,
-        downsample=False, downsample_factor=None, **kwargs):
+        downsample=False, downsample_factor=None, ignore_edge_zeros=False,
+        **kwargs):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
 
-    Options: 
+    Parameters
+    ----------
     kernelwidth:
         width of kernel in pixels  (see definitions below)
     kerneltype:
@@ -19,36 +21,41 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
             out to [nwidths]-sigma
         A boxcar is a kernelwidth x kernelwidth square 
         A tophat is a flat circle with radius = kernelwidth
-    Default options:
-        psf_pad: [True]
-            will pad the input image to be the image size + PSF.
-            Slows things down but removes edge-wrapping effects (see convolve)
-            This option should be set to false if the edges of your image are
-            symmetric.
-        interp_nan: [False]
-            Will replace NaN points in an image with the
-            smoothed average of its neighbors (you can still simply ignore NaN 
-            values by setting ignore_nan=True but leaving interp_nan=False)
-        silent: [True]
-            turn it off to get verbose statements about kernel types
-        return_kernel: [False]
-            If set to true, will return the kernel as the
-            second return value
-        nwidths: ['max']
-            number of kernel widths wide to make the kernel.  Set to 'max' to
-            match the image shape, otherwise use any integer 
-        min_nwidths: [6]
-            minimum number of gaussian widths to make the kernel
-            (the kernel will be larger than the image if the image size is <
-            min_widths*kernelsize)
-        normalize_kernel:
-            Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
-            or the kernel peak (i.e. kernel.max() = 1) ?  Must be a *function* that can
-            operate on a numpy array
-        downsample:
-            downsample after smoothing?
-        downsample_factor:
-            if None, default to kernelwidth
+
+    psf_pad: [True]
+        will pad the input image to be the image size + PSF.
+        Slows things down but removes edge-wrapping effects (see convolve)
+        This option should be set to false if the edges of your image are
+        symmetric.
+    interp_nan: [False]
+        Will replace NaN points in an image with the
+        smoothed average of its neighbors (you can still simply ignore NaN 
+        values by setting ignore_nan=True but leaving interp_nan=False)
+    silent: [True]
+        turn it off to get verbose statements about kernel types
+    return_kernel: [False]
+        If set to true, will return the kernel as the
+        second return value
+    nwidths: ['max']
+        number of kernel widths wide to make the kernel.  Set to 'max' to
+        match the image shape, otherwise use any integer 
+    min_nwidths: [6]
+        minimum number of gaussian widths to make the kernel
+        (the kernel will be larger than the image if the image size is <
+        min_widths*kernelsize)
+    normalize_kernel:
+        Should the kernel preserve the map sum (i.e. kernel.sum() = 1)
+        or the kernel peak (i.e. kernel.max() = 1) ?  Must be a *function* that can
+        operate on a numpy array
+    downsample:
+        downsample after smoothing?
+    downsample_factor:
+        if None, default to kernelwidth
+    ignore_edge_zeros: bool
+        Ignore the zero-pad-created zeros.  This will effectively decrease
+        the kernel area on the edges but will not re-normalize the kernel.
+        This parameter may result in 'edge-brightening' effects if you're using
+        a normalized kernel
 
     Note that the kernel is forced to be even sized on each axis to assure no
     offset when smoothing.
@@ -79,11 +86,12 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     # convolve does this already temp[bad] = 0
 
     # kwargs parsing to avoid duplicate keyword passing
-    if not kwargs.has_key('ignore_edge_zeros'): kwargs['ignore_edge_zeros']=True
+    #if not kwargs.has_key('ignore_edge_zeros'): kwargs['ignore_edge_zeros']=True
     if not kwargs.has_key('interpolate_nan'): kwargs['interpolate_nan']=interp_nan
 
     # No need to normalize - normalization is dealt with in this code
-    temp = convolve(temp,kernel,psf_pad=psf_pad, normalize_kernel=False, **kwargs)
+    temp = convolve(temp,kernel,psf_pad=psf_pad, normalize_kernel=False,
+            ignore_edge_zeros=ignore_edge_zeros, **kwargs)
     if interp_nan is False: temp[bad] = image[bad]
 
     if temp.shape != image.shape:
