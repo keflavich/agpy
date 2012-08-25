@@ -17,6 +17,30 @@ def shift(data, deltax, deltay, phase=0):
 
 def register(im1, im2, usfac=1, return_registered=False, return_error=False, zeromean=True, DEBUG=False):
     """
+    Sub-pixel image registration (see dftregistration for lots of details)
+
+    Parameters
+    ----------
+    im1 : np.ndarray
+    im2 : np.ndarray
+        The images to register. 
+    return_registered : bool
+        Return the registered image as the last parameter
+    return_error : bool
+        Does nothing at the moment, but in principle should return the "fit
+        error" (it does nothing because I don't know how to compute the "fit
+        error")
+    zeromean : bool
+        Subtract the mean from the images before cross-correlating?  If no, you
+        may get a 0,0 offset because the DC levels are strongly correlated.
+    DEBUG : bool
+        Test code used during development.  Should DEFINITELY be removed.
+
+    Returns
+    -------
+    dy, dx : float,float
+        These are in "matrix" order because this code was translated from matlab.
+
     """
     if not im1.shape == im2.shape:
         raise ValueError("Images must have same shape.")
@@ -786,6 +810,15 @@ try:
             shift_func=cross_correlation_shifts, sfkwargs={},
             doplot=False,
             **kwargs):
+
+        try: 
+            import progressbar
+            widgets = [progressbar.FormatLabel('Processed: %(value)d offsets in %(elapsed)s)'), progressbar.Percentage()]
+            progress = progressbar.ProgressBar(widgets=widgets)
+        except ImportError:
+            def progress(x):
+                yield x
+
         image = make_extended(imsize, powerlaw=powerlaw)
         if zeropad > 0:
             newsize = [s+zeropad for s in image.shape]
@@ -800,14 +833,13 @@ try:
         if unsharp_mask:
             from AG_fft_tools import smooth
             offsets = []
-            for ii in xrange(nfits):
+            for ii in progress(xrange(nfits)):
                 inim = image-smooth(image,smoothfactor)
                 offim = make_offset_extended(image, xsh, ysh, noise=noise, **kwargs)
                 offim -= smooth(offim,smoothfactor)
                 offsets.append( shift_func( inim, offim,  return_error=return_error, **sfkwargs) )
         else:
             offsets = []
-            offim = make_offset_extended(image, xsh, ysh, noise=noise, **kwargs)
             if doplot:
                 import pylab
                 pylab.figure(3); pylab.subplot(221); pylab.imshow(image-image.mean()); pylab.subplot(222); pylab.imshow(offim-offim.mean())
@@ -815,7 +847,8 @@ try:
                 pylab.subplot(223); pylab.imshow(abs(ifft2((fft2(image)*conj(fft2(offim))))))
                 pylab.subplot(224); pylab.imshow(abs(ifft2((fft2(image-image.mean())*conj(fft2(offim-offim.mean()))))))
                 draw()
-            for ii in xrange(nfits):
+            for ii in progress(xrange(nfits)):
+                offim = make_offset_extended(image, xsh, ysh, noise=noise, **kwargs)
                 offsets.append( shift_func( 
                     image,
                     offim,
@@ -908,10 +941,88 @@ try:
         pylab.plot(np.arange(*usf_range), dr, label="noise=%0.2g" % (noise))
         pylab.plot(np.arange(*usf_range), 1./np.arange(*usf_range), 'k--', label="Theoretical")
 
+    def error_test(xsh=2.25,ysh=-1.35,noise=0.5,imsize=100,usf=101,nsamples=100):
+        """
+        Empirically determine the error in the fit using random realizations, compare to...
+        noise level, I guess?
+        """
+
+        offsets = np.array(do_n_extended_fits(nsamples, xsh, ysh, imsize,
+                shift_func=register, sfkwargs={'usfac':usf}, noise=noise))
+
+        print "Theoretical accuracy: ",1./usf
+        print "Standard Deviation x,y: ",offsets.std(axis=0)
+        #print "Standard Deviation compared to truth x,y: ",(offsets-np.array([ysh,xsh])).std(axis=0)
+        print "Mean x,y: ",offsets.mean(axis=0),"Real x,y: ",ysh,xsh
+        print "Mean x,y - true x,y: ",offsets.mean(axis=0)+np.array([ysh,xsh])
+        print "Mean x,y - true x,y / std: ",(offsets.mean(axis=0)+np.array([ysh,xsh]))/offsets.std(axis=0)
+        signal = 3.05 * imsize**2 # empirical: plot(array([5,25,50,75,100,125,150]),array([mean([make_extended(jj).sum() for i in xrange(100)]) for jj in [5,25,50,75,100,125,150]])/array([5,25,50,75,100,125,150])**2)
+        noise = 0.8 * imsize**2 * noise
+        print "Signal / Noise: ", signal / noise
+
+        return np.array(offsets),offsets.std(axis=0),offsets.mean(axis=0)+np.array([ysh,xsh]),signal/noise
+
+
+    def register_accuracy_test(im1,im2,usf_range=[1,100],**kwargs):
+        offsets = []
+        try: 
+            import progressbar
+            widgets = [progressbar.FormatLabel('Processed: %(value)d offsets in %(elapsed)s)'), progressbar.Percentage()]
+            progress = progressbar.ProgressBar(widgets=widgets)
+        except ImportError:
+            def progress(x):
+                yield x
+        for usf in progress(xrange(*usf_range)): 
+            dy,dx = register(im1,im2,usfac=usf,**kwargs)
+            offsets.append([dx,dy])
+
+        return np.array(offsets)
+
+    def register_noise_test(im1,im2,usf=201, ntests=100, noise=np.std, **kwargs):
+        """
+        Perform tests with noise added to determine the errors on the 
+        'best-fit' offset
+
+        Parameters
+        ----------
+        usf : int
+            Upsampling factor (max accuracy = 1/usf)
+        ntests : int
+            Number of tests to run
+        noise : func or real
+            Either a function to apply to im2 to determine the noise to use, or
+            a fixed noise level
+        """
+
+        try:
+            noise = noise(im2)
+        except TypeError:
+            pass
+
+        try: 
+            import progressbar
+            widgets = [progressbar.FormatLabel('Processed: %(value)d offsets in %(elapsed)s'), progressbar.Percentage()]
+            progress = progressbar.ProgressBar(widgets=widgets)
+        except ImportError:
+            def progress(x):
+                yield x
+
+        offsets = []
+        for test_number in progress(xrange(ntests)):
+            extra_noise = np.random.randn(*im2.shape) * noise
+            dy,dx = register(im1,im2+extra_noise,usfac=usf,**kwargs)
+            offsets.append([dx,dy])
+
+        return np.array(offsets)
+
+
+
+
 except ImportError:
     pass
 
-if __name__ == "__main__":
+doplots=False
+if doplots:
     print "Showing some nice plots"
 
     from pylab import *
