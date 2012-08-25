@@ -7,7 +7,11 @@ def shift(data, deltax, deltay, phase=0):
     """
     FFT-based sub-pixel image shift
     http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation/content/html/efficient_subpixel_registration.html
+
+    Will turn NaNs into zeros
     """
+    if np.any(np.isnan(data)):
+        data = np.nan_to_num(data)
     ny,nx = data.shape
     Nx = np.fft.ifftshift(np.linspace(-np.fix(nx/2),np.ceil(nx/2)-1,nx))
     Ny = np.fft.ifftshift(np.linspace(-np.fix(ny/2),np.ceil(ny/2)-1,ny))
@@ -15,7 +19,14 @@ def shift(data, deltax, deltay, phase=0):
     gg = np.fft.ifftn( np.fft.fftn(data)* np.exp(1j*2*np.pi*(-deltax*Nx/nx-deltay*Ny/ny)) * np.exp(-1j*phase) )
     return gg
 
-def register(im1, im2, usfac=1, return_registered=False, return_error=False, zeromean=True, DEBUG=False):
+def chi2(im1, im2, dx, dy):
+    im1 = np.nan_to_num(im1)
+    im2 = np.nan_to_num(im2)
+    im2s = np.abs(shift(im2, -dx, -dy))
+    return ((im1-im2s)**2).sum()
+
+
+def register(im1, im2, usfac=1, return_registered=False, return_error=False, zeromean=True, DEBUG=False, maxoff=None):
     """
     Sub-pixel image registration (see dftregistration for lots of details)
 
@@ -33,13 +44,19 @@ def register(im1, im2, usfac=1, return_registered=False, return_error=False, zer
     zeromean : bool
         Subtract the mean from the images before cross-correlating?  If no, you
         may get a 0,0 offset because the DC levels are strongly correlated.
+    maxoff : int
+        Maximum allowed offset to measure (setting this helps avoid spurious
+        peaks)
     DEBUG : bool
         Test code used during development.  Should DEFINITELY be removed.
 
     Returns
     -------
-    dy, dx : float,float
-        These are in "matrix" order because this code was translated from matlab.
+    dx,dy : float,float
+        REVERSE of dftregistration order (also, signs flipped) for consistency
+        with other routines.
+        Measures the amount im2 is offset from im1 (i.e., shift im2 by these #'s
+        to match im1)
 
     """
     if not im1.shape == im2.shape:
@@ -61,7 +78,9 @@ def register(im1, im2, usfac=1, return_registered=False, return_error=False, zer
 
     output = dftregistration(im1fft,im2fft,usfac=usfac,
             return_registered=return_registered, return_error=return_error,
-            zeromean=zeromean, DEBUG=DEBUG)
+            zeromean=zeromean, DEBUG=DEBUG, maxoff=maxoff)
+
+    output = [-output[1], -output[0], ] + [o for o in output[2:]]
 
     if return_registered:
         output[-1] = np.abs(np.fft.ifftshift(np.fft.ifft2(output[-1])))
@@ -69,7 +88,8 @@ def register(im1, im2, usfac=1, return_registered=False, return_error=False, zer
     return output
 
 
-def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error=False, zeromean=True, DEBUG=False):
+def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False,
+        return_error=False, zeromean=True, DEBUG=False, maxoff=None):
     """
     Efficient subpixel image registration by crosscorrelation. This code
     gives the same precision as the FFT upsampled cross correlation in a
@@ -113,8 +133,8 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error
 
     # this function is translated from matlab, so I'm just going to pretend
     # it is matlab/pylab
-    from numpy import *
-    from numpy.fft import *
+    from numpy import conj,abs,arctan2,sqrt,real,imag,shape,zeros,trunc,ceil,floor,fix
+    from numpy.fft import fftshift,ifftshift,fft2,ifft2
 
     # Compute error for no pixel shift
     if usfac == 0:
@@ -132,8 +152,16 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error
     elif usfac == 1:
         [m,n]=shape(buf1ft);
         CC = ifft2(buf1ft * conj(buf2ft));
-        rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
-        CCmax=CC[rloc,cloc]; 
+        if maxoff is None:
+            rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
+            CCmax=CC[rloc,cloc]; 
+        else:
+            # set the interior of the shifted array to zero
+            # (i.e., ignore it)
+            CC[maxoff:-maxoff,:] = 0
+            CC[:,maxoff:-maxoff] = 0
+            rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
+            CCmax=CC[rloc,cloc]; 
         rfzero = sum(abs(buf1ft)**2)/(m*n);
         rgzero = sum(abs(buf2ft)**2)/(m*n); 
         error = 1.0 - CCmax * conj(CCmax)/(rgzero*rfzero);
@@ -169,8 +197,16 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False, return_error
       
         # Compute crosscorrelation and locate the peak 
         CC = ifft2(ifftshift(CClarge)); # Calculate cross-correlation
-        rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
-        CCmax = CC[rloc,cloc]
+        if maxoff is None:
+            rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
+            CCmax=CC[rloc,cloc]; 
+        else:
+            # set the interior of the shifted array to zero
+            # (i.e., ignore it)
+            CC[maxoff:-maxoff,:] = 0
+            CC[:,maxoff:-maxoff] = 0
+            rloc,cloc = np.unravel_index(abs(CC).argmax(), CC.shape)
+            CCmax=CC[rloc,cloc]; 
 
         if DEBUG:
             pylab.figure(1)
@@ -941,21 +977,21 @@ try:
         pylab.plot(np.arange(*usf_range), dr, label="noise=%0.2g" % (noise))
         pylab.plot(np.arange(*usf_range), 1./np.arange(*usf_range), 'k--', label="Theoretical")
 
-    def error_test(xsh=2.25,ysh=-1.35,noise=0.5,imsize=100,usf=101,nsamples=100):
+    def error_test(xsh=2.25,ysh=-1.35,noise=0.5,imsize=100,usf=101,nsamples=100,maxoff=10):
         """
         Empirically determine the error in the fit using random realizations, compare to...
         noise level, I guess?
         """
 
         offsets = np.array(do_n_extended_fits(nsamples, xsh, ysh, imsize,
-                shift_func=register, sfkwargs={'usfac':usf}, noise=noise))
+            shift_func=register, sfkwargs={'usfac':usf,'maxoff':maxoff}, noise=noise))
 
         print "Theoretical accuracy: ",1./usf
         print "Standard Deviation x,y: ",offsets.std(axis=0)
         #print "Standard Deviation compared to truth x,y: ",(offsets-np.array([ysh,xsh])).std(axis=0)
-        print "Mean x,y: ",offsets.mean(axis=0),"Real x,y: ",ysh,xsh
-        print "Mean x,y - true x,y: ",offsets.mean(axis=0)+np.array([ysh,xsh])
-        print "Mean x,y - true x,y / std: ",(offsets.mean(axis=0)+np.array([ysh,xsh]))/offsets.std(axis=0)
+        print "Mean x,y: ",offsets.mean(axis=0),"Real x,y: ",xsh,ysh
+        print "Mean x,y - true x,y: ",offsets.mean(axis=0)-np.array([xsh,ysh])
+        print "Mean x,y - true x,y / std: ",(offsets.mean(axis=0)-np.array([xsh,ysh]))/offsets.std(axis=0)
         signal = 3.05 * imsize**2 # empirical: plot(array([5,25,50,75,100,125,150]),array([mean([make_extended(jj).sum() for i in xrange(100)]) for jj in [5,25,50,75,100,125,150]])/array([5,25,50,75,100,125,150])**2)
         noise = 0.8 * imsize**2 * noise
         print "Signal / Noise: ", signal / noise
