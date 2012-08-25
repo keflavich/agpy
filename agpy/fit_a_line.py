@@ -179,7 +179,10 @@ def total_least_squares(data1, data2, data1err=None, data2err=None,
 def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         print_results=False, intercept=True, nsample=5000, burn=1000,
         thin=10, return_MC=False, guess=None):
-    import pymc
+    import numpy as np
+    old_errsettings = np.geterr()
+    import pymc # pymc breaks np error settings
+    np.seterr(old_errsettings)
 
     if guess is None:
         guess = (0,0)

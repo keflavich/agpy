@@ -5,7 +5,7 @@ except ImportError:
     import pyfits
     import pywcs
 import numpy as np
-np.seterr(all='ignore')
+# this may break downstream items np.seterr(all='ignore')
 import pyregion
 from agpy.region_positions import *
 try:

@@ -23,7 +23,7 @@ MyPL.plotpdf(log=True)
 """
 
 import numpy 
-numpy.seterr(all='ignore') # likely to cause failures otherwise
+# this may break downstream items numpy.seterr(all='ignore') # likely to cause failures otherwise
 import time
 import pylab
 try:

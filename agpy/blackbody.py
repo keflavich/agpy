@@ -292,7 +292,10 @@ except ImportError:
     pass
 
 try:
-    import pymc
+    import numpy as np
+    old_errsettings = np.geterr()
+    import pymc # pymc breaks np error settings
+    np.seterr(old_errsettings)
 
     def fit_blackbody_montecarlo(frequency, flux, err=None,
             temperature_guess=10, beta_guess=None, scale_guess=None,
