@@ -182,7 +182,7 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
     import numpy as np
     old_errsettings = np.geterr()
     import pymc # pymc breaks np error settings
-    np.seterr(old_errsettings)
+    np.seterr(**old_errsettings)
 
     if guess is None:
         guess = (0,0)

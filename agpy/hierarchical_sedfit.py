@@ -1,7 +1,7 @@
 import numpy as np
 old_errsettings = np.geterr()
 import pymc # pymc breaks np error settings
-np.seterr(old_errsettings)
+np.seterr(**old_errsettings)
 import itertools
 from . import blackbody
 

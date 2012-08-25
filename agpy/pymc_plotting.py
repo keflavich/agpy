@@ -3,7 +3,7 @@ import pylab
 import matplotlib
 old_errsettings = np.geterr()
 import pymc # pymc breaks np error settings
-np.seterr(old_errsettings)
+np.seterr(**old_errsettings)
 
 def find_percentile(data, pctile):
     sorted_data = np.sort(data.ravel())
