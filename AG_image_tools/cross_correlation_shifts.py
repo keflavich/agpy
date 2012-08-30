@@ -406,79 +406,6 @@ def upsample_ft_raw(buf1ft,buf2ft,zoomfac=2):
     
     return CC
 
-def cross_correlation_shifts_FITS(fitsfile1, fitsfile2,
-        return_cropped_images=False, quiet=True, sigma_cut=False,
-        register_method=cross_correlation_shifts, **kwargs):
-    """
-    Determine the shift between two FITS images using the cross-correlation
-    technique.  Requires montage or hcongrid.
-
-    Parameters
-    ----------
-    fitsfile1: str
-        Reference fits file name
-    fitsfile2: str
-        Offset fits file name
-    return_cropped_images: bool
-        Returns the images used for the analysis in addition to the measured
-        offsets
-    quiet: bool
-        Silence messages?
-    sigma_cut: bool or int
-        Perform a sigma-cut before cross-correlating the images to minimize
-        noise correlation?
-    """
-    import montage
-    try:
-        import astropy.io.fits as pyfits
-        import astropy.wcs as pywcs
-    except ImportError:
-        import pyfits
-        import pywcs
-    import tempfile
-
-    header = pyfits.getheader(fitsfile1)
-    temp_headerfile = tempfile.NamedTemporaryFile()
-    header.toTxtFile(temp_headerfile.name)
-
-    outfile = tempfile.NamedTemporaryFile()
-    montage.wrappers.reproject(fitsfile2, outfile.name, temp_headerfile.name, exact_size=True, silent_cleanup=quiet)
-    image2_projected = pyfits.getdata(outfile.name)
-    image1 = pyfits.getdata(fitsfile1)
-    
-    outfile.close()
-    temp_headerfile.close()
-
-    if image1.shape != image2_projected.shape:
-        raise ValueError("montage failed to reproject images to same shape.")
-
-    if sigma_cut:
-        corr_image1 = image1*(image1 > image1.std()*sigma_cut)
-        corr_image2 = image2_projected*(image2_projected > image2_projected.std()*sigma_cut)
-        OK = (corr_image1==corr_image1)*(corr_image2==corr_image2) 
-        if (corr_image1[OK]*corr_image2[OK]).sum() == 0:
-            print "Could not use sigma_cut of %f because it excluded all valid data" % sigma_cut
-            corr_image1 = image1
-            corr_image2 = image2_projected
-    else:
-        corr_image1 = image1
-        corr_image2 = image2_projected
-
-    verbose = kwargs.pop('verbose') if 'verbose' in kwargs else not quiet
-    xoff,yoff = register_method(corr_image1, corr_image2, verbose=verbose,**kwargs)
-    
-    wcs = pywcs.WCS(header)
-    try:
-        xoff_wcs,yoff_wcs = np.inner( np.array([[xoff,0],[0,yoff]]), wcs.wcs.cd )[[0,1],[0,1]]
-    except AttributeError:
-        xoff_wcs,yoff_wcs = 0,0
-
-    if return_cropped_images:
-        return xoff,yoff,xoff_wcs,yoff_wcs,image1,image2_projected
-    else:
-        return xoff,yoff,xoff_wcs,yoff_wcs
-    
-
 def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         maxoff=None, verbose=False, gaussfit=False, return_error=False,
         zeromean=True, **kwargs):
@@ -672,6 +599,80 @@ def second_derivative(image):
     dxy=0.25*(shift_up_right+shift_down_left-shift_up_left-shift_down_right)
 
     return dxx,dyy,dxy
+
+def cross_correlation_shifts_FITS(fitsfile1, fitsfile2,
+        return_cropped_images=False, quiet=True, sigma_cut=False,
+        register_method=cross_correlation_shifts, **kwargs):
+    """
+    Determine the shift between two FITS images using the cross-correlation
+    technique.  Requires montage or hcongrid.
+
+    Parameters
+    ----------
+    fitsfile1: str
+        Reference fits file name
+    fitsfile2: str
+        Offset fits file name
+    return_cropped_images: bool
+        Returns the images used for the analysis in addition to the measured
+        offsets
+    quiet: bool
+        Silence messages?
+    sigma_cut: bool or int
+        Perform a sigma-cut before cross-correlating the images to minimize
+        noise correlation?
+    """
+    import montage
+    try:
+        import astropy.io.fits as pyfits
+        import astropy.wcs as pywcs
+    except ImportError:
+        import pyfits
+        import pywcs
+    import tempfile
+
+    header = pyfits.getheader(fitsfile1)
+    temp_headerfile = tempfile.NamedTemporaryFile()
+    header.toTxtFile(temp_headerfile.name)
+
+    outfile = tempfile.NamedTemporaryFile()
+    montage.wrappers.reproject(fitsfile2, outfile.name, temp_headerfile.name, exact_size=True, silent_cleanup=quiet)
+    image2_projected = pyfits.getdata(outfile.name)
+    image1 = pyfits.getdata(fitsfile1)
+    
+    outfile.close()
+    temp_headerfile.close()
+
+    if image1.shape != image2_projected.shape:
+        raise ValueError("montage failed to reproject images to same shape.")
+
+    if sigma_cut:
+        corr_image1 = image1*(image1 > image1.std()*sigma_cut)
+        corr_image2 = image2_projected*(image2_projected > image2_projected.std()*sigma_cut)
+        OK = (corr_image1==corr_image1)*(corr_image2==corr_image2) 
+        if (corr_image1[OK]*corr_image2[OK]).sum() == 0:
+            print "Could not use sigma_cut of %f because it excluded all valid data" % sigma_cut
+            corr_image1 = image1
+            corr_image2 = image2_projected
+    else:
+        corr_image1 = image1
+        corr_image2 = image2_projected
+
+    verbose = kwargs.pop('verbose') if 'verbose' in kwargs else not quiet
+    xoff,yoff = register_method(corr_image1, corr_image2, verbose=verbose,**kwargs)
+    
+    wcs = pywcs.WCS(header)
+    try:
+        xoff_wcs,yoff_wcs = np.inner( np.array([[xoff,0],[0,yoff]]), wcs.wcs.cd )[[0,1],[0,1]]
+    except AttributeError:
+        xoff_wcs,yoff_wcs = 0,0
+
+    if return_cropped_images:
+        return xoff,yoff,xoff_wcs,yoff_wcs,image1,image2_projected
+    else:
+        return xoff,yoff,xoff_wcs,yoff_wcs
+    
+
 
 def chi2_shift(im1, im2, err=None, mode='wrap', maxoff=None, **kwargs):
     """
