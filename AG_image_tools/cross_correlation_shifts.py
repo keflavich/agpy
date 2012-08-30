@@ -1,22 +1,26 @@
-from AG_fft_tools import correlate2d
+from AG_fft_tools import correlate2d,fast_ffts
 from agpy import gaussfitter
 import warnings
 import numpy as np
 
-def shift(data, deltax, deltay, phase=0):
+
+def shift(data, deltax, deltay, phase=0, nthreads=1, use_numpy_fft=False):
     """
     FFT-based sub-pixel image shift
     http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation/content/html/efficient_subpixel_registration.html
 
     Will turn NaNs into zeros
     """
+
+    fftn,ifftn = fast_ffts.get_ffts(nthreads=nthreads, use_numpy_fft=use_numpy_fft)
+
     if np.any(np.isnan(data)):
         data = np.nan_to_num(data)
     ny,nx = data.shape
     Nx = np.fft.ifftshift(np.linspace(-np.fix(nx/2),np.ceil(nx/2)-1,nx))
     Ny = np.fft.ifftshift(np.linspace(-np.fix(ny/2),np.ceil(ny/2)-1,ny))
     Nx,Ny = np.meshgrid(Nx,Ny)
-    gg = np.fft.ifftn( np.fft.fftn(data)* np.exp(1j*2*np.pi*(-deltax*Nx/nx-deltay*Ny/ny)) * np.exp(-1j*phase) )
+    gg = ifftn( fftn(data)* np.exp(1j*2*np.pi*(-deltax*Nx/nx-deltay*Ny/ny)) * np.exp(-1j*phase) )
     return gg
 
 def chi2(im1, im2, dx, dy):
@@ -26,7 +30,7 @@ def chi2(im1, im2, dx, dy):
     return ((im1-im2s)**2).sum()
 
 
-def register(im1, im2, usfac=1, return_registered=False, return_error=False, zeromean=True, DEBUG=False, maxoff=None):
+def register(im1, im2, usfac=1, return_registered=False, return_error=False, zeromean=True, DEBUG=False, maxoff=None, nthreads=1, use_numpy_fft=False):
     """
     Sub-pixel image registration (see dftregistration for lots of details)
 
@@ -35,6 +39,8 @@ def register(im1, im2, usfac=1, return_registered=False, return_error=False, zer
     im1 : np.ndarray
     im2 : np.ndarray
         The images to register. 
+    usfac : int
+        upsampling factor; governs accuracy of fit (1/usfac is best accuracy)
     return_registered : bool
         Return the registered image as the last parameter
     return_error : bool
@@ -73,8 +79,10 @@ def register(im1, im2, usfac=1, return_registered=False, return_error=False, zer
         im2 = im2.copy()
         im2[im2!=im2] = 0
 
-    im1fft = np.fft.fft2(im1)
-    im2fft = np.fft.fft2(im2)
+    fft2,ifft2 = fftn,ifftn = fast_ffts.get_ffts(nthreads=nthreads, use_numpy_fft=use_numpy_fft)
+
+    im1fft = fft2(im1)
+    im2fft = fft2(im2)
 
     output = dftregistration(im1fft,im2fft,usfac=usfac,
             return_registered=return_registered, return_error=return_error,
@@ -83,13 +91,14 @@ def register(im1, im2, usfac=1, return_registered=False, return_error=False, zer
     output = [-output[1], -output[0], ] + [o for o in output[2:]]
 
     if return_registered:
-        output[-1] = np.abs(np.fft.ifftshift(np.fft.ifft2(output[-1])))
+        output[-1] = np.abs(np.fft.ifftshift(ifft2(output[-1])))
 
     return output
 
 
 def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False,
-        return_error=False, zeromean=True, DEBUG=False, maxoff=None):
+        return_error=False, zeromean=True, DEBUG=False, maxoff=None,
+        nthreads=1, use_numpy_fft=False):
     """
     Efficient subpixel image registration by crosscorrelation. This code
     gives the same precision as the FFT upsampled cross correlation in a
@@ -134,7 +143,8 @@ def dftregistration(buf1ft,buf2ft,usfac=1, return_registered=False,
     # this function is translated from matlab, so I'm just going to pretend
     # it is matlab/pylab
     from numpy import conj,abs,arctan2,sqrt,real,imag,shape,zeros,trunc,ceil,floor,fix
-    from numpy.fft import fftshift,ifftshift,fft2,ifft2
+    from numpy.fft import fftshift,ifftshift
+    fft2,ifft2 = fftn,ifftn = fast_ffts.get_ffts(nthreads=nthreads, use_numpy_fft=use_numpy_fft)
 
     # Compute error for no pixel shift
     if usfac == 0:
@@ -375,6 +385,9 @@ def dftups(inp,nor=None,noc=None,usfac=1,roff=0,coff=0):
     return out 
 
 def upsample_ft_raw(buf1ft,buf2ft,zoomfac=2):
+    """
+    This was just test/debug code to compare to dftups; it is not meant for use
+    """
 
     from numpy.fft import ifft2,ifftshift,fftshift
     from numpy import conj
@@ -393,7 +406,9 @@ def upsample_ft_raw(buf1ft,buf2ft,zoomfac=2):
     
     return CC
 
-def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=False, quiet=True, sigma_cut=False, **kwargs):
+def cross_correlation_shifts_FITS(fitsfile1, fitsfile2,
+        return_cropped_images=False, quiet=True, sigma_cut=False,
+        register_method=cross_correlation_shifts, **kwargs):
     """
     Determine the shift between two FITS images using the cross-correlation
     technique.  Requires montage or hcongrid.
@@ -450,7 +465,7 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2, return_cropped_images=Fa
         corr_image2 = image2_projected
 
     verbose = kwargs.pop('verbose') if 'verbose' in kwargs else not quiet
-    xoff,yoff = cross_correlation_shifts(corr_image1, corr_image2, verbose=verbose,**kwargs)
+    xoff,yoff = register_method(corr_image1, corr_image2, verbose=verbose,**kwargs)
     
     wcs = pywcs.WCS(header)
     try:
@@ -1014,15 +1029,16 @@ try:
 
         return np.array(offsets)
 
-    def register_noise_test(im1,im2,usf=201, ntests=100, noise=np.std, **kwargs):
+    def register_noise_test(im1,im2, ntests=100, noise=np.std,
+            register_method=register, **kwargs):
         """
         Perform tests with noise added to determine the errors on the 
         'best-fit' offset
 
         Parameters
         ----------
-        usf : int
-            Upsampling factor (max accuracy = 1/usf)
+        register_method : function
+            Which registration method to test
         ntests : int
             Number of tests to run
         noise : func or real
@@ -1046,8 +1062,48 @@ try:
         offsets = []
         for test_number in progress(xrange(ntests)):
             extra_noise = np.random.randn(*im2.shape) * noise
-            dy,dx = register(im1,im2+extra_noise,usfac=usf,**kwargs)
+            dx,dy = register_method(im1,im2+extra_noise,**kwargs)
             offsets.append([dx,dy])
+
+        return np.array(offsets)
+
+    def compare_methods(im1,im2, ntests=100, noise=np.std,
+            usfac=201, **kwargs):
+        """
+        Perform tests with noise added to determine the errors on the 
+        'best-fit' offset
+
+        Parameters
+        ----------
+        usfac : int
+            upsampling factor; governs accuracy of fit (1/usfac is best accuracy)
+        ntests : int
+            Number of tests to run
+        noise : func or real
+            Either a function to apply to im2 to determine the noise to use, or
+            a fixed noise level
+        """
+
+        try:
+            noise = noise(im2)
+        except TypeError:
+            pass
+
+        try: 
+            import progressbar
+            widgets = [progressbar.FormatLabel('Processed: %(value)d offsets in %(elapsed)s'), progressbar.Percentage()]
+            progress = progressbar.ProgressBar(widgets=widgets)
+        except ImportError:
+            def progress(x):
+                yield x
+
+        offsets = []
+        for test_number in progress(xrange(ntests)):
+            extra_noise = np.random.randn(*im2.shape) * noise
+            dxr,dyr = register(im1,im2+extra_noise,usfac=usfac,**kwargs)
+            dxccs,dyccs = cross_correlation_shifts(im1,im2+extra_noise,**kwargs)
+            dxccg,dyccg = cross_correlation_shifts(im1,im2+extra_noise,gaussfit=True,**kwargs)
+            offsets.append([dxr,dyr,dxccs,dyccs,dxccg,dyccg])
 
         return np.array(offsets)
 
@@ -1085,3 +1141,10 @@ if doplots:
     xlabel("Upsample Factor")
     ylabel("Real offset - measured offset")
 
+
+    # some neat test codes:
+    # compare_offsets = compare_methods(testim, testim_offset, nthreads=8)
+    # plot(compare_offsets[:,0],compare_offsets[:,2],'.')
+    # errorbar(compare_offsets[:,0].mean(),compare_offsets[:,2].mean(),xerr=compare_offsets[:,0].std(),yerr=compare_offsets[:,2].std(),marker='x',linestyle='none')
+    # plot(compare_offsets[:,1],compare_offsets[:,3],'.')
+    # errorbar(compare_offsets[:,1].mean(),compare_offsets[:,3].mean(),xerr=compare_offsets[:,1].std(),yerr=compare_offsets[:,3].std(),marker='x',linestyle='none')

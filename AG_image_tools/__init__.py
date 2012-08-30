@@ -3,4 +3,4 @@ from radialprofile import azimuthalAverage,azimuthalAverageBins,radialAverage,ra
 from drizzle import drizzle
 import downsample
 from downsample import downsample,downsample_1d,downsample_cube
-from cross_correlation_shifts import cross_correlation_shifts_FITS,cross_correlation_shifts,chi2_shift
+from cross_correlation_shifts import cross_correlation_shifts_FITS,cross_correlation_shifts,chi2_shift,register,dftregistration,register_noise_test

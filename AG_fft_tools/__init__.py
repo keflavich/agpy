@@ -14,3 +14,4 @@ from psds import PSD2
 from smooth_tools import smooth
 from convolve_nd import convolvend
 from convolve_nd import convolvend as convolve
+import fast_ffts
