@@ -23,3 +23,10 @@ Image Tools
     :members:
     :undoc-members:
 
+:mod:`cross_correlation_shifts` Module
+---------------------------
+
+.. automodule:: AG_image_tools.cross_correlation_shifts
+    :members:
+    :undoc-members:
+

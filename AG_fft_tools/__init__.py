@@ -15,3 +15,5 @@ from smooth_tools import smooth
 from convolve_nd import convolvend
 from convolve_nd import convolvend as convolve
 import fast_ffts
+from upsample import dftups,upsample_image
+from shift import shift
