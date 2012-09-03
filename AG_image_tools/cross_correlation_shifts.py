@@ -4,7 +4,8 @@ import warnings
 import numpy as np
 
 
-def shift(data, deltax, deltay, phase=0, nthreads=1, use_numpy_fft=False):
+def shift(data, deltax, deltay, phase=0, nthreads=1, use_numpy_fft=False,
+        return_abs=True):
     """
     FFT-based sub-pixel image shift
     http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation/content/html/efficient_subpixel_registration.html
@@ -21,12 +22,23 @@ def shift(data, deltax, deltay, phase=0, nthreads=1, use_numpy_fft=False):
     Ny = np.fft.ifftshift(np.linspace(-np.fix(ny/2),np.ceil(ny/2)-1,ny))
     Nx,Ny = np.meshgrid(Nx,Ny)
     gg = ifftn( fftn(data)* np.exp(1j*2*np.pi*(-deltax*Nx/nx-deltay*Ny/ny)) * np.exp(-1j*phase) )
-    return gg
+    if return_abs:
+        return np.abs(gg)
+    else:
+        return gg
 
-def chi2(im1, im2, dx, dy):
+def chi2(im1, im2, dx, dy, upsample=1):
     im1 = np.nan_to_num(im1)
     im2 = np.nan_to_num(im2)
-    im2s = np.abs(shift(im2, -dx, -dy))
+
+    if upsample > 1:
+        im1  = upsample_image(im1, upsample_factor=upsample, output_size=im1.shape, )
+        im2s = upsample_image(im2, upsample_factor=upsample, output_size=im2.shape, xshift=-dx*upsample, yshift=-dy*upsample)
+        #im2s = np.abs(shift(im2, -dx*upsample, -dy*upsample))
+
+    else:
+        im2s = np.abs(shift(im2, -dx, -dy))
+
     return ((im1-im2s)**2).sum()
 
 
@@ -384,6 +396,33 @@ def dftups(inp,nor=None,noc=None,usfac=1,roff=0,coff=0):
     #return np.roll(np.roll(out,-1,axis=0),-1,axis=1)
     return out 
 
+def upsample_image(image, upsample_factor=1, output_size=None, nthreads=1, use_numpy_fft=False,
+        xshift=0, yshift=0):
+    """
+    Use dftups to upsample an image (but takes an image and returns an image with all reals)
+    """
+    fftn,ifftn = fast_ffts.get_ffts(nthreads=nthreads, use_numpy_fft=use_numpy_fft)
+
+    imfft = ifftn(image)
+
+    if output_size is None:
+        s1 = image.shape[0]*upsample_factor
+        s2 = image.shape[1]*upsample_factor
+    elif hasattr(output_size,'__len__'):
+        s1 = output_size[0]
+        s2 = output_size[1]
+    else:
+        s1 = output_size
+        s2 = output_size
+
+    ups = dftups(imfft, s1, s2, upsample_factor, roff=yshift, coff=xshift)
+
+    return np.abs(ups)
+
+
+
+    
+
 def upsample_ft_raw(buf1ft,buf2ft,zoomfac=2):
     """
     This was just test/debug code to compare to dftups; it is not meant for use
@@ -548,10 +587,14 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         # Zucker error
 
         if return_error:
-            ccorrn = ccorr / eccorr**2 / ccorr.size #/ (errim1.mean()*errim2.mean()) #/ eccorr**2
-            exshift = (np.abs(-1 * ccorrn.size * fxx/ccorrn[ymax,xmax] *
+            #acorr1 = (correlate2d(image1,image1,quiet=quiet,**kwargs) / image1.size)
+            #acorr2 = (correlate2d(image2,image2,quiet=quiet,**kwargs) / image2.size)
+            #ccorrn = ccorr / eccorr**2 / ccorr.size #/ (errim1.mean()*errim2.mean()) #/ eccorr**2
+            normalization = 1. / ((image1**2).sum()/image1.size) / ((image2**2).sum()/image2.size) 
+            ccorrn = ccorr * normalization
+            exshift = (np.abs(-1 * ccorrn.size * fxx*normalization/ccorrn[ymax,xmax] *
                     (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) 
-            eyshift = (np.abs(-1 * ccorrn.size * fyy/ccorrn[ymax,xmax] *
+            eyshift = (np.abs(-1 * ccorrn.size * fyy*normalization/ccorrn[ymax,xmax] *
                     (ccorrn[ymax,xmax]**2/(1-ccorrn[ymax,xmax]**2)))**-0.5) 
             if np.isnan(exshift):
                 raise ValueError("Error: NAN error!")
@@ -673,16 +716,195 @@ def cross_correlation_shifts_FITS(fitsfile1, fitsfile2,
         return xoff,yoff,xoff_wcs,yoff_wcs
     
 
+def chi2_of_offset(im1, im2, err=None, upsample_factor=10, boundary='wrap',
+        nthreads=1, use_numpy_fft=False, zeromean=False, ndof=2, verbose=True,
+        return_error=True, return_chi2array=False):
+    """
+    Find the offsets between image 1 and image 2 using the DFT upsampling method
+    (http://www.mathworks.com/matlabcentral/fileexchange/18401-efficient-subpixel-image-registration-by-cross-correlation/content/html/efficient_subpixel_registration.html)
+    combined with chi^2 to measure the errors on the fit
+    
+    Parameters
+    ----------
+    im1 : np.ndarray
+    im2 : np.ndarray
+        The images to register. 
+    err : np.ndarray
+        Per-pixel error in image 2
+    boundary : 'wrap','constant','reflect','nearest'
+        Option to pass to map_coordinates for determining what to do with
+        shifts outside of the boundaries.  
+    upsample_factor : int
+        upsampling factor; governs accuracy of fit (1/usfac is best accuracy)
+    return_error : bool
+        Returns the "fit error" (1-sigma in x and y) based on the delta-chi2
+        values
+    return_chi2_array : bool
+        Returns the x and y shifts and the chi2 as a function of those shifts
+        in addition to other returned parameters.  i.e., the last return from
+        this function will be a tuple (x, y, chi2)
+    zeromean : bool
+        Subtract the mean from the images before cross-correlating?  If no, you
+        may get a 0,0 offset because the DC levels are strongly correlated.
+    verbose : bool
+        Print error message if upsampling factor is inadequate to measure errors
+    use_numpy_fft : bool
+        Force use numpy's fft over fftw?  (only matters if you have fftw
+        installed)
+    nthreads : bool
+        Number of threads to use for fft (only matters if you have fftw
+        installed)
+    ndof : int
+        number of degrees of freedom in the fit (used for chi^2 computations).
+        Should probably always be 2.
 
-def chi2_shift(im1, im2, err=None, mode='wrap', maxoff=None, **kwargs):
+
+    Returns
+    -------
+    dx,dy : float,float
+        REVERSE of dftregistration order (also, signs flipped) for consistency
+        with other routines.
+        Measures the amount im2 is offset from im1 (i.e., shift im2 by these #'s
+        to match im1)
+
+
+    """
+    if not im1.shape == im2.shape:
+        raise ValueError("Images must have same shape.")
+
+    if zeromean:
+        im1 = im1 - (im1[im1==im1].mean())
+        im2 = im2 - (im2[im2==im2].mean())
+
+    if np.any(np.isnan(im1)):
+        im1 = im1.copy()
+        im1[im1!=im1] = 0
+    if np.any(np.isnan(im2)):
+        im2 = im2.copy()
+        im2[im2!=im2] = 0
+
+    xc = correlate2d(im1,im2, boundary=boundary)
+    if err is not None:
+        err_ac = correlate2d(err,err, boundary=boundary)
+        err2sum = (err**2).sum()
+    else:
+        err_ac = xc.size - ndof
+        err2sum = xc.size - ndof
+    ac1peak = (im1**2).sum()
+    ac2peak = (im2**2).sum()
+    chi2n = (ac1peak/err2sum - 2*xc/err_ac + ac2peak/err2sum)
+    ymax, xmax = np.unravel_index(chi2n.argmin(), chi2n.shape)
+
+    fftn,ifftn = fast_ffts.get_ffts(nthreads=nthreads, use_numpy_fft=use_numpy_fft)
+
+    # biggest scale = where chi^2/n ~ 9?
+
+    s1,s2 = im1.shape
+    ylen,xlen = im1.shape
+    xcen = xlen/2-(1-xlen%2) 
+    ycen = ylen/2-(1-ylen%2) 
+    yshift = ymax-ycen # shift im2 by these numbers to get im1
+    xshift = xmax-xcen
+
+    #xcft = correlate2d(im1,im2,boundary=boundary,return_fft=True)
+
+    # signs?!
+    zoom_factor = s1/upsample_factor
+    if zoom_factor <= 1:
+        zoom_factor = 2
+        s1 = zoom_factor*upsample_factor
+        s2 = zoom_factor*upsample_factor
+    dftshift = np.trunc(np.ceil(upsample_factor*zoom_factor)/2); #% Center of output array at dftshift+1
+    xc_ups = dftups(fftn(im2)*np.conj(fftn(im1)), s1, s2, usfac=upsample_factor,
+            roff=dftshift-yshift*upsample_factor,
+            coff=dftshift-xshift*upsample_factor) / (im1.size) #*upsample_factor**2)
+    if err is not None:
+        err_ups = upsample_image(err, output_size=s1,
+                upsample_factor=upsample_factor, xshift=xshift, yshift=yshift)
+    else:
+        err_ups = 1
+    chi2n_ups = (ac1peak/err2sum-2*np.abs(xc_ups)/np.abs(err_ups)+ac2peak/err2sum)
+    deltachi2 = chi2n_ups - chi2n_ups.min()
+
+    yy,xx = np.indices([s1,s2])
+    xshifts_corrections = (xx-dftshift)/upsample_factor
+    yshifts_corrections = (yy-dftshift)/upsample_factor
+
+    try:
+        import scipy.stats
+        # 1,2,3-sigma delta-chi2 levels
+        m1 = scipy.stats.chi2.ppf( 1-scipy.stats.norm.sf(1)*2, ndof )
+        m2 = scipy.stats.chi2.ppf( 1-scipy.stats.norm.sf(2)*2, ndof )
+        m3 = scipy.stats.chi2.ppf( 1-scipy.stats.norm.sf(3)*2, ndof )
+    except ImportError:
+        # assume m=2 (2 degrees of freedom)
+        m1 = 2.2957489288986364
+        m2 = 6.1800743062441734 
+        m3 = 11.829158081900793
+
+    sigma1_area = deltachi2<m1
+    x_sigma1 = xshifts_corrections[sigma1_area]
+    y_sigma1 = yshifts_corrections[sigma1_area]
+    # optional...?
+    #sigma2_area = deltachi2<m2
+    #x_sigma2 = xshifts_corrections[sigma2_area]
+    #y_sigma2 = yshifts_corrections[sigma2_area]
+    #sigma3_area = deltachi2<m3
+    #x_sigma3 = xshifts_corrections[sigma3_area]
+    #y_sigma3 = yshifts_corrections[sigma3_area]
+
+    if sigma1_area.sum() <= 1:
+        if verbose:
+            print "Cannot estimate errors: need higher upsample factor"
+        errx_low = erry_low = errx_high = erry_high = 1./upsample_factor
+
+    upsymax,upsxmax = np.unravel_index(chi2n_ups.argmin(), chi2n_ups.shape)
+
+    errx_low = (upsxmax-dftshift)/upsample_factor - x_sigma1.min()
+    errx_high = x_sigma1.max() - (upsxmax-dftshift)/upsample_factor
+    erry_low = (upsymax-dftshift)/upsample_factor - y_sigma1.min()
+    erry_high = y_sigma1.max() - (upsymax-dftshift)/upsample_factor
+
+    if verbose > 1:
+        #print ymax,xmax
+        #print upsymax, upsxmax
+        #print upsymax-dftshift, upsxmax-dftshift
+        print "Correction: ",(upsymax-dftshift)/float(upsample_factor), (upsxmax-dftshift)/float(upsample_factor)
+        yshift_corr = yshift+(upsymax-dftshift)/float(upsample_factor)
+        xshift_corr = xshift+(upsxmax-dftshift)/float(upsample_factor)
+        print "Chi2 1sig bounds:", x_sigma1.min(), x_sigma1.max(), y_sigma1.min(), y_sigma1.max()
+        print errx_low,errx_high,erry_low,erry_high
+        print "%0.3f +%0.3f -%0.3f   %0.3f +%0.3f -%0.3f" % (yshift_corr, erry_high, erry_low, xshift_corr, errx_high, errx_low)
+        #print ymax-ycen+upsymax/float(upsample_factor), xmax-xcen+upsxmax/float(upsample_factor)
+        #print (upsymax-s1/2)/upsample_factor, (upsxmax-s2/2)/upsample_factor
+
+    shift_xvals = xshifts_corrections+xshift
+    shift_yvals = yshifts_corrections+yshift
+
+    returns = [yshift_corr,xshift_corr]
+    if return_error:
+        returns.append( (errx_low+errx_high)/2. )
+        returns.append( (erry_low+erry_high)/2. )
+    if return_chi2array:
+        returns.append((shift_xvals,shift_yvals,chi2n_ups))
+
+    return returns
+
+
+def chi2_shift(im1, im2, err=None, mode='wrap', maxoff=None, return_error=True,
+        guessx=0, guessy=0, use_fft=False, ignore_outside=True, **kwargs):
     """
     Determine the best fit offset using `scipy.ndimage.map_coordinates` to
     shift the offset image.
 
     Parameters
     ----------
-        im1
-        im2
+        im1 : np.ndarray
+            First image
+        im2 : np.ndarray
+            Second image (offset image)
+        err : np.ndarray
+            Per-pixel error in image 2
         mode : 'wrap','constant','reflect','nearest'
             Option to pass to map_coordinates for determining what to do with
             shifts outside of the boundaries.  
@@ -696,6 +918,7 @@ def chi2_shift(im1, im2, err=None, mode='wrap', maxoff=None, **kwargs):
     #ac1peak = (im1**2).sum()
     #ac2peak = (im2**2).sum()
     #chi2 = ac1peak - 2*xc + ac2peak
+
 
     if not im1.shape == im2.shape:
         raise ValueError("Images must have same shape.")
@@ -711,31 +934,79 @@ def chi2_shift(im1, im2, err=None, mode='wrap', maxoff=None, **kwargs):
 
     im1 = im1-im1.mean()
     im2 = im2-im2.mean()
-    yy,xx = np.indices(im1.shape)
+    if not use_fft:
+        yy,xx = np.indices(im1.shape)
     ylen,xlen = im1.shape
     xcen = xlen/2-(1-xlen%2) 
     ycen = ylen/2-(1-ylen%2) 
     import scipy.ndimage,scipy.optimize
-    def chi2(p, **kwargs):
+
+    def residuals(p, **kwargs):
         xsh,ysh = p
-        shifted_img = scipy.ndimage.map_coordinates(im2, [yy+ysh,xx+xsh], mode=mode, **kwargs)
+        if use_fft:
+            shifted_img = shift(im2, -ysh, -xsh)
+        else:
+            shifted_img = scipy.ndimage.map_coordinates(im2, [yy+ysh,xx+xsh], mode=mode, **kwargs)
         if maxoff is not None:
             xslice = slice(xcen-maxoff,xcen+maxoff,None)
             yslice = slice(ycen-maxoff,ycen+maxoff,None)
             # divide by sqrt(number of samples) = sqrt(maxoff**2)
-            residuals = np.ravel((im1[yslice,xslice]-shifted_img[yslice,xslice])) / maxoff
+            residuals = np.abs(np.ravel((im1[yslice,xslice]-shifted_img[yslice,xslice])) / maxoff)
         else:
-            xslice = slice(None)
-            yslice = slice(None)
-            residuals = np.abs(np.ravel((im1-shifted_img))) / im1.size**0.5
+            if ignore_outside:
+                outsidex = min([(xlen-2*xsh)/2,xcen])
+                outsidey = min([(ylen-2*ysh)/2,xcen])
+                xslice = slice(xcen-outsidex,xcen+outsidex,None)
+                yslice = slice(ycen-outsidey,ycen+outsidey,None)
+                residuals = ( np.abs( np.ravel(
+                    (im1[yslice,xslice]-shifted_img[yslice,xslice]))) /
+                    (2*outsidex*2*outsidey)**0.5 )
+            else:
+                xslice = slice(None)
+                yslice = slice(None)
+                residuals = np.abs(np.ravel((im1-shifted_img))) / im1.size**0.5
         if err is None:
             return residuals
         else:
-            shifted_err = scipy.ndimage.map_coordinates(err, [yy+ysh,xx+xsh], mode=mode, **kwargs)
-            return residuals / shifted_err[slice,slice] 
+            if use_fft:
+                shifted_err = shift(err, -ysh, -xsh)
+            else:
+                shifted_err = scipy.ndimage.map_coordinates(err, [yy+ysh,xx+xsh], mode=mode, **kwargs)
+            return residuals / shifted_err[yslice,xslice].flat
 
-    bestfit,cov,info,msg,ier = scipy.optimize.leastsq(chi2, [0.5,0.5], full_output=1)
-    return bestfit[0],bestfit[1],cov[0,0],cov[1,1]
+    bestfit,cov,info,msg,ier = scipy.optimize.leastsq(residuals, [guessx,guessy], full_output=1)
+    #bestfit,cov = scipy.optimize.curve_fit(shift, im2, im1, p0=[guessx,guessy], sigma=err)
+
+    chi2n = (residuals(bestfit)**2).sum() / (im1.size-2)
+
+    if bestfit is None or cov is None:
+        print bestfit-np.array([guessx,guessy])
+        print bestfit
+        print cov
+        print info
+        print msg
+        print ier
+        if cov is None:
+            from numpy.dual import inv
+            from numpy.linalg import LinAlgError
+            n = 2 # number of free pars
+            perm = np.take(np.eye(n),info['ipvt']-1,0)
+            r = np.triu(np.transpose(info['fjac'])[:n,:])
+            R = np.dot(r, perm)
+            try:
+                cov = inv(np.dot(np.transpose(R),R))
+            except LinAlgError:
+                print "Could not compute cov because of linalgerr"
+                pass
+                
+        
+    if return_error:
+        if cov is None:
+            return bestfit[0],bestfit[1],0,0
+        else: # based on scipy.optimize.curve_fit, the "correct" covariance is this cov * chi^2/n
+            return bestfit[0],bestfit[1],(cov[0,0]*chi2n)**0.5,(cov[1,1]*chi2n)**0.5
+    else:
+        return bestfit[0],bestfit[1]
 
 
 
@@ -1099,15 +1370,65 @@ try:
                 yield x
 
         offsets = []
+        eoffsets = []
         for test_number in progress(xrange(ntests)):
             extra_noise = np.random.randn(*im2.shape) * noise
-            dxr,dyr = register(im1,im2+extra_noise,usfac=usfac,**kwargs)
-            dxccs,dyccs = cross_correlation_shifts(im1,im2+extra_noise,**kwargs)
-            dxccg,dyccg = cross_correlation_shifts(im1,im2+extra_noise,gaussfit=True,**kwargs)
-            offsets.append([dxr,dyr,dxccs,dyccs,dxccg,dyccg])
+            dxr, dyr, edxr, edyr = register(im1, im2+extra_noise, usfac=usfac,
+                    return_error=True, **kwargs)
+            dxccs, dyccs, edxccs, edyccs = cross_correlation_shifts(im1,
+                    im2+extra_noise, return_error=True, **kwargs)
+            dxccg, dyccg, edxccg, edyccg = cross_correlation_shifts(im1,
+                    im2+extra_noise, return_error=True, gaussfit=True,
+                    **kwargs)
+            dxchi, dychi, edxchi, edychi = chi2_shift(im1, im2+extra_noise,
+                    return_error=True, guessx=dxr, guessy=dyr, use_fft=True,
+                    **kwargs)
+            offsets.append([dxr,dyr,dxccs,dyccs,dxccg,dyccg,dxchi,dychi])
+            eoffsets.append([edxr,edyr,edxccs,edyccs,edxccg,edyccg,edxchi,edychi])
 
-        return np.array(offsets)
+        return np.array(offsets),np.array(eoffsets)
 
+    def plot_compare_methods(offsets, eoffsets, dx=None, dy=None, fig1=1,
+            fig2=2, legend=True):
+        """
+        plot wrapper
+        """
+        import pylab
+
+        pylab.figure(fig1)
+        pylab.clf()
+        if dx is not None and dy is not None:
+            pylab.plot([dx],[dy],'kx',markersize=30,zorder=50,markeredgewidth=3)
+        pylab.errorbar(offsets[:,0],offsets[:,1],xerr=eoffsets[:,0],yerr=eoffsets[:,1],linestyle='none',label='DFT')
+        pylab.errorbar(offsets[:,2],offsets[:,3],xerr=eoffsets[:,2],yerr=eoffsets[:,3],linestyle='none',label='Taylor')
+        pylab.errorbar(offsets[:,4],offsets[:,5],xerr=eoffsets[:,4],yerr=eoffsets[:,5],linestyle='none',label='Gaussian')
+        pylab.errorbar(offsets[:,6],offsets[:,7],xerr=eoffsets[:,6],yerr=eoffsets[:,7],linestyle='none',label='$\\chi^2$')
+        if legend:
+            pylab.legend(loc='best')
+
+        means = offsets.mean(axis=0)
+        stds = offsets.std(axis=0)
+        emeans = eoffsets.mean(axis=0)
+        estds = eoffsets.std(axis=0)
+
+        print stds
+        print emeans
+        print emeans/stds
+
+        pylab.figure(fig2)
+        pylab.clf()
+        if dx is not None and dy is not None:
+            pylab.plot([dx],[dy],'kx',markersize=30,zorder=50,markeredgewidth=3)
+        pylab.errorbar(means[0],means[1],xerr=emeans[0],yerr=emeans[1],capsize=20,color='r',dash_capstyle='round',solid_capstyle='round',label='DFT')     
+        pylab.errorbar(means[2],means[3],xerr=emeans[2],yerr=emeans[3],capsize=20,color='g',dash_capstyle='round',solid_capstyle='round',label='Taylor')  
+        pylab.errorbar(means[4],means[5],xerr=emeans[4],yerr=emeans[5],capsize=20,color='b',dash_capstyle='round',solid_capstyle='round',label='Gaussian')
+        pylab.errorbar(means[6],means[7],xerr=emeans[6],yerr=emeans[7],capsize=20,color='m',dash_capstyle='round',solid_capstyle='round',label='$\\chi^2$')
+        pylab.errorbar(means[0],means[1],xerr=stds[0],yerr=stds[1],capsize=10,color='r',linestyle='--',linewidth=5)
+        pylab.errorbar(means[2],means[3],xerr=stds[2],yerr=stds[3],capsize=10,color='g',linestyle='--',linewidth=5)
+        pylab.errorbar(means[4],means[5],xerr=stds[4],yerr=stds[5],capsize=10,color='b',linestyle='--',linewidth=5)
+        pylab.errorbar(means[6],means[7],xerr=stds[6],yerr=stds[7],capsize=10,color='m',linestyle='--',linewidth=5)
+        if legend:
+            pylab.legend(loc='best')
 
 
 
