@@ -1,6 +1,10 @@
 import numpy as np
-import pywcs
-import pyfits
+try:
+    import astropy.io.fits as pyfits
+    import astropy.wcs as pywcs
+except ImportError:
+    import pyfits
+    import pywcs
 import scipy.ndimage
 
 def hcongrid(image, header1, header2, **kwargs):
