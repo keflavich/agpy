@@ -50,9 +50,49 @@ def schechter(m,A=1,beta=2,m0=100, integral=False):
     """
     A Schechter function with arbitrary defaults
     (integral may not be correct - exponent hasn't been dealt with at all)
+
+    $$ A m^{-\\beta} e^{-m/m_0} $$
+    
+    Parameters
+    ----------
+        m : np.ndarray
+            List of masses for which to compute the Schechter function
+        A : float
+            Arbitrary amplitude of the Schechter function
+        beta : float
+            Power law exponent
+        m0 : float
+            Characteristic mass (mass at which exponential decay takes over)
+    
+    Returns
+    -------
+        p(m) - the (unnormalized) probability of an object of a given mass
+        as a function of that object's mass
+        (though you could interpret mass as anything, it's just a number)
+
     """
     if integral: beta -= 1
     return A*m**-beta * np.exp(-m/m0)
+
+def modified_schechter(m, m1, **kwargs):
+    """
+    A Schechter function with a low-level exponential cutoff
+    "
+    Parameters
+    ----------
+        m : np.ndarray
+            List of masses for which to compute the Schechter function
+        m1 : float
+            Characteristic minimum mass (exponential decay below this mass)
+        ** See schecter for other parameters ** 
+
+    Returns
+    -------
+        p(m) - the (unnormalized) probability of an object of a given mass
+        as a function of that object's mass
+        (though you could interpret mass as anything, it's just a number)
+    """
+    return schechter(m, **kwargs) * np.exp(-m1/m)
 
 try: 
     import scipy
@@ -114,11 +154,11 @@ def m_cumint(fn=kroupa, bins=np.logspace(-2,2,500)):
     xax,integral = m_integrate(fn,bins)
     return integral.cumsum() / integral.sum()
 
-massfunctions = {'kroupa':kroupa, 'salpeter':salpeter, 'chabrier':chabrier, 'schechter':schechter}
+massfunctions = {'kroupa':kroupa, 'salpeter':salpeter, 'chabrier':chabrier, 'schechter':schechter,'modified_schechter':modified_schechter}
 # salpeter and schechter selections are arbitrary
-mostcommonmass = {'kroupa':0.08, 'salpeter':0.01, 'chabrier':0.23, 'schecter':0.01}
+mostcommonmass = {'kroupa':0.08, 'salpeter':0.01, 'chabrier':0.23, 'schecter':0.01,'modified_schechter':0.01}
 
-def inverse_imf(p, nbins=1000, mmin=0.03, mmax=120, massfunc='kroupa'):
+def inverse_imf(p, nbins=1000, mmin=0.03, mmax=120, massfunc='kroupa', **kwargs):
     """
     Inverse mass function
 
@@ -127,9 +167,9 @@ def inverse_imf(p, nbins=1000, mmin=0.03, mmax=120, massfunc='kroupa'):
  
     masses = np.logspace(np.log10(mmin),np.log10(mmax),nbins)
     if type(massfunc) is types.FunctionType:
-        mf = massfunc(masses, integral=True)
+        mf = massfunc(masses, integral=True, **kwargs)
     elif type(massfunc) is str:
-        mf = massfunctions[massfunc](masses, integral=True)
+        mf = massfunctions[massfunc](masses, integral=True, **kwargs)
     else:
         raise ValueError("massfunc must either be a string in the set %s or a function" % (",".join(massfunctions.keys())))
     mfcum = mf.cumsum()
