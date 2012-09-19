@@ -229,6 +229,46 @@ def make_cluster(mcluster, massfunc='kroupa', verbose=False, silent=False, toler
 vgsmass = [150.,  130.,  110.,   90.,   70.,  51.3,44.2,41.0,38.1,35.5,33.1,30.8,28.8,26.9,25.1,23.6,22.1,20.8,19.5,18.4,18.,  16.,  14.,  12.,  10.,   8.][::-1]
 vgslogq = [50.51,50.34,50.13,49.88,49.57,49.18,48.99,48.90,48.81,48.72,48.61,48.49,48.34,48.16,47.92,47.63,47.25,46.77,46.23,45.69,45.58,44.65,43.60,42.39,40.96,39.21][::-1]
 
+# non-extrapolated
+vgsM    = [51.3,44.2,41.0,38.1,35.5,33.1,30.8,28.8,26.9,25.1,23.6,22.1,20.8,19.5,18.4]
+vgslogL = [6.154,6.046,5.991,5.934,5.876,5.817,5.756,5.695,5.631,5.566,5.499,5.431,5.360,5.287,5.211]
+vgslogQ = [49.18,48.99,48.90,48.81,48.72,48.61,48.49,48.34,48.16,47.92,47.63,47.25,46.77,46.23,45.69]
+vgsMe = np.concatenate([
+    np.linspace(8,18.4,100),
+    vgsM[::-1],
+    np.linspace(50,150,100)])
+vgslogLe = np.concatenate([
+    np.polyval(np.polyfit(np.log10(vgsM)[-3:],vgslogL[-3:],1),np.log10(np.linspace(8,18.4,100))),
+    vgslogL[::-1],
+    np.polyval(np.polyfit(np.log10(vgsM)[:3],vgslogL[:3],1),np.log10(np.linspace(50,150,100)))])
+vgslogQe = np.concatenate([
+    np.polyval(np.polyfit(np.log10(vgsM)[-3:],vgslogQ[-3:],1),np.log10(np.linspace(8,18.4,100))),
+    vgslogQ[::-1],
+    np.polyval(np.polyfit(np.log10(vgsM)[:3],vgslogQ[:3],1),np.log10(np.linspace(50,150,100)))])
+
+def lum_of_star(mass):
+    """
+    Determine total luminosity of a star given its mass
+    Uses the Vacca, Garmany, Shull 1996 Table 5 Log Q and Mspec parameters
+
+    returns LogL in solar luminosities
+    **WARNING** Extrapolates for M not in [18.4,50] msun
+    """
+
+    return np.interp(mass, vgsMe, vgslogLe)
+
+def lum_of_cluster(masses):
+    """
+    Determine the log of the integrated luminosity of a cluster
+    Only M>=8msun count
+
+    masses is a list or array of masses.  
+    """
+    if max(masses) < 8: return 0
+    logL = lum_of_star(masses[masses >= 8])
+    logLtot = np.log10( (10**logL).sum() )
+    return logLtot
+
 def lyc_of_star(mass):
     """
     Determine lyman continuum luminosity of a star given its mass
@@ -237,7 +277,7 @@ def lyc_of_star(mass):
     returns LogQ
     """
 
-    return np.interp(mass, vgsmass, vgslogq)
+    return np.interp(mass, vgsMe, vgslogQe)
 
 def lyc_of_cluster(masses):
     """
