@@ -25,17 +25,20 @@ def ds9_photometry(xpapoint):
     wherenotnan = (arr == arr)
     mask = mask*wherenotnan
     hdr = pf[0].header
-    wcs = pywcs.WCS(hdr)
+    wcs = pywcs.WCS(hdr.tostring())
     try:
         try:
             bmaj = float(hdr['BMAJ'])
             bmin = float(hdr['BMIN'])
         except KeyError:
             # VLA imfits
+            bmin = None; bmaj = None
             for k,v in hdr.iteritems():
                 if numpy.iterable(v) and "BMAJ" in v:
                     bmaj = float(v.split()[3])
                     bmin = float(v.split()[5])
+            if bmin is None or bmaj is None:
+                raise KeyError("BMIN and BMAJ not found")
         try:
             cd1 = wcs.wcs.cd[0,0]
             cd2 = wcs.wcs.cd[1,1]

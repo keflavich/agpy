@@ -13,11 +13,58 @@ import os
 import agpy.cubes,agpy.grep,agpy.cutout
 import timer
 
+default_rootdirs = ['/Volumes/disk2/data/','/Volumes/WD_2/HiGal/','/Volumes/disk4/']
+
+#dirs = reduce(lambda a,b: a+b, [find_directories(dr) for dr in default_rootdirs], []) 
+
+standard_dirs = [
+        '/Volumes/disk2/data/MGPS/',
+        '/Volumes/disk2/data/MSX/',
+        '/Volumes/disk2/data/WISE/',
+        '/Volumes/disk2/data/bally_CO/',
+        '/Volumes/disk2/data/bgps/releases/IPAC/',
+        '/Volumes/disk2/data/bgps/releases/v2.0/',
+        '/Volumes/disk2/data/bgps/releases/v2.0/final/',
+        '/Volumes/disk2/data/c2d/',
+        '/Volumes/disk2/data/cara/csfiles/',
+        '/Volumes/disk2/data/cara/glimpsev3/',
+        '/Volumes/disk2/data/co/',
+        '/Volumes/disk2/data/glimpse/',
+        '/Volumes/disk2/data/glimpseii/',
+        '/Volumes/disk2/data/grs/',
+        '/Volumes/disk2/data/harp/fits/',
+        '/Volumes/disk2/data/iras/',
+        '/Volumes/disk2/data/magpis/',
+        '/Volumes/disk2/data/mips/',
+        '/Volumes/disk2/data/mipsgal/',
+        '/Volumes/disk2/data/mosaics/',
+        '/Volumes/disk2/data/motte/',
+        '/Volumes/disk2/data/nvss/',
+        '/Volumes/disk2/data/scuba/',
+        '/Volumes/disk2/data/sharc/processd/',
+        '/Volumes/disk2/data/vgps/',
+        '/Volumes/WD_2/HiGal/',
+        '/Volumes/disk4/cmz/',
+        '/Volumes/disk4/gc/',
+        '/Volumes/disk4/higal-gc/',
+        '/Volumes/disk4/l44_kirk/',
+        '/Volumes/disk4/mosaics/',
+        '/Volumes/disk4/nvss/',
+        '/Volumes/disk4/orion/',
+        '/Volumes/disk4/perseus/',
+        '/Volumes/disk4/vlss/',
+        ]
+
+dirs=standard_dirs
+
 @timer.print_timing
 def findimages(xc, yc, searchpath, coordsys='celestial', verbose=False,
         ignore_imagetypes=('_area','power','angle','weight','residual','smooth','model','mask','noise','label','nhits','covg','std','rms')):
     """
     Given a single coordinate pair, searches for images that contain the coordinate
+
+    findimages(xc, yc, searchpath, coordsys='celestial', verbose=False,
+        ignore_imagetypes=('_area','power','angle','weight','residual','smooth','model','mask','noise','label','nhits','covg','std','rms')):    
     """
     if verbose: print "Searching %s" % searchpath
     imlist = glob.glob(searchpath+"/*.fits")
@@ -83,10 +130,28 @@ def find_all_images(xc,yc,dirlist, flatten=False, **kwargs):
 @timer.print_timing
 def get_cutouts(xcoord,ycoord,xwidth,ywidth, coordsys='galactic',
         ignore_imagetypes=('_area','power','angle','weight','residual','smooth','model','mask','noise','label','nhits','covg','std','rms'),
-        flist='find', savedir=None, clobber=True, verbose=False, 
+        flist='find', savedir=None, clobber=True, verbose=False,  dirs=dirs,
         **kwargs):
     """
     Create cutouts from all possible images in the searched directories.
+
+    Parameters
+    ----------
+    xcoord, ycoord : float, float
+        lon, lat coordinates in degrees
+    xwidth, ywidth : float, float
+        lon, lat size of the cutout in degrees
+    savedir : None or string
+        If specified, will attempt to write out FITS files with the naming scheme:
+        savedir / [input_filename]_cutout.fits
+    dirs : list
+        A set of directories to search - defaults to a set specified at the
+        top of this file
+
+    get_cutouts(xcoord,ycoord,xwidth,ywidth, coordsys='galactic',
+            ignore_imagetypes=('_area','power','angle','weight','residual','smooth','model','mask','noise','label','nhits','covg','std','rms'),
+            flist='find', savedir=None, clobber=True, verbose=False, 
+            **kwargs):
     """
 
     if flist == 'find':
@@ -144,46 +209,3 @@ def find_directories(rootdir, ignoredirs=('v0.7','powerspectra','AGBT','Frame'))
 
     return paths
 
-default_rootdirs = ['/Volumes/disk2/data/','/Volumes/WD_2/HiGal/','/Volumes/disk4/']
-
-#dirs = reduce(lambda a,b: a+b, [find_directories(dr) for dr in default_rootdirs], []) 
-
-standard_dirs = [
-        '/Volumes/disk2/data/MGPS/',
-        '/Volumes/disk2/data/MSX/',
-        '/Volumes/disk2/data/WISE/',
-        '/Volumes/disk2/data/bally_CO/',
-        '/Volumes/disk2/data/bgps/releases/IPAC/',
-        '/Volumes/disk2/data/bgps/releases/v2.0/',
-        '/Volumes/disk2/data/bgps/releases/v2.0/final/',
-        '/Volumes/disk2/data/c2d/',
-        '/Volumes/disk2/data/cara/csfiles/',
-        '/Volumes/disk2/data/cara/glimpsev3/',
-        '/Volumes/disk2/data/co/',
-        '/Volumes/disk2/data/glimpse/',
-        '/Volumes/disk2/data/glimpseii/',
-        '/Volumes/disk2/data/grs/',
-        '/Volumes/disk2/data/harp/fits/',
-        '/Volumes/disk2/data/iras/',
-        '/Volumes/disk2/data/magpis/',
-        '/Volumes/disk2/data/mips/',
-        '/Volumes/disk2/data/mipsgal/',
-        '/Volumes/disk2/data/mosaics/',
-        '/Volumes/disk2/data/motte/',
-        '/Volumes/disk2/data/nvss/',
-        '/Volumes/disk2/data/scuba/',
-        '/Volumes/disk2/data/sharc/processd/',
-        '/Volumes/disk2/data/vgps/',
-        '/Volumes/WD_2/HiGal/',
-        '/Volumes/disk4/cmz/',
-        '/Volumes/disk4/gc/',
-        '/Volumes/disk4/higal-gc/',
-        '/Volumes/disk4/l44_kirk/',
-        '/Volumes/disk4/mosaics/',
-        '/Volumes/disk4/nvss/',
-        '/Volumes/disk4/orion/',
-        '/Volumes/disk4/perseus/',
-        '/Volumes/disk4/vlss/',
-        ]
-
-dirs=standard_dirs

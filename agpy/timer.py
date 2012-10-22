@@ -1,6 +1,8 @@
 import time
+from functools import wraps
 
 def print_timing(func):
+    @wraps(func)
     def wrapper(*arg,**kwargs):
         t1 = time.time()
         res = func(*arg,**kwargs)
