@@ -27,7 +27,7 @@ def shift(data, deltax, phase=0):
     """
     nx = data.size
     Nx = np.fft.ifftshift(np.linspace(-np.fix(nx/2),np.ceil(nx/2)-1,nx))
-    gg = np.fft.ifft( np.fft.fft(data)* np.exp(1j*2*pi*(-deltax*Nx/nx)) * np.exp(-1j*phase) )
+    gg = np.fft.ifft( np.fft.fft(data)* np.exp(1j*2*np.pi*(-deltax*Nx/nx)) * np.exp(-1j*phase) )
     return gg
 
 def chi2(arr1,arr2,lag):

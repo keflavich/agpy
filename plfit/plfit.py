@@ -63,6 +63,7 @@ class plfit:
         Initializes and fits the power law.  Can pass "quiet" to turn off 
         output (except for warnings; "silent" turns off warnings)
         """
+        x = np.array(x) # make sure x is an array, otherwise the next step fails 
         if (x<0).sum() > 0:
             print "Removed %i negative points" % ((x<0).sum())
             x = x[x>0]

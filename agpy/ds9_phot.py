@@ -20,12 +20,16 @@ def ds9_photometry(xpapoint):
         print ex
         raise ex
     pf = D.get_pyfits()
-    mask = reg.get_mask(pf[0])
+    ph = pyfits.PrimaryHDU(data=pf[0].data,header=pf[0].header)
+    mask = reg.get_mask(ph)
     arr = pf[0].data
     wherenotnan = (arr == arr)
     mask = mask*wherenotnan
     hdr = pf[0].header
-    wcs = pywcs.WCS(hdr.tostring())
+    try:
+        wcs = pywcs.WCS(hdr.tostring())
+    except AttributeError:
+        wcs = pywcs.WCS(hdr)
     try:
         try:
             bmaj = float(hdr['BMAJ'])

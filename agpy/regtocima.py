@@ -16,8 +16,8 @@ def regtocima(regfile,outfile,filtercolor=None):
     filtercolor - if specified, will ignore any regions of this color
     """
 
-    print "Doesn't work yet"
-    return
+    #print "Doesn't work yet"
+    #return
 
     reg = pyregion.open(regfile)
     outf = open(outfile,'w')
