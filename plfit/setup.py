@@ -39,8 +39,8 @@ ext_cplfit = Extension(
 		include_dirs = dirs, 
 		extra_compile_args=['-O3'])
 
-ext_fplfit = numpyExtension(name="fplfit",
-                    sources=["fplfit.f"])
+#ext_fplfit = numpyExtension(name="fplfit",
+#                    sources=["fplfit.f"])
 
 if __name__=="__main__":
     setup(
@@ -60,9 +60,9 @@ if __name__=="__main__":
         cmdclass = {'build_ext': build_ext}
     )
 
-    numpysetup(name = 'fplfit',
-          ext_modules = [ext_fplfit]
-          )
+    #numpysetup(name = 'fplfit',
+    #      ext_modules = [ext_fplfit]
+    #      )
 
 
 print "I can't get numpy.distutils to compile the fortran.  To do it yourself, run some variant of:"
