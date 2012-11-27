@@ -12,7 +12,10 @@ except ImportError:
     import pyfits
     import pywcs
 import numpy
-import coords
+try:
+    import coords
+except ImportError:
+    pass # maybe should do something smarter here, but I want agpy to install...
 try:
     import montage
     import os

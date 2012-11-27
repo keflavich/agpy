@@ -8,7 +8,10 @@ try:
 except ImportError:
     import pyfits
     import pywcs
-import coords
+try:
+    import coords
+except ImportError:
+    pass
 import os
 import agpy.cubes,agpy.grep,agpy.cutout
 import timer

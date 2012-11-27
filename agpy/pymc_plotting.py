@@ -2,7 +2,10 @@ import numpy as np
 import pylab
 import matplotlib
 old_errsettings = np.geterr()
-import pymc # pymc breaks np error settings
+try:
+    import pymc # pymc breaks np error settings
+except ImportError:
+    pass
 np.seterr(**old_errsettings)
 
 def find_percentile(data, pctile):
