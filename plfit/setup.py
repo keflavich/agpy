@@ -17,6 +17,7 @@ build_src.have_pyrex = True
 from Cython.Distutils import build_ext
 import Cython
 import numpy
+import os
 
 print "To create cplfit.so (for importing), call command: "
 print "python setup.py build_ext --inplace"
@@ -43,6 +44,14 @@ ext_cplfit = Extension(
 #                    sources=["fplfit.f"])
 
 if __name__=="__main__":
+
+    # can't specify fcompiler if numpysetup is included 
+    # therefore, run this command separately
+    # gfortran = OK.  g77, g95 NOT ok
+    fortran_compile_command = "f2py -c fplfit.f -m fplfit --fcompiler=gfortran"
+    os.system(fortran_compile_command)
+    # do this first so it gets copied (in principle...)
+
     setup(
         name = "plfit",
         version = "1.0",
@@ -65,8 +74,9 @@ if __name__=="__main__":
     #      )
 
 
-print "I can't get numpy.distutils to compile the fortran.  To do it yourself, run some variant of:"
-print 'f2py -c fplfit.f -m fplfit'
+
+#print "I can't get numpy.distutils to compile the fortran.  To do it yourself, run some variant of:"
+#print 'f2py -c fplfit.f -m fplfit'
 # keep an eye on this: http://stackoverflow.com/questions/7932028/setup-py-for-packages-that-depend-on-both-cython-and-f2py
 
 # try:

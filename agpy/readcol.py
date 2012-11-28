@@ -21,7 +21,8 @@ except ValueError:
 
 def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
         fixedformat=None,asdict=False,comment='#',verbose=True,nullval=None,
-        asStruct=False,namecomment=True,removeblanks=False,header_badchars=None):
+        asStruct=False,namecomment=True,removeblanks=False,header_badchars=None,
+        asRecArray=False):
     """
     The default return is a two dimensional float array.  If you want a list of
     columns output instead of a 2D array, pass 'twod=False'.  In this case,
@@ -94,6 +95,9 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
     null=[f.pop(0) for i in range(skipline)]
 
     commentfilter = make_commentfilter(comment)
+
+    if not asStruct:
+        asStruct = asRecArray
 
     if namecomment is False and (names or asdict or asStruct):
         while 1:
@@ -177,6 +181,8 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
             mydict[k] = get_autotype(v)
         if asdict:
             return mydict
+        elif asRecArray:
+            return Struct(mydict).as_recarray()
         elif asStruct:
             return Struct(mydict)
     elif names and twod:
@@ -225,6 +231,14 @@ class Struct(object):
         (will overwrite anything with the same name)
         """
         self.__dict__[name] = data
+
+    def as_recarray(self):
+        """ Convert into numpy recordarray """
+        dtype = [(k,v.dtype) for k,v in self.__dict__.iteritems()]
+        R = numpy.recarray(len(self.__dict__[k]),dtype=dtype)
+        for key in self.__dict__:
+            R[key] = self.__dict__[key]
+        return R
 
     def __getitem__(self, key):
         return self.__dict__[key]
