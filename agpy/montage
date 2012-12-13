@@ -59,6 +59,7 @@ def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr',
     print "Creating temporary directory"
     if os.path.exists(tmpdir) and remove_tmpdir:
         shutil.rmtree(tmpdir)
+        os.mkdir(tmpdir+"/")
     elif not os.path.exists(tmpdir):
         os.mkdir(tmpdir+"/")
     if copy:
