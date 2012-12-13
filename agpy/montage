@@ -10,6 +10,8 @@ import sys
 mypath = os.path.split(__file__)[0]
 if mypath in sys.path:
     sys.path.remove(mypath)
+sys.path.insert(0,mypath.replace("agpy","montage")
+sys.path.insert(0,mypath.replace("agpy","")
 import montage
 
 
