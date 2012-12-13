@@ -15,35 +15,36 @@ import montage
 
 def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr',
         exact_size=True, combine='median', getheader=False, copy=False,
-        background_match=False, tmpdrive="/Volumes/disk4/var/tmp/"):
+        background_match=False, tmpdrive="/Volumes/disk4/var/tmp/",
+        remove_tmpdir=False):
     """
-Usage: montage outfile=filename.fits *.fits combine=median
+    Usage: montage outfile=filename.fits *.fits combine=median
 
-     Wrapper to mosaic a *subset* of images in the current directory
-Usage:     mGetHdr template_fitsfile.fit mosaic.hdr     montage
-outfile=l089_reference_montage.fits 0*_indiv13pca*_map01.fits combine=median &
-Keyword parameters:       combine - 'median', 'average', or 'sum'       header
-- Filename of fits file from which to create mosaic.hdr       outfile - Output
-fits filename
+         Wrapper to mosaic a *subset* of images in the current directory
+    Usage:     mGetHdr template_fitsfile.fit mosaic.hdr     montage
+    outfile=l089_reference_montage.fits 0*_indiv13pca*_map01.fits combine=median &
+    Keyword parameters:       combine - 'median', 'average', or 'sum'       header
+    - Filename of fits file from which to create mosaic.hdr       outfile - Output
+    fits filename
 
-Options:
-  -h, --help            show this help message and exit
-  --header=HEADER       Name of the .hdr file or a fits file from which to
-                        extract a header.  Defaults to mosaic.hdr
-  -g, --get-header      Get the header of the first input file?  Overrides
-                        --header.  Default False
-  --combine=COMBINE     How to combine the images.  Options are mean, median,
-                        count.  Default median
-  -X, --exact, --exact_size, --exact-size
-                        Use exact_size=True?  Default True
-  -o OUTFILE, --outfile=OUTFILE, --out=OUTFILE
-                        Output file name
-  --copy                Copy files instead of linking
-  --background_match    background_match images?
-  --tmpdir=TMPDIR       Alternative name for temporary directory (default
-                        'tmp')
-  --tmpdrive=TMPDRIVE   The temporary directory in which to do coadding
-                        (important that it is on the same physical HD)
+    Options:
+      -h, --help            show this help message and exit
+      --header=HEADER       Name of the .hdr file or a fits file from which to
+                            extract a header.  Defaults to mosaic.hdr
+      -g, --get-header      Get the header of the first input file?  Overrides
+                            --header.  Default False
+      --combine=COMBINE     How to combine the images.  Options are mean, median,
+                            count.  Default median
+      -X, --exact, --exact_size, --exact-size
+                            Use exact_size=True?  Default True
+      -o OUTFILE, --outfile=OUTFILE, --out=OUTFILE
+                            Output file name
+      --copy                Copy files instead of linking
+      --background_match    background_match images?
+      --tmpdir=TMPDIR       Alternative name for temporary directory (default
+                            'tmp')
+      --tmpdrive=TMPDRIVE   The temporary directory in which to do coadding
+                            (important that it is on the same physical HD)
     """
 
     filelist = []
@@ -56,7 +57,10 @@ Options:
 
     #echo "Creating temporary directory and sym-linking all files into it"
     print "Creating temporary directory"
-    os.mkdir(tmpdir+"/")
+    if os.path.exists(tmpdir) and remove_tmpdir:
+        shutil.rmtree(tmpdir)
+    elif not os.path.exists(tmpdir):
+        os.mkdir(tmpdir+"/")
     if copy:
         print "Copying all files into %s" % tmpdir
         for fn in filelist:
