@@ -78,6 +78,7 @@ def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr',
         os.link(header,'%s/%s' % (tmpdir, os.path.split(header)[-1]))
 
     olddir = os.getcwd()
+    print "Changing directory to %s" % tmpdir
     os.chdir(tmpdir+'/')
     dir = os.getcwd()
     print "Beginning montage operations: montage.wrappers.mosaic(%s,'%s/mosaic',header='%s/%s', exact_size=%s, combine=%s, background_match=%s)" % (dir,dir,dir,header,exact_size,combine,background_match)
@@ -87,6 +88,7 @@ def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr',
 
     time.sleep(1)
 
+    print "Changing directory back to %s" % olddir
     os.chdir(olddir)
     if os.path.exists(tmpdir+'/mosaic/mosaic.fits'):
         shutil.move(tmpdir+'/mosaic/mosaic.fits',outfile)
