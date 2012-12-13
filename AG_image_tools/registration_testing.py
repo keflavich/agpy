@@ -115,7 +115,7 @@ try:
     def test_shifts(xsh,ysh,imsize,gaussfit):
         image,new_image,tolerance = make_offset_images(xsh, ysh, imsize)
         if gaussfit:
-            xoff,yoff,exoff,eyoff = cross_correlation_shifts(image,new_image)
+            xoff,yoff,exoff,eyoff = cross_correlation_shifts(image,new_image,return_error=True)
             print xoff,yoff,np.abs(xoff-xsh),np.abs(yoff-ysh),exoff,eyoff
         else:
             xoff,yoff = cross_correlation_shifts(image,new_image)
@@ -274,6 +274,7 @@ try:
         print "Analytic offset: %g" % (( (A[:,3]/A[:,1]).mean() + (A[:,2]/A[:,0]).mean() )/2. )
         print "Gaussian offset: %g" % (( (G[:,3]/G[:,1]).mean() + (G[:,2]/G[:,0]).mean() )/2. )
         
+    @pytest.mark.parametrize(('imsize'),sizes)
     def test_upsample(imsize, usfac=2, xsh=2.25, ysh=2.25, noise=0.1, **kwargs):
         image = make_extended(imsize)
         offim = make_offset_extended(image, xsh, ysh, noise=noise, **kwargs)
@@ -526,3 +527,29 @@ if doplots:
     # errorbar(compare_offsets[:,0].mean(),compare_offsets[:,2].mean(),xerr=compare_offsets[:,0].std(),yerr=compare_offsets[:,2].std(),marker='x',linestyle='none')
     # plot(compare_offsets[:,1],compare_offsets[:,3],'.')
     # errorbar(compare_offsets[:,1].mean(),compare_offsets[:,3].mean(),xerr=compare_offsets[:,1].std(),yerr=compare_offsets[:,3].std(),marker='x',linestyle='none')
+
+if __name__ == "__main__":
+    import line_profiler
+
+    profile = line_profiler.LineProfiler(compare_methods, cross_correlation_shifts, chi2_shift, upsample_image, dftups)
+
+    xsh = 1.5
+    ysh = -2.1
+    imsize = 112
+    image,new_image,tolerance = make_offset_images(xsh, ysh, imsize)
+    cmd = "compare_methods(image, new_image, nthreads=8)"
+
+    profile.run(cmd)
+    profile.print_stats()
+
+    # different profiler conditions
+    profile2 = line_profiler.LineProfiler(compare_methods, cross_correlation_shifts, chi2_shift, upsample_image, dftups)
+
+    xsh = 1.5
+    ysh = -2.1
+    imsize = 512
+    image,new_image,tolerance = make_offset_images(xsh, ysh, imsize)
+    cmd = "compare_methods(image, new_image, ntests=10, nthreads=8, usfac=201)"
+
+    profile2.run(cmd)
+    profile2.print_stats()

@@ -45,6 +45,8 @@ import get_cutouts
 import pymc_plotting
 import imf
 
+import montage
+
 # import all of the functions but not the modules...
 __all__ = ['readcol', 'gaussfitter', 'kdist', 'reg_gal2cel', 'posang',
     'densitymap', 'downsample', 'correlate2d', 'psds', 'convolve', 'radialprofile',
