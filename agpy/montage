@@ -10,12 +10,15 @@ import sys
 mypath = os.path.split(__file__)[0]
 if mypath in sys.path:
     sys.path.remove(mypath)
-sys.path.insert(0,mypath.replace("agpy","montage"))
-sys.path.insert(0,mypath.replace("agpy",""))
+#sys.path.insert(0,mypath.replace("agpy","montage"))
+#sys.path.insert(0,mypath.replace("agpy",""))
 #import montage
 sys.modules['montage'] = __import__('montage')
 montage = sys.modules['montage']
 
+print montage.__file__
+if "agpy" in montage.__file__:
+    raise ImportError
 
 def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr',
         exact_size=True, combine='median', getheader=False, copy=False,
@@ -78,7 +81,7 @@ def wrapper(args, outfile=None, tmpdir='tmp', header='header.hdr',
         os.link(header,'%s/%s' % (tmpdir, os.path.split(header)[-1]))
 
     olddir = os.getcwd()
-    print "Changing directory to %s" % tmpdir
+    print "Changing directory to %s, with old dir %s" % (tmpdir,olddir)
     os.chdir(tmpdir+'/')
     dir = os.getcwd()
     print "Beginning montage operations: montage.wrappers.mosaic(%s,'%s/mosaic',header='%s/%s', exact_size=%s, combine=%s, background_match=%s)" % (dir,dir,dir,header,exact_size,combine,background_match)
