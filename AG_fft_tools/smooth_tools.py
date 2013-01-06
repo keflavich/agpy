@@ -1,5 +1,4 @@
 import numpy as np
-import types
 from AG_image_tools import downsample as downsample_2d
 from convolve_nd import convolvend as convolve
 
@@ -181,7 +180,7 @@ def make_kernel(kernelshape, kernelwidth=3, kerneltype='gaussian',
                     "airy kernel without this (need the bessel function)")
         rr = np.sum([(x-(x.max())/2.)**2 for x in np.indices(kernelshape)],axis=0)**0.5
         # airy function is first bessel(x) / x  [like the sinc]
-        kernel = j1(rr/kernelwidth) / (rr/kernelwidth) 
+        kernel = scipy.special.j1(rr/kernelwidth) / (rr/kernelwidth) 
         # fix NAN @ center
         kernel[rr==0] = 0.5
         kernel /= normalize_kernel(kernel)

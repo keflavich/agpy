@@ -33,7 +33,8 @@ import copy
 import idlsave
 import gaussfitter
 import agpy.mpfit as mpfit
-from PCA_tools import *
+import agpy
+from agpy.PCA_tools import *
 from AG_image_tools.drizzle import drizzle
 from agpy import smooth
 from guppy import hpy
@@ -1549,7 +1550,8 @@ class Flagger:
         ylabel('Frequency')
         self.powerspec_plotted = True
 
-    def powerspec_whole(self,bolonum=0,recompute=False,timestream='data',clear=True,fignum=4,logx=False,logy=True,color='k'):
+    def powerspec_whole(self, bolonum=0, recompute=False, timestream='data',
+            clear=True, fignum=4, logx=False, logy=True, color='k', **kwargs):
         if self.powerspectra_whole is None or recompute:
             if timestream == 'data':
                 wholedata = reshape(self.data,[self.data.shape[0]*self.data.shape[1],self.data.shape[2]])
@@ -1573,7 +1575,36 @@ class Flagger:
             plotcmd = plot
         plotcmd(fftfreq(datashape,d=self.sample_interval)[0:datashape/2],
                 self.powerspectra_whole[0:datashape/2,bolonum],
-                linewidth=0.5,color=color)
+                linewidth=0.5,color=color, **kwargs)
+        xlabel("Frequency (Hz)")
+
+    def atmo_to_astro_power(self, recompute=False, clear=True, fignum=4,
+            logx=False, logy=True, color='k', atmo='ac_bolos', **kwargs):
+
+        if recompute or 'powerspectra_whole_astro' not in self.__dict__:
+            data = self.lookup('astrosignal').filled(0)
+            wholedata = reshape(data,[data.shape[0]*data.shape[1],data.shape[2]])
+            wholedata[wholedata!=wholedata] = 0
+            self.powerspectra_whole_astro = real(fft(wholedata,axis=0) * conj(fft(wholedata,axis=0)))
+
+            data = self.lookup(atmo).filled(0)
+            wholedata = reshape(data,[data.shape[0]*data.shape[1],data.shape[2]])
+            wholedata[wholedata!=wholedata] = 0
+            self.powerspectra_whole_atmo = real(fft(wholedata,axis=0) * conj(fft(wholedata,axis=0)))
+
+        datashape = self.powerspectra_whole_astro.shape[0]
+        self.plotfig=figure(fignum)
+        if clear: self.plotfig.clear()
+        if logy:
+            if logx:
+                plotcmd = loglog
+            else:
+                plotcmd = semilogy
+        else:
+            plotcmd = plot
+        plotcmd(fftfreq(datashape,d=self.sample_interval)[0:datashape/2],
+            self.powerspectra_whole_astro.mean(axis=1)[0:datashape/2] / self.powerspectra_whole_atmo.mean(axis=1)[0:datashape/2],
+            linewidth=0.5,color=color, **kwargs)
         xlabel("Frequency (Hz)")
 
     def broken_powerfit(self, bolonum=0, plbreak=2, doplot=True, logx=True,

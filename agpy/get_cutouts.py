@@ -177,7 +177,11 @@ def get_cutouts(xcoord,ycoord,xwidth,ywidth, coordsys='galactic',
         except agpy.cutout.DimensionError:
             header = pyfits.getheader(fn)
             wcs = pywcs.WCS( agpy.cubes.flatten_header(header) )
-            xc,yc,xw,yw = agpy.cubes.aper_world2pix((xcoord,ycoord,xwidth,ywidth),wcs,coordsys=coordsys,wunit='degree')
+            try:
+                xc,yc,xw,yw = agpy.cubes.aper_world2pix((xcoord,ycoord,xwidth,ywidth),wcs,coordsys=coordsys,wunit='degree')
+            except Exception as ex:
+                print "%s failed at aper_world2pix: " % fn, ex
+                continue
             try:
                 co = agpy.cubes.subcube( pyfits.getdata(fn), xcoord, xwidth, ycoord, ywidth, header=header, return_HDU=True, widthunits='pixels' )
             except Exception as ex:
