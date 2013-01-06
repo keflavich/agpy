@@ -22,7 +22,7 @@ def fits_overlap(file1,file2):
     hdr2 = pyfits.getheader(file2)
     return header_overlap(hdr1,hdr2)
 
-def header_overlap(hdr1,hdr2):
+def header_overlap(hdr1,hdr2,max_separation=180):
     """
     Create a header containing the exact overlap region between two .fits files
 
@@ -32,6 +32,9 @@ def header_overlap(hdr1,hdr2):
     ----------
     hdr1,hdr2 : pyfits.Header
         Two pyfits headers to compare
+    max_separation : int
+        Maximum number of degrees between two headers to consider before flipping
+        signs on one of them (this to deal with the longitude=0 region)
     """
     wcs1 = pywcs.WCS(hdr1)
     wcs2 = pywcs.WCS(hdr2)
@@ -41,6 +44,12 @@ def header_overlap(hdr1,hdr2):
 
     ((xmin1,ymin1),) = wcs1.wcs_pix2world([[1,1]],1)
     ((xmin2,ymin2),) = wcs2.wcs_pix2world([[1,1]],1)
+
+    # make sure the edges are all in the same quadrant-ish
+    xmlist = [ xm - 360 if xm > max_separation else 
+            xm + 360 if xm < -max_separation else xm
+        for xm in xmin1,xmax1,xmin2,xmax2]
+    xmin1,xmax1,xmin2,xmax2 = xmlist
 
     if xmin2 > xmax2:
         xmax2,xmin2 = xmin2,xmax2
@@ -62,7 +71,8 @@ def header_overlap(hdr1,hdr2):
         cdelt1,cdelt2 = np.abs(np.vstack([wcs1.wcs.cdelt, wcs2.wcs.cdelt])).min(axis=0) * np.sign(wcs1.wcs.cdelt)
 
     # no overlap at all
-    if xmin1 > xmax2 or xmin2 > xmax1:
+    if ((xmin1 > xmax2) or 
+        (xmin2 > xmax1)):
         naxis1 = 0
     else:
         naxis1 = np.ceil(np.abs((xmax-xmin)/cdelt1))
