@@ -47,6 +47,8 @@ matplotlib.rcParams['axes.color_cycle'] = [list(clr) for clr in matplotlib.cm.br
 matplotlib.defaultParams['image.origin']='lower'
 matplotlib.defaultParams['image.interpolation']='nearest'
 matplotlib.defaultParams['image.aspect']=1
+rc('font',size=24)
+rc('font',family='serif')
 if matplotlib.rcParams['text.usetex']: texOn = True
 else: texOn = False
 # matplotlib.rcParams['text.usetex']=False
@@ -1093,7 +1095,7 @@ class Flagger:
             pylab.plot(fftfreq(xlen,d=self.sample_interval)[:xlen/2],self.plane[:xlen/2,numpy.round(tsx)],
                     linewidth=0.5,color=color)
             xlabel("Frequency (Hz)")
-            ylabel("Power (Jy$^2$)")
+            ylabel("PSD (Jy$^2$)")
             title("Bolo %i" % round(tsx))
         else:
             title("Bolo %i" % round(tsx))
@@ -1626,13 +1628,44 @@ class Flagger:
         def f(x,p):
             return 10**(p[1])*x**(p[0])
         if None not in (p1in,p2in,p0in):
-            plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0in),color='r', label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0in[1],p0in[0]), linestyle="-")
-            plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1in),color='r', label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1in[1],p1in[0]), linestyle="--")
-            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2in),color='r', label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2in[1],p2in[0]), linestyle=":")
+            plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0in),
+                    color='r', 
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0in[1],p0in[0]), 
+                    linewidth=3,
+                    alpha=0.5,
+                    linestyle="-")
+            d, = plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1in),
+                    color='r', 
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1in[1],p1in[0]), 
+                    linestyle="--",
+                    linewidth=5,
+                    alpha=0.5,
+                    )
+            d.set_dashes([12,12]) # make dot length > dot width
+            d,= plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2in),
+                    color='r', 
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2in[1],p2in[0]), 
+                    linestyle=":",
+                    linewidth=5,
+                    alpha=0.5,
+                    )
+            d.set_dashes([5,5]) # make dot length = dot width
         if doplot: 
-            P = plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0), label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0[1],p0[0]))[0]
-            plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1),color=P.get_color(), label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1[1],p1[0]))
-            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2),color=P.get_color(), label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2[1],p2[0]))
+            P = plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0), 
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0[1],p0[0]),
+                    )[0]
+            plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],
+                    f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1),
+                    color=P.get_color(),
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1[1],p1[0]),
+                    linewidth=3,
+                    alpha=0.5)
+            plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2),
+                    color=P.get_color(),
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2[1],p2[0]),
+                    linewidth=3,
+                    alpha=0.5,
+                    )
         print "Best powerlaw fit: P = 10^%0.3f freq^%0.3f   { freq < %0.2f" % (p1[1],p1[0],plbreak)
         print "                       10^%0.3f freq^%0.3f   { freq >= %0.2f" % (p2[1],p2[0],plbreak)
         print "                       10^%0.3f freq^%0.3f   { freq < %0.2f" % (p0[1],p0[0],0.02)
@@ -2329,7 +2362,7 @@ if __name__ == "__main__":
                       )
               L = legend(loc='upper right')
               xlabel("Frequency (Hz)")
-              ylabel("Power (Jy$^2$)")
+              ylabel("PSD (Jy$^2$)")
               savefig(f.fileprefix+"_PowerSpectrumFit.png")
 
           if options.compute_expfit:
