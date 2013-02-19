@@ -1580,6 +1580,9 @@ class Flagger:
 
     def atmo_to_astro_power(self, recompute=False, clear=True, fignum=4,
             logx=False, logy=True, color='k', atmo='ac_bolos', **kwargs):
+        """
+        Plot ratio of atmospheric to astrophysical power spectrum
+        """
 
         if recompute or 'powerspectra_whole_astro' not in self.__dict__:
             data = self.lookup('astrosignal').filled(0)

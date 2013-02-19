@@ -88,6 +88,39 @@ def modified_blackbody(nu,temperature,beta=1.75, logN=22, logscale=0.0,
     N = 1e22 is the column density in cm^-2
 
     nu0 and nu must have same units!
+
+    Parameters
+    ----------
+    nu : float
+        Frequency in units of `frequency_units`
+    temperature : float
+        Temperature in Kelvins
+    beta : float
+        The blackbody modification value; the blackbody function is multiplied
+        by :math:`(1-exp(-(\\nu/\\nu_0)**\\beta))`
+    logN : float
+        The log column denisty to be fit
+    logscale : float
+        An arbitrary logarithmic scale to apply to the blackbody function
+        before passing it to mpfit; this is meant to prevent numerical
+        instability when attempting to fit very small numbers.
+        Can also be used to represent, e.g., steradians
+    muh2 : float
+        The mass (in amu) per molecule of H2.  Defaults to 2.8.
+    units : 'cgs' or 'mks'
+        The unit system to use
+    frequency_units : string
+        Hz or some variant (GHz, kHz, etc)
+    kappa0 : float
+        The opacity in cm^2/g *for gas* at nu0 (see dusttogas)
+    nu0 : float
+        The frequency at which the opacity power law is locked
+    normalize : function or None
+        A normalization function for the blackbody.  Set to None if you're
+        interested in the amplitude of the blackbody
+    dusttogas : float
+        The dust to gas ratio.  The opacity kappa0 is divided by this number to
+        get the opacity of the dust
     """
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
     mh = unitdict[units]['mh']
@@ -98,7 +131,8 @@ def modified_blackbody(nu,temperature,beta=1.75, logN=22, logscale=0.0,
 
     modification = (1.0 - exp(-1.0 * tau))
 
-    I = blackbody(nu,temperature,units=units,frequency_units=frequency_units,normalize=normalize)*modification
+    I = blackbody(nu, temperature, units=units,
+            frequency_units=frequency_units, normalize=normalize)*modification
 
     if normalize and hasattr(I,'__len__'):
         if len(I) > 1:
@@ -177,6 +211,13 @@ try:
         quiet : bool
             quiet flag passed to mpfit
 
+        Returns
+        -------
+        mp : mpfit structure
+            An mpfit structure.  Access parameters and errors via
+            `mp.params` and `mp.perror`.  The covariance matrix
+            is in mp.covar.
+
         Examples
         --------
         >>> wavelength = array([20,70,160,250,350,500,850,1100])
@@ -184,13 +225,16 @@ try:
                 logN=22, wavelength_units='microns', normalize=False,
                 logscale=16)
         >>> err = 0.1 * flux
+        >>> np.random.seed(0)
         >>> flux += np.random.randn(len(wavelength)) * err
         >>> tguess, bguess, nguess = 20.,2.,21.5
         >>> mp = fit_blackbody(wavelength, flux, err=err,
                  blackbody_function=modified_blackbody_wavelength,
                  logscale=16, guesses=(tguess, bguess, nguess),
                  wavelength_units='microns')
-        >>> print mp.params
+        >>> print mp.params 
+        [ 14.99095224   1.78620237  22.05271119]
+        >>> # T~14.9 K, beta ~1.79, column ~10^22
         """
 
         def mpfitfun(x,y,err):
