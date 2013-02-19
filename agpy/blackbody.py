@@ -313,11 +313,14 @@ try:
             return f
 
         if not isinstance(guesses,lmfit.Parameters):
-            guesses = lmfit.Parameters(dict([ (n,lmfit.Parameter(x)) for n,x
-                in zip(('T','beta','N'),guesses) ]))
+            guesspars = lmfit.Parameters(
+                    dict([ (n,lmfit.Parameter(value=x,name=n))
+                        for n,x in zip(('T','beta','N'),guesses) ]))
+        else:
+            guesspars = guesses
 
         minimizer = lmfit.minimize( lmfitfun(xdata,np.array(flux),err),
-                guesses)
+                guesspars)
 
         return minimizer
 except ImportError:
