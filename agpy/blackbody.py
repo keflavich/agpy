@@ -256,6 +256,7 @@ except ImportError:
 
 try:
     import lmfit
+    import ordereddict
     import numpy as np
     def fit_blackbody_lmfit(xdata, flux, guesses=(0,0), err=None,
             blackbody_function=blackbody, quiet=True, **kwargs):
@@ -279,7 +280,7 @@ try:
 
         Examples
         --------
-        >>> wavelength = array([20,70,160,250,350,500,850,1100])
+        >>> wavelength = np.array([20,70,160,250,350,500,850,1100])
         >>> flux = modified_blackbody_wavelength(wavelength, 15, beta=1.75,
                 wavelength_units='microns', normalize=False, logN=22, logscale=16)
         >>> err = 0.1 * flux
@@ -292,7 +293,7 @@ try:
         >>> print lm.params
         
         >>> # If you want to fit for a fixed beta, do this:
-        >>> parameters = lmfit.Parameters(dict([ (n,lmfit.Parameter(x)) for n,x
+        >>> parameters = lmfit.Parameters(ordereddict.OrderedDict([ (n,lmfit.Parameter(x)) for n,x
                 in zip(('T','beta','N'),(20.,2.,21.5)) ]))
         >>> import lmfit
         >>> parameters['beta'].vary = False
@@ -314,7 +315,7 @@ try:
 
         if not isinstance(guesses,lmfit.Parameters):
             guesspars = lmfit.Parameters(
-                    dict([ (n,lmfit.Parameter(value=x,name=n))
+                    ordereddict.OrderedDict([ (n,lmfit.Parameter(value=x,name=n))
                         for n,x in zip(('T','beta','N'),guesses) ]))
         else:
             guesspars = guesses
