@@ -256,7 +256,10 @@ except ImportError:
 
 try:
     import lmfit
-    import ordereddict
+    try:
+        from collections import OrderedDict
+    except ImportError:
+        from ordereddict import OrderedDict
     import numpy as np
     def fit_blackbody_lmfit(xdata, flux, guesses=(0,0), err=None,
             blackbody_function=blackbody, quiet=True, **kwargs):
@@ -293,7 +296,7 @@ try:
         >>> print lm.params
         
         >>> # If you want to fit for a fixed beta, do this:
-        >>> parameters = lmfit.Parameters(ordereddict.OrderedDict([ (n,lmfit.Parameter(x)) for n,x
+        >>> parameters = lmfit.Parameters(OrderedDict([ (n,lmfit.Parameter(x)) for n,x
                 in zip(('T','beta','N'),(20.,2.,21.5)) ]))
         >>> import lmfit
         >>> parameters['beta'].vary = False
@@ -315,7 +318,7 @@ try:
 
         if not isinstance(guesses,lmfit.Parameters):
             guesspars = lmfit.Parameters(
-                    ordereddict.OrderedDict([ (n,lmfit.Parameter(value=x,name=n))
+                    OrderedDict([ (n,lmfit.Parameter(value=x,name=n))
                         for n,x in zip(('T','beta','N'),guesses) ]))
         else:
             guesspars = guesses
