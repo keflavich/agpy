@@ -500,7 +500,7 @@ def smooth_cube(cube,cubedim=0,parallel=True,numcores=None,**kwargs):
         purposes?)
     numcores - pass to parallel_map (None = use all available)
     """
-    from convolve import smooth
+    from AG_fft_tools import smooth
     from contributed import parallel_map
 
     if cubedim != 0:

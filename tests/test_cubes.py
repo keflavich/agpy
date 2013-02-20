@@ -12,13 +12,13 @@ for size in sizes:
 
     t0 = time.time()
 
-    smcube = cubes.smooth_cube(rr,ignore_nan=True)
+    smcube = cubes.smooth_cube(rr,interpolate_nan=True)
     
     t1=time.time()
     print "parallel smooth took %0.2f seconds for size = %i" % (t1-t0,size)
     parallel_times.append(t1-t0)
 
-    smcube = cubes.smooth_cube(rr,ignore_nan=True,parallel=False)
+    smcube = cubes.smooth_cube(rr,interpolate_nan=True,parallel=False)
 
     t2=time.time()
     print "non-parallel smooth took %0.2f seconds for size = %i" % (t2-t1,size)
@@ -32,10 +32,10 @@ size = 200
 zz,yy,xx = np.indices([size,size,size])
 rr = np.sqrt((size/2)-((zz-(size/2))**2+(yy-(size/2))**2+(xx-(size/2))**2))
 
-for nprocs in range(1,17):
+for nprocs in range(1,5):
     t0 = time.time()
 
-    smcube = cubes.smooth_cube(rr,ignore_nan=True,numcores=nprocs)
+    smcube = cubes.smooth_cube(rr,interpolate_nan=True,numcores=nprocs)
     
     t1=time.time()
     print "parallel smooth took %0.2f seconds for nproces = %i" % (t1-t0,nprocs)
