@@ -145,6 +145,10 @@ def modified_blackbody(nu,temperature,beta=1.75, logN=22, logscale=0.0,
 def greybody(nu, temperature, beta, A=1.0, logscale=0.0,
         units='cgs', frequency_units='Hz', 
         kappa0=4.0, nu0=3000e9, normalize=max):
+    """
+    Same as modified blackbody... not sure why I have it at all, though the
+    normalization constants are different.
+    """
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
     mh = unitdict[units]['mh']
 
@@ -161,14 +165,49 @@ def greybody(nu, temperature, beta, A=1.0, logscale=0.0,
 
 def modified_blackbody_wavelength(lam, temperature, beta=1.75, logN=22,
         logscale=0.0, muh2=2.8, units='cgs', wavelength_units='Angstroms',
-        kappa0=4.0, nu0=3000e9, dusttogas=100., normalize=max):
+        kappa0=4.0, nu0=505e9, dusttogas=100., normalize=max):
     """
     Snu =  2hnu^3 c^-2  (e^(hnu/kT) - 1)^-1  (1 - e^(-tau_nu) )
     Kappa0 and Nu0 are set as per http://arxiv.org/abs/1101.4654 which uses OH94 values.
     beta = 1.75 is a reasonable default for Herschel data
     N = 1e22 is the column density in cm^-2
 
-    nu0 and nu must have same units!
+    nu0 and nu must have same units!  But wavelength is converted to frequency
+    of the right unit anyway
+
+    Parameters
+    ----------
+    lam : float
+        Wavelength in units of `wavelength_units`
+    temperature : float
+        Temperature in Kelvins
+    beta : float
+        The blackbody modification value; the blackbody function is multiplied
+        by :math:`(1-exp(-(\\nu/\\nu_0)**\\beta))`
+    logN : float
+        The log column denisty to be fit
+    logscale : float
+        An arbitrary logarithmic scale to apply to the blackbody function
+        before passing it to mpfit; this is meant to prevent numerical
+        instability when attempting to fit very small numbers.
+        Can also be used to represent, e.g., steradians
+    muh2 : float
+        The mass (in amu) per molecule of H2.  Defaults to 2.8.
+    units : 'cgs' or 'mks'
+        The unit system to use
+    wavelength_units : string
+        A valid wavelength (e.g., 'angstroms', 'cm','m')
+    kappa0 : float
+        The opacity in cm^2/g *for gas* at nu0 (see dusttogas)
+    nu0 : float
+        The frequency at which the opacity power law is locked.
+        kappa(nu) = kappa0/dusttogas * (nu/nu0)**beta
+    normalize : function or None
+        A normalization function for the blackbody.  Set to None if you're
+        interested in the amplitude of the blackbody
+    dusttogas : float
+        The dust to gas ratio.  The opacity kappa0 is divided by this number to
+        get the opacity of the dust
     """
     h,k,c = unitdict[units]['h'],unitdict[units]['k'],unitdict[units]['c']
     mh = unitdict[units]['mh']
