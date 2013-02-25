@@ -1,6 +1,4 @@
 import numpy.ma as ma
-#from scipy.stats import norm, median
-#from scipy.stats.stats import nanmedian,_nanmedian
  	
 def MAD(a, c=0.6745, axis=None):
     """
