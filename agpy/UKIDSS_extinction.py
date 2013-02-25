@@ -1,4 +1,4 @@
-from astrodata import ukidss,magpis
+from astroquery import ukidss,magpis
 import matplotlib
 import matplotlib._cntr as _cntr
 import pylab

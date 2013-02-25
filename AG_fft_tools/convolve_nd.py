@@ -1,5 +1,7 @@
 import numpy as np
 import warnings
+#from guppy import hpy
+#heapy = hpy()
 
 try:
     import fftw3
@@ -34,7 +36,8 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
         crop=True, return_fft=False, fftshift=True, fft_pad=True,
         psf_pad=False, interpolate_nan=False, quiet=False,
         ignore_edge_zeros=False, min_wt=0.0, normalize_kernel=False,
-        use_numpy_fft=not has_fftw, nthreads=1):
+        use_numpy_fft=not has_fftw, nthreads=1, complextype=np.complex128,
+        use_rfft=False):
     """
     Convolve an ndarray with an nd-kernel.  Returns a convolved image with shape =
     array.shape.  Assumes image & kernel are centered.
@@ -138,6 +141,8 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
 
     """
 
+    #print "Memory usage: ",heapy.heap().size/1024.**3
+
 
     # Checking copied from convolve.py - however, since FFTs have real &
     # complex components, we change the types.  Only the real part will be
@@ -171,7 +176,10 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
 
     # replace fftn if has_fftw so that nthreads can be passed
     global fftn, ifftn
-    if has_fftw and not use_numpy_fft:
+    if use_rfft:
+        fftn = np.fft.rfftn
+        ifftn = np.fft.irfftn
+    elif has_fftw and not use_numpy_fft:
         def fftn(*args, **kwargs):
             return fftwn(*args, nthreads=nthreads, **kwargs)
 
@@ -246,6 +254,7 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
         if psf_pad:
             # just add the biggest dimensions
             newshape = np.array(arrayshape)+np.array(kernshape)
+            # ERROR: this situation leads to crash if kernshape[i] = arrayshape[i]-1 for all i
         else:
             newshape = np.array([np.max([imsh, kernsh])
                 for imsh, kernsh in zip(arrayshape, kernshape)])
@@ -262,19 +271,38 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
         kernslices += [slice(center - kerndimsize//2,
             center + (kerndimsize+1)//2)]
 
-    bigarray = np.ones(newshape, dtype=np.complex128) * fill_value
-    bigkernel = np.zeros(newshape, dtype=np.complex128)
-    bigarray[arrayslices] = array
-    bigkernel[kernslices] = kernel
-    arrayfft = fftn(bigarray)
+    #print "Memory usage (line 269): ",heapy.heap().size/1024.**3
+
+
+    # if no padding is requested, save memory by not copying things
+    if tuple(newshape) == arrayshape:
+        bigarray = array
+    else:
+        bigarray = np.ones(newshape, dtype=complextype) * fill_value
+        bigarray[arrayslices] = array
+
+    if tuple(newshape) == kernshape:
+        bigkernel = kernel
+    else:
+        bigkernel = np.zeros(newshape, dtype=complextype)
+        bigkernel[kernslices] = kernel
     # need to shift the kernel so that, e.g., [0,0,1,0] -> [1,0,0,0] = unity
     kernfft = fftn(np.fft.ifftshift(bigkernel))
-    fftmult = arrayfft*kernfft
+
+
+    # for memory conservation's sake, do this all on one line
+    # it is kept in comments in its multi-line form for clarity
+    # arrayfft = fftn(bigarray)
+    # fftmult = arrayfft*kernfft
+    fftmult = fftn(bigarray)*kernfft
+
+    #print "Memory usage (line 294): ",heapy.heap().size/1024.**3
+
     if (interpolate_nan or ignore_edge_zeros) and kernel_is_normalized:
         if ignore_edge_zeros:
-            bigimwt = np.zeros(newshape, dtype=np.complex128)
+            bigimwt = np.zeros(newshape, dtype=complextype)
         else:
-            bigimwt = np.ones(newshape, dtype=np.complex128)
+            bigimwt = np.ones(newshape, dtype=complextype)
         bigimwt[arrayslices] = 1.0-nanmaskarray*interpolate_nan
         wtfft = fftn(bigimwt)
         # I think this one HAS to be normalized (i.e., the weights can't be
