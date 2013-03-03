@@ -255,6 +255,13 @@ def pymc_linear_fit_withoutliers(data1, data2, data1err=None, data2err=None,
     """
     Use pymc to fit a line to data with outliers assuming outliers
     come from a broad, uniform distribution that cover all the data
+
+    The model doesn't work exactly right; it over-rejects "outliers" because
+    'bady' is an unobserved stochastic parameter that can therefore move. 
+
+    Maybe it should be implemented as a "potential" or a mixture model, e.g.
+    as in Hogg 2010 / Van Der Plas' astroml example:
+    http://astroml.github.com/book_figures/chapter8/fig_outlier_rejection.html
     """
     import pymc
 
@@ -329,6 +336,183 @@ def pymc_linear_fit_withoutliers(data1, data2, data1err=None, data2err=None,
         return m,b
     else:
         return m
+        
+
+# set up the expression for likelihood
+def mixture_likelihood(yi, model, dyi, Pb, Yb, sigmab):
+    """Equation 17 of Hogg 2010
+    "Mixture Model" for identifying outliers, copied directly from
+    http://astroml.github.com/book_figures/chapter8/fig_outlier_rejection.html
+    """
+    Vi = dyi ** 2
+    Vb = sigmab ** 2
+
+    root2pi = np.sqrt(2 * np.pi)
+
+    L_in = (1. / root2pi / dyi
+            * np.exp(-0.5 * (yi - model) ** 2 / Vi))
+
+    L_out = (1. / root2pi / np.sqrt(Vi + Vb)
+             * np.exp(-0.5 * (yi - Yb) ** 2 / (Vi + Vb)))
+
+    return np.sum(np.log((1 - Pb) * L_in + Pb * L_out))
+
+
+def pymc_linear_fit_mixture(data1, data2, data1err=None, data2err=None,
+        print_results=False, intercept=True, nsample=5000, burn=1000,
+        thin=10, return_MC=False, guess=None, verbose=0):
+    """
+    ***NOT TESTED***  ***MAY IGNORE X ERRORS***
+    Use pymc to fit a line to data with outliers assuming outliers
+    come from a broad, uniform distribution that cover all the data
+
+    The model doesn't work exactly right; it over-rejects "outliers" because
+    'bady' is an unobserved stochastic parameter that can therefore move. 
+
+    Maybe it should be implemented as a "potential" or a mixture model, e.g.
+    as in Hogg 2010 / Van Der Plas' astroml example:
+    http://astroml.github.com/book_figures/chapter8/fig_outlier_rejection.html
+    """
+    import pymc
+
+    if guess is None:
+        guess = (0,0)
+
+    xmu = pymc.distributions.Uninformative(name='x_observed',value=0)
+    if data1err is None:
+        xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
+                value=data1, tau=1, trace=False)
+    else:
+        xtau = pymc.distributions.Uninformative(name='x_tau',
+                value=1.0/data1err**2, observed=True, trace=False)
+        xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
+                value=data1, tau=xtau, trace=False)
+
+    d={'slope':pymc.distributions.Uninformative(name='slope', value=guess[0]), 
+        #d['badvals'] = pymc.distributions.Binomial('bad',len(data2),0.5,value=[False]*len(data2))
+        #d['badx'] = pymc.distributions.Uniform('badx',min(data1-data1err),max(data1+data1err),value=data1)
+        #'badvals':pymc.distributions.DiscreteUniform('bad',0,1,value=[False]*len(data2)),
+        #'bady':pymc.distributions.Uniform('bady',min(data2-data2err),max(data2+data2err),value=data2),
+       }
+
+    # set up "mixture model" from Hogg et al 2010:
+    # uniform prior on Pb, the fraction of bad points
+    Pb = pymc.Uniform('Pb', 0, 1.0, value=0.1)
+
+    # uniform prior on Yb, the centroid of the outlier distribution
+    Yb = pymc.Uniform('Yb', -10000, 10000, value=0)
+
+    # uniform prior on log(sigmab), the spread of the outlier distribution
+    log_sigmab = pymc.Uniform('log_sigmab', -10, 10, value=5)
+
+    @pymc.deterministic
+    def sigmab(log_sigmab=log_sigmab):
+        return np.exp(log_sigmab)
+
+    MixtureNormal = pymc.stochastic_from_dist('mixturenormal',
+                                              logp=mixture_likelihood,
+                                              dtype=np.float,
+                                              mv=True)
+
+
+
+    if intercept:
+        d['intercept'] = pymc.distributions.Uninformative(name='intercept',
+                value=guess[1])
+
+        @pymc.deterministic(trace=False)
+        def model(x=xdata,slope=d['slope'],intercept=d['intercept']):
+            return (x*slope+intercept) 
+
+    else:
+
+        @pymc.deterministic(trace=False)
+        def model(x=xdata,slope=d['slope']):
+            return x*slope
+
+    d['f'] = model
+
+    dyi = data2err if data2err is not None else np.ones(data2.shape)
+
+    y_mixture = MixtureNormal('y_mixture', model=model, dyi=dyi,
+                              Pb=Pb, Yb=Yb, sigmab=sigmab,
+                              observed=True, value=data2)
+
+    d['y'] = y_mixture
+
+
+    #if data2err is None:
+    #    ydata = pymc.distributions.Normal('y', mu=model, observed=True,
+    #            value=data2, tau=1, trace=False)
+    #else:
+    #    ytau = pymc.distributions.Uninformative(name='y_tau',
+    #            value=1.0/data2err**2, observed=True, trace=False)
+    #    ydata = pymc.distributions.Normal('y', mu=model, observed=True,
+    #            value=data2, tau=ytau, trace=False) 
+    #d['y'] = ydata
+    
+    MC = pymc.MCMC(d)
+    MC.sample(nsample,burn=burn,thin=thin,verbose=verbose)
+
+
+def pymc_linear_fit_perpointoutlier(data1, data2, data1err=None, data2err=None):
+    """
+    Model 3 from http://astroml.github.com/book_figures/chapter8/fig_outlier_rejection.html
+
+    *IGNORES X ERRORS*
+    """
+    if data1err is not None:
+        raise NotImplementedError("Currently this form of outlier rejection ignores X errors")
+
+    # Third model: marginalizes over the probability that each point is an outlier.
+    # define priors on beta = (slope, intercept)
+    @pymc.stochastic
+    def beta_M2(value=np.array([2., 100.])):
+        """Slope and intercept parameters for a straight line.
+        The likelihood corresponds to the prior probability of the parameters."""
+        slope, intercept = value
+        prob_intercept = 1 + 0 * intercept
+        # uniform prior on theta = arctan(slope)
+        # d[arctan(x)]/dx = 1 / (1 + x^2)
+        prob_slope = np.log(1. / (1. + slope ** 2))
+        return prob_intercept + prob_slope
+
+
+    @pymc.deterministic
+    def model_M2(xi=data1, beta=beta_M2):
+        slope, intercept = beta
+        return slope * xi + intercept
+
+    # qui is bernoulli distributed
+    qi = pymc.Bernoulli('qi', p=1 - Pb, value=np.ones(len(data1)))
+
+
+    def outlier_likelihood(yi, mu, dyi, qi, Yb, sigmab):
+        """likelihood for full outlier posterior"""
+        Vi = dyi ** 2
+        Vb = sigmab ** 2
+
+        root2pi = np.sqrt(2 * np.pi)
+
+        logL_in = -0.5 * np.sum(qi * (np.log(2 * np.pi * Vi)
+                                      + (yi - mu) ** 2 / Vi))
+
+        logL_out = -0.5 * np.sum((1 - qi) * (np.log(2 * np.pi * (Vi + Vb))
+                                             + (yi - Yb) ** 2 / (Vi + Vb)))
+
+        return logL_out + logL_in
+
+    OutlierNormal = pymc.stochastic_from_dist('outliernormal',
+                                              logp=outlier_likelihood,
+                                              dtype=np.float,
+                                              mv=True)
+
+    y_outlier = OutlierNormal('y_outlier', mu=model_M2, dyi=data2,
+                              Yb=Yb, sigmab=sigmab, qi=qi,
+                              observed=True, value=yi)
+
+    M2 = dict(y_outlier=y_outlier, beta_M2=beta_M2, model_M2=model_M2,
+              qi=qi, Pb=Pb, Yb=Yb, log_sigmab=log_sigmab, sigmab=sigmab)
         
 
 
