@@ -1613,7 +1613,13 @@ class Flagger:
         xlabel("Frequency (Hz)")
 
     def broken_powerfit(self, bolonum=0, plbreak=2, doplot=True, logx=True,
-            replotspec=True, defaultplot=False, p0in=None, p1in=None, p2in=None, **kwargs):
+            psd=True, replotspec=True, defaultplot=False, p0in=None, p1in=None,
+            p2in=None, **kwargs):
+        """
+        psd : bool
+            Divide Y-axis by frequency when plotting to turn power spectrum into
+            power spectral density?
+        """
         if replotspec or (self.powerspectra_whole is None):
             self.powerspec_whole(bolonum=bolonum,logx=True,**kwargs)
         datashape = self.powerspectra_whole.shape[0]
@@ -1626,17 +1632,21 @@ class Flagger:
         p2nought = p2[1]
         p2[1] = log10(10**p1[1]*(plbreak**(p1[0]-p2[0])))
         def f(x,p):
-            return 10**(p[1])*x**(p[0])
+            if psd:
+                return 10**(p[1])*x**(p[0]) * x
+            else:
+                return 10**(p[1])*x**(p[0])
         if None not in (p1in,p2in,p0in):
             plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0in),
                     color='r', 
-                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0in[1],p0in[0]), 
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0in[1],p0in[0]+psd), 
                     linewidth=3,
                     alpha=0.5,
                     linestyle="-")
-            d, = plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1in),
+            d, = plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],
+                    f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1in),
                     color='r', 
-                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1in[1],p1in[0]), 
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1in[1],p1in[0]+psd), 
                     linestyle="--",
                     linewidth=5,
                     alpha=0.5,
@@ -1644,7 +1654,7 @@ class Flagger:
             d.set_dashes([12,12]) # make dot length > dot width
             d,= plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2in),
                     color='r', 
-                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2in[1],p2in[0]), 
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2in[1],p2in[0]+psd), 
                     linestyle=":",
                     linewidth=5,
                     alpha=0.5,
@@ -1652,17 +1662,17 @@ class Flagger:
             d.set_dashes([5,5]) # make dot length = dot width
         if doplot: 
             P = plot(xfreq[xfreq<0.02],f(xfreq[xfreq<0.02],p0), 
-                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0[1],p0[0]),
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p0[1],p0[0]+psd),
                     )[0]
             plot(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],
                     f(xfreq[(xfreq<plbreak)*(xfreq>=0.02)],p1),
                     color=P.get_color(),
-                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1[1],p1[0]),
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p1[1],p1[0]+psd),
                     linewidth=3,
                     alpha=0.5)
             plot(xfreq[xfreq>=plbreak],f(xfreq[xfreq>=plbreak],p2),
                     color=P.get_color(),
-                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2[1],p2[0]),
+                    label="$10^{%0.3f} \\nu^{%0.3f}$" % (p2[1],p2[0]+psd),
                     linewidth=3,
                     alpha=0.5,
                     )
@@ -2335,7 +2345,8 @@ if __name__ == "__main__":
               gstd = zeros(f.nbolos)
               for ii in range(f.nbolos):
                   try:
-                      ppars0[:,ii],ppars1[:,ii], ppars2[:,ii], gstd[ii] = f.broken_powerfit(ii,timestream='ac_bolos')
+                      ppars0[:,ii],ppars1[:,ii], ppars2[:,ii], gstd[ii] = \
+                              f.broken_powerfit(ii,timestream='ac_bolos')
                   except ValueError:
                       print "Bolo %i is probably flagged out." % ii
               print "Median(gstd) = %f" % median(gstd)
@@ -2352,17 +2363,18 @@ if __name__ == "__main__":
               datashape = f.powerspectra_whole.shape[0]
               xfreq = fftfreq(datashape,d=f.sample_interval)[1:datashape/2]
               psw = f.powerspectra_whole.mean(axis=1)
-              loglog(xfreq, psw[1:psw.size/2], linewidth=0.5, color='k')
+              loglog(xfreq, psw[1:psw.size/2]*xfreq, linewidth=0.5, color='k')
                 
               f.broken_powerfit(ii,timestream='ac_bolos',replotspec=False,
                       doplot=False,
                       p0in=[median(ppars0[0,:]),median(ppars0[1,:])],
                       p1in=[median(ppars1[0,:]),median(ppars1[1,:])],
                       p2in=[median(ppars2[0,:]),median(ppars2[1,:])],
+                      psd=True
                       )
               L = legend(loc='upper right')
               xlabel("Frequency (Hz)")
-              ylabel("PSD (Jy$^2$)")
+              ylabel("PSD (Jy$^2$ Hz$^{-1}$)")
               savefig(f.fileprefix+"_PowerSpectrumFit.png")
 
           if options.compute_expfit:
