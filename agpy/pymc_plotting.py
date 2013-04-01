@@ -31,6 +31,7 @@ def hist2d(MC, varname1, varname2, varslice=None,
         percentiles=[0.0027,0.0455,0.3173,0.5,0.75],
         colors=[(0.4,0.4,1,0.2),(1,0.4,1,0.5),(1,0.2,0.2,0.5),(0.7,0.1,0.1,1),(0.5,0.05,0.05,1),(0.4,0.05,0.05,0.5)],
         ticklabels=['3$\\sigma$','2$\\sigma$','1$\\sigma$','50%','25%'],
+        axis=None,
         fignum=1,
         contourcmd=pylab.contourf,
         clear=False,
@@ -54,14 +55,18 @@ def hist2d(MC, varname1, varname2, varslice=None,
 
     levels = [find_percentile(histvals, p*100) for p in percentiles]
     
-    pylab.figure(fignum); 
-    if clear: pylab.clf(); 
+    if axis is None:
+        pylab.figure(fignum); 
+        if clear: pylab.clf(); 
+        axis = pylab.gca()
 
     xax = np.linspace(xvals.min(),xvals.max(),histvals.shape[1])
     yax = np.linspace(yvals.min(),yvals.max(),histvals.shape[0])
+    if axis is not None:
+        contourcmd = eval('axis.'+contourcmd.__name__)
     contourcmd(xax, yax, histvals.swapaxes(0,1), levels+[histvals.max()], colors=colors)
-    pylab.xlabel(varname1); 
-    pylab.ylabel(varname2); 
+    axis.set_xlabel(varname1); 
+    axis.set_ylabel(varname2); 
     if colorbar: 
         cb = pylab.colorbar(); 
         cb.ax.set_yticks(levels); 

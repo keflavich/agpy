@@ -3,7 +3,7 @@ from AG_image_tools.downsample import downsample as downsample_2d
 from convolve_nd import convolvend as convolve
 
 def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
-        silent=True, psf_pad=True, interp_nan=False, nwidths='max',
+        silent=True, psf_pad=True, interpolate_nan=False, nwidths='max',
         min_nwidths=6, return_kernel=False, normalize_kernel=np.sum,
         downsample=False, downsample_factor=None, ignore_edge_zeros=False,
         **kwargs):
@@ -26,10 +26,10 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         Slows things down but removes edge-wrapping effects (see convolve)
         This option should be set to false if the edges of your image are
         symmetric.
-    interp_nan: [False]
+    interpolate_nan: [False]
         Will replace NaN points in an image with the
         smoothed average of its neighbors (you can still simply ignore NaN 
-        values by setting ignore_nan=True but leaving interp_nan=False)
+        values by setting ignore_nan=True but leaving interpolate_nan=False)
     silent: [True]
         turn it off to get verbose statements about kernel types
     return_kernel: [False]
@@ -86,12 +86,12 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
 
     # kwargs parsing to avoid duplicate keyword passing
     #if not kwargs.has_key('ignore_edge_zeros'): kwargs['ignore_edge_zeros']=True
-    if not kwargs.has_key('interpolate_nan'): kwargs['interpolate_nan']=interp_nan
+    if not kwargs.has_key('interpolate_nan'): kwargs['interpolate_nan']=interpolate_nan
 
     # No need to normalize - normalization is dealt with in this code
     temp = convolve(temp,kernel,psf_pad=psf_pad, normalize_kernel=False,
             ignore_edge_zeros=ignore_edge_zeros, **kwargs)
-    if interp_nan is False: temp[bad] = image[bad]
+    if interpolate_nan is False: temp[bad] = image[bad]
 
     if temp.shape != image.shape:
         raise ValueError("Output image changed size; this is completely impossible.")

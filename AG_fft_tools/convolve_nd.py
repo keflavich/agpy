@@ -191,9 +191,9 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
 
 
     # NAN catching
-    nanmaskarray = (array != array)
+    nanmaskarray = np.isnan(array)
     array[nanmaskarray] = 0
-    nanmaskkernel = (kernel != kernel)
+    nanmaskkernel = np.isnan(kernel)
     kernel[nanmaskkernel] = 0
     if ((nanmaskarray.sum() > 0 or nanmaskkernel.sum() > 0) and not interpolate_nan
             and not quiet):
@@ -213,7 +213,10 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
             kernel_is_normalized = True
         else:
             kernel_is_normalized = False
-
+            if (interpolate_nan or ignore_edge_zeros):
+                WARNING = ("Kernel is not normalized, therefore ignore_edge_zeros"+
+                    "and interpolate_nan will be ignored.")
+                log.warn(WARNING)
 
     if boundary is None:
         WARNING = ("The convolvend version of boundary=None is equivalent" +
@@ -234,8 +237,7 @@ def convolvend(array, kernel, boundary='fill', fill_value=0,
 
     arrayshape = array.shape
     kernshape = kernel.shape
-    ndim = len(array.shape)
-    if ndim != len(kernshape):
+    if array.ndim != kernel.ndim:
         raise ValueError("Image and kernel must " +
             "have same number of dimensions")
     # find ideal size (power of 2) for fft.

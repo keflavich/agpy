@@ -237,8 +237,12 @@ def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
     else:
         crv1,crv2 = wcs.wcs_pix2sky(xlo,ylo,0)
 
-        flathead['CRVAL1'] = crv1[0]
-        flathead['CRVAL2'] = crv2[0]
+        try:
+            flathead['CRVAL1'] = crv1[0]
+            flathead['CRVAL2'] = crv2[0]
+        except IndexError:
+            flathead['CRVAL1'] = crv1.item() # np 0-d arrays are not scalar
+            flathead['CRVAL2'] = crv2.item() # np 0-d arrays are not scalar
         flathead['CRPIX1'] = 1
         flathead['CRPIX2'] = 1
         
