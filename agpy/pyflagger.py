@@ -2363,7 +2363,15 @@ if __name__ == "__main__":
               datashape = f.powerspectra_whole.shape[0]
               xfreq = fftfreq(datashape,d=f.sample_interval)[1:datashape/2]
               psw = f.powerspectra_whole.mean(axis=1)
-              loglog(xfreq, psw[1:psw.size/2]*xfreq, linewidth=0.5, color='k')
+              logfreq = np.logspace(np.log10(np.min(xfreq)), np.log10(np.max(xfreq)), 1000)
+              inds = np.digitize(xfreq,logfreq)
+              psd = psw[1:psw.size/2]*xfreq
+              # interpolation: ignores data 
+              logpsw  = np.interp(logfreq, xfreq, psw[1:psw.size/2]*xfreq)
+              # so average down where available...
+              logpsw[np.unique(inds)] = [np.median(psd[inds==i]) for i in np.unique(inds)]
+              # all data: loglog(xfreq, psw[1:psw.size/2]*xfreq, linewidth=0.5, color='k')
+              loglog(logfreq, logpsw, linewidth=0.5, color='k')
                 
               f.broken_powerfit(ii,timestream='ac_bolos',replotspec=False,
                       doplot=False,
@@ -2375,6 +2383,7 @@ if __name__ == "__main__":
               L = legend(loc='upper right')
               xlabel("Frequency (Hz)")
               ylabel("PSD (Jy$^2$ Hz$^{-1}$)")
+              gca().set_xlim(xfreq.min(),xfreq.max())
               savefig(f.fileprefix+"_PowerSpectrumFit.png")
 
           if options.compute_expfit:

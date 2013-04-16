@@ -102,3 +102,24 @@ def gkde_contours(MC, varname1, varname2, varslice=None,
     
     pylab.xlabel(varname1); 
     pylab.ylabel(varname2); 
+
+
+def plot_mc_hist(MC,field,onesided=True,bins=50,**kwargs):
+    """
+    Plot a histogram with 1,2,3-sigma bars
+    """
+    field_data = MC.trace(field)[:]
+    field_data_sorted = np.sort(field_data)
+    pylab.hist(field_data,bins=bins,histtype='stepfilled',**kwargs)
+    ax = pylab.gca()
+    ylim = ax.get_ylim()
+    fieldlen = len(field_data)
+    if onesided:
+        pylab.vlines(field_data_sorted[fieldlen*0.68],*ylim,color='k',label="$1-\\sigma$")
+        pylab.vlines(field_data_sorted[fieldlen*0.95],*ylim,color='r',label="$2-\\sigma$")
+        pylab.vlines(field_data_sorted[fieldlen*0.997],*ylim,color='g',label="$3-\\sigma$")
+    else:
+        pylab.vlines(field_data_sorted[fieldlen*0.15866,fieldlen*0.84134],*ylim,color='k',label="$1-\\sigma$")
+        pylab.vlines(field_data_sorted[fieldlen*0.02275,fieldlen*0.97725],*ylim,color='r',label="$2-\\sigma$")
+        pylab.vlines(field_data_sorted[fieldlen*0.00135,fieldlen*0.99865],*ylim,color='g',label="$3-\\sigma$")
+    pylab.legend(loc='best')
