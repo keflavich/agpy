@@ -128,7 +128,7 @@ def readcol(filename,skipline=0,skipafter=0,names=False,fsep=None,twod=True,
     null=[f.pop(0) for i in range(skipafter)]
     
     if fixedformat:
-        myreadff = lambda(x): readff(x,fixedformat)
+        myreadff = lambda x: readff(x,fixedformat)
         splitarr = map(myreadff,f)
         splitarr = filter(commentfilter,splitarr)
     else:
@@ -263,5 +263,5 @@ def make_commentfilter(comment):
             except: return -1
         return commentfilter
     else: # always return false 
-        return lambda(x): -1
+        return lambda x: -1
 

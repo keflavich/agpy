@@ -109,17 +109,28 @@ def plot_mc_hist(MC,field,onesided=True,bins=50,**kwargs):
     Plot a histogram with 1,2,3-sigma bars
     """
     field_data = MC.trace(field)[:]
+    if onesided:
+        field_stats = MC.trace(field).stats(quantiles=[68.2689,95.44997,99.7300,50])
+    else:
+        field_stats = MC.trace(field).stats(quantiles=[0.135,2.275,15.866,84.134,97.725,99.865,50])
+    vpts = field_stats['quantiles']
     field_data_sorted = np.sort(field_data)
-    pylab.hist(field_data,bins=bins,histtype='stepfilled',**kwargs)
+    h,l,p = pylab.hist(field_data,bins=bins,histtype='stepfilled',**kwargs)
     ax = pylab.gca()
-    ylim = ax.get_ylim()
+    if kwargs.get('normed'):
+        ylim = [0,h.max()*1.01]
+    else:
+        ylim = ax.get_ylim()
     fieldlen = len(field_data)
     if onesided:
-        pylab.vlines(field_data_sorted[fieldlen*0.68],*ylim,color='k',label="$1-\\sigma$")
-        pylab.vlines(field_data_sorted[fieldlen*0.95],*ylim,color='r',label="$2-\\sigma$")
-        pylab.vlines(field_data_sorted[fieldlen*0.997],*ylim,color='g',label="$3-\\sigma$")
+        pylab.vlines(vpts[68.2689] ,*ylim ,linewidth=3, alpha=0.5, color='k',label="$1\\sigma$")
+        pylab.vlines(vpts[95.44997],*ylim ,linewidth=3, alpha=0.5, color='r',label="$2\\sigma$")
+        pylab.vlines(vpts[99.7300] ,*ylim ,linewidth=3, alpha=0.5, color='g',label="$3\\sigma$")
     else:
-        pylab.vlines(field_data_sorted[fieldlen*0.15866,fieldlen*0.84134],*ylim,color='k',label="$1-\\sigma$")
-        pylab.vlines(field_data_sorted[fieldlen*0.02275,fieldlen*0.97725],*ylim,color='r',label="$2-\\sigma$")
-        pylab.vlines(field_data_sorted[fieldlen*0.00135,fieldlen*0.99865],*ylim,color='g',label="$3-\\sigma$")
+        pylab.vlines(field_stats['mean'],*ylim,color='k', linestyle='--', linewidth=3, alpha=0.5, label="$\mu$")
+        pylab.vlines(vpts[50],*ylim, color='b', linestyle='--', linewidth=3, alpha=0.5, label="$\mu_{1/2}$")
+        pylab.vlines([vpts[15.866],vpts[84.134]],*ylim,color='k',linewidth=3, alpha=0.5, label="$1\\sigma$")
+        pylab.vlines([vpts[ 2.275],vpts[97.725]],*ylim,color='r',linewidth=3, alpha=0.5, label="$2\\sigma$")
+        pylab.vlines([vpts[ 0.135],vpts[99.865]],*ylim,color='g',linewidth=3, alpha=0.5, label="$3\\sigma$")
+    ax.set_ylim(*ylim)
     pylab.legend(loc='best')
