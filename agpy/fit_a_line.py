@@ -8,15 +8,25 @@ A set of tools for simple line fitting.
 Running this code independently tests the fitting functions with different
 types of random data.
 
+(note: this code exists as a standalone package from http://github.com/keflavich/fit_a_line)
+
 """
 import numpy
 
+def ordinary_least_squares(data1, data2, error=None):
+    import statsmodels.api as sm
+    results = sm.OLS(data2, data1).fit()
+    return results
 
 def PCA_linear_fit(data1, data2, print_results=False, ignore_nans=True):
     """
-    Use principal component analysis to determine the best linear fit to the data.
-    data1 - x array
-    data2 - y array
+    Use principal component analysis to determine the best linear fit to the
+    data.
+    
+    Parameters
+    ----------
+        data1 - x array
+        data2 - y array
 
     returns m,b in the equation y = m x + b
 
@@ -178,11 +188,15 @@ def total_least_squares(data1, data2, data1err=None, data2err=None,
 
 def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         print_results=False, intercept=True, nsample=5000, burn=1000,
-        thin=10, return_MC=False, guess=None):
+        thin=10, return_MC=False, guess=None, ignore_nans=True,
+        progress_bar=True):
     import numpy as np
     old_errsettings = np.geterr()
     import pymc # pymc breaks np error settings
     np.seterr(**old_errsettings)
+
+    if ignore_nans:
+        data1,data2,data1err,data2err = remove_nans(data1,data2,data1err,data2err)
 
     if guess is None:
         guess = (0,0)
@@ -224,7 +238,7 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
     d['y'] = ydata
     
     MC = pymc.MCMC(d)
-    MC.sample(nsample,burn=burn,thin=thin)
+    MC.sample(nsample,burn=burn,thin=thin,progress_bar=progress_bar)
 
     MCs = MC.stats()
     m,em = MCs['slope']['mean'],MCs['slope']['standard deviation']
@@ -248,10 +262,33 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         return m,b
     else:
         return m
-        
+
+def remove_nans(data1,data2,data1err=None,data2err=None):
+    badvals = numpy.isnan(data1) + numpy.isnan(data2)
+    if data1err is not None:
+        badvals += numpy.isnan(data1err)
+    if data2err is not None:
+        badvals += numpy.isnan(data2err)
+    goodvals = True-badvals
+    if goodvals.sum() < 2:
+        if intercept:
+            return 0,0
+        else:
+            return 0
+    if badvals.sum():
+        data1 = data1[goodvals]
+        data2 = data2[goodvals]
+        if data1err is not None:
+            data1err = data1err[goodvals]
+        if data2err is not None:
+            data2err = data2err[goodvals]
+
+    return data1,data2,data1err,data2err
+
 def pymc_linear_fit_withoutliers(data1, data2, data1err=None, data2err=None,
         print_results=False, intercept=True, nsample=5000, burn=1000,
-        thin=10, return_MC=False, guess=None, verbose=0):
+        thin=10, return_MC=False, guess=None, verbose=0, ignore_nans=True,
+        progress_bar=True):
     """
     Use pymc to fit a line to data with outliers assuming outliers
     come from a broad, uniform distribution that cover all the data
@@ -264,6 +301,9 @@ def pymc_linear_fit_withoutliers(data1, data2, data1err=None, data2err=None,
     http://astroml.github.com/book_figures/chapter8/fig_outlier_rejection.html
     """
     import pymc
+
+    if ignore_nans:
+        data1,data2,data1err,data2err = remove_nans(data1,data2,data1err,data2err)
 
     if guess is None:
         guess = (0,0)
@@ -312,7 +352,7 @@ def pymc_linear_fit_withoutliers(data1, data2, data1err=None, data2err=None,
     d['y'] = ydata
     
     MC = pymc.MCMC(d)
-    MC.sample(nsample,burn=burn,thin=thin,verbose=verbose)
+    MC.sample(nsample,burn=burn,thin=thin,verbose=verbose,progress_bar=progress_bar)
 
     MCs = MC.stats()
     m,em = MCs['slope']['mean'],MCs['slope']['standard deviation']
@@ -492,7 +532,7 @@ def pymc_linear_fit_perpointoutlier(data1, data2, data1err=None, data2err=None):
         Vi = dyi ** 2
         Vb = sigmab ** 2
 
-        root2pi = np.sqrt(2 * np.pi)
+        #root2pi = np.sqrt(2 * np.pi)
 
         logL_in = -0.5 * np.sum(qi * (np.log(2 * np.pi * Vi)
                                       + (yi - mu) ** 2 / Vi))

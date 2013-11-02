@@ -245,15 +245,37 @@ def unpca_subtract(arr,ncomps):
 
 def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         print_results=False, intercept=True, nsample=5000, burn=1000,
-        thin=10, return_MC=False, guess=None):
+        thin=10, return_MC=False, guess=None, ignore_nans=True,
+        progress_bar=True):
     old_errsettings = numpy.geterr()
     import pymc # pymc breaks np error settings
     numpy.seterr(**old_errsettings)
 
+    if ignore_nans:
+        badvals = numpy.isnan(data1) + numpy.isnan(data2)
+        if data1err is not None:
+            badvals += numpy.isnan(data1err)
+        if data2err is not None:
+            badvals += numpy.isnan(data2err)
+        goodvals = True-badvals
+        if goodvals.sum() < 2:
+            if intercept:
+                return 0,0
+            else:
+                return 0
+        if badvals.sum():
+            data1 = data1[goodvals]
+            data2 = data2[goodvals]
+            if data1err is not None:
+                data1err = data1err[goodvals]
+            if data2err is not None:
+                data2err = data2err[goodvals]
+
+
     if guess is None:
         guess = (0,0)
 
-    xmu = pymc.distributions.Uninformative(name='x_observed',value=0)
+    xmu = pymc.distributions.Uninformative(name='x_observed',value=data1)
     if data1err is None:
         xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
                 value=data1, tau=1, trace=False)
@@ -263,8 +285,7 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
         xdata = pymc.distributions.Normal('x', mu=xmu, observed=True,
                 value=data1, tau=xtau, trace=False)
 
-    d={'slope':pymc.distributions.Uninformative(name='slope', value=guess[0]), 
-       }
+    d={'slope':pymc.distributions.Uninformative(name='slope', value=guess[0]), }
     if intercept:
         d['intercept'] = pymc.distributions.Uninformative(name='intercept',
                 value=guess[1])
@@ -290,7 +311,7 @@ def pymc_linear_fit(data1, data2, data1err=None, data2err=None,
     d['y'] = ydata
     
     MC = pymc.MCMC(d)
-    MC.sample(nsample,burn=burn,thin=thin)
+    MC.sample(nsample,burn=burn,thin=thin,progress_bar=progress_bar)
 
     MCs = MC.stats()
     m,em = MCs['slope']['mean'],MCs['slope']['standard deviation']

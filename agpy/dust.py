@@ -12,7 +12,7 @@ try:
 except ImportError:
     from math import exp,log
 
-def kappa(nu, nu0=constants.c/500e-4, kappa0=0.005, beta=1.75):
+def kappa(nu, nu0=271.1, kappa0=0.0114, beta=1.75):
     return kappa0*(nu*1e9/nu0)**(beta)
 
 def snu(nu, column, kappa, temperature):
