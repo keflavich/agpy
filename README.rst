@@ -6,4 +6,3 @@ A collection of astronomy-related tools.  Please see the `package documentation 
 
 Apologies for the large file size - I'll remove the large files (since they're not needed for most takss) when I get to it.
 
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/keflavich/agpy/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
