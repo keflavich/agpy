@@ -57,8 +57,11 @@ def flatten_header(header):
 
     for key in newheader.keys():
         try:
-            if int(key[-1]) >= 3 and key[:2] in ['CD','CR','CT','CU','NA']:
-                newheader.rename_key(key,'A'+key,force=True)
+            if key[:2] in ['CD','CR','CT','CU','NA','PC']:
+                if int(key[-1]) >= 3:
+                    newheader.rename_key(key,'A'+key,force=True)
+                elif int(key[3]) >= 3: # for, e.g., PC04_02
+                    newheader.rename_key(key,'A'+key,force=True)
         except ValueError:
             # if key[-1] is not an int
             pass
