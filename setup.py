@@ -7,7 +7,7 @@ if 'develop' in sys.argv:
 else:
     from distutils.core import setup
 
-with open('README.txt') as file:
+with open('README.rst') as file:
     long_description = file.read()
 
 with open('CHANGES') as file:
