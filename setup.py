@@ -14,10 +14,10 @@ with open('CHANGES') as file:
     long_description += file.read()
 
 
-from agpy import __version__ as version
+execfile('agpy/__version__.py')
 
 setup(name='agpy',
-      version=version,
+      version=__version__,
       description='agpy, Adam Ginsburg\'s Python Code (in 0.1 for perpetuity - it won\'t bump up until I release something)',
       long_description=long_description,
       author='Adam Ginsburg',

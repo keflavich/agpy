@@ -8,7 +8,6 @@ The functions included below are the 'mature' codes from the agpy package.
 .. moduleauthor:: Adam Ginsburg <adam.g.ginsburg@gmail.com>
 
 """
-__version__='0.1.2'
 ##from luminosity import luminosity
 #import readcol as readcol_mod
 from readcol import readcol
@@ -46,6 +45,8 @@ import pymc_plotting
 import imf
 
 import montage
+
+from __version__ import __version__
 
 # import all of the functions but not the modules...
 __all__ = ['readcol', 'gaussfitter', 'kdist', 'reg_gal2cel', 'posang',

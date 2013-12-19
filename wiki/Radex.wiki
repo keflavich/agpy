@@ -1,0 +1,17 @@
+#summary RADEX codes description
+#labels Featured
+
+[http://www.strw.leidenuniv.nl/~moldata/radex.html RADEX] is a one-dimensional non-LTE radiative transfer code base on the LAMDA molecular database.
+
+----
+
+I have written two codes to use RADEX more efficiently:
+
+  *  [http://code.google.com/p/agpy/source/browse/trunk/radex/radex_grid.py radex_grid.py] is an executable that is intended to be user-modified.  It will create a grid (cube) over density, column, and temperature parameter space.  It can be run in parallel using mpi4py and mpirun.
+
+  *  [http://code.google.com/p/agpy/source/browse/trunk/radex/radex_grid.py radex_grid_opH2.py] is the same as radex_grid, but allows multiple collision partners, specifically ortho and para H2.  This proved useful for using the [http://adsabs.harvard.edu/abs/2009A%26A...493..687T Troscompt 2009] [http://code.google.com/p/agpy/source/browse/trunk/radex/o-h2co_troscompt.dat collision rates].
+
+  *  [http://code.google.com/p/agpy/source/browse/trunk/radex/plot_grids.py plot_grids.py] is meant to plot the resulting data and/or turn it into .fits data cubes.
+
+
+In order to use radex_grid with LVG, Sphere, and Planar assumptions, I recommend generating separate executables.  Edit "radex.inc" included in the RADEX source code distribution (lines 34-36 in the current version as of this posting, stating "parameter (method = 1)" ) for each assumption, then make, then move bin/radex to bin/radex_sphere or bin/radex_lvg as appropriate.  I then symlinked (ln -s) the executables into my /usr/local/bin directory, but you can add them to your path however you like.

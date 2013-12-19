@@ -1,1 +1,56 @@
+# Compiled files
+*.py[cod]
+*.a
+*.o
+*.so
+*.pyd
+__pycache__
+
+# Other generated files
+MANIFEST
+
+# Sphinx
+_build
+_generated
+docs/api
+
+# Packages/installer info
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+distribute-*.tar.gz
+
+# Other
+.cache
+.tox
+.*.swp
+*~
+.project
+.pydevproject
+.settings
+.coverage
+cover
+htmlcov
+
+# Mac OSX
+.DS_Store
+
 *pyc
+*~
+ipython_log*py
+ipython_*py
+*lprof
+*png
+*.[123456789]
+.svn
+build
+autodoc
+*tmp

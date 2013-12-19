@@ -1,0 +1,49 @@
+﻿#summary Python implementation of a power-law distribution fitter.
+#labels powerlaw
+= Power-law Distribution Fitting =
+
+Aaron Clauset et al. address the issue of fitting power-laws to distributions on [http://www.santafe.edu/~aaronc/powerlaws/ this website] and in their paper [http://arxiv.org/abs/0706.1062 Power-law distributions in empirical data].  I have created a python implementation of their code because I didn't have matlab or R and wanted to do some power-law fitting. 
+
+Power-laws are very commonly used in astronomy and are typically used to describe the initial mass function (IMF), the core mass function (CMF), and often luminosity distributions.  Most distributions in astronomy tend to be apparent power-laws because the source counts are too few or too narrow to distinguish powerlaws from log-normal and other distributions.  But, to this end, I've included the testing mechanism to test for consistency with a power law as described in the above paper.
+
+Only the continuous case is implemented in this case; my research interests do not (yet) require the discrete distribution.
+[http://code.google.com/p/agpy/source/browse/#svn/trunk/plfit]
+
+The python internal documentation is complete.  A brief description of relevant functions is included here for convenience:
+
+plfit is implemented as a class.  This means that you import plfit, and declare an instance of the plfit class:
+import plfit
+X = rand(1000)
+myplfit = plfit.plfit(X)
+The results of the fit are printed to the screen (if desired) and are stored as part of the object.
+
+alpha`_` and kstest`_` are functions used internally to determine the ks-statistic and alpha values as a function of xmin.
+
+There are 3 predefined plotting functions:
+  * `alphavsks` plots alpha on the y-axis vs. the ks statistic value on the x-axis with the 'best-fit' alpha value plotted with error bars.   These plots are a useful way to determine if other values of xmin are similarly good fits.
+  * `plotcdf` plots the cumulative distribution function along with the best-fit power law
+  * `plotpdf` plots a histogram of the PDF with the best fit power law.  It defaults to log binning (i.e. a linear power-law fit) but can do dN/dS and linear binning as well.
+
+test_pl uses the fitted power-law as the starting point for a monte-carlo test of whether the powerlaw is an acceptable fit.  It returns a "p-value" that should be >0.1 if a power-law fit is to be considered (though a high p-value does not ensure that the distribution function is a power law!).
+
+plexp_inv creates a cutoff power-law distribution with an exponential tail-off.  It is useful for tests.
+pl_inv creates a pure cutoff power-law distribution
+test_fitter uses the previous two functions to test the fitter's ability to return the correct xmin and alpha values for large numbers of iterations
+
+
+The powerlaw fitter is very effective at returning the correct value of alpha but not as good at returning the correct value of xmin.
+
+There are 3 implementations of the code internals.  fplfit.f is a fortran function, cplfit.pyx is a cython function, and plfit.py is the wrapper and includes a python-only implementation that requires numpy.  FORTRAN is fastest, follow closely by cython.  Python is ~3x slower.  
+
+As of November 21, 2011, there is a pure python (i.e., no numpy) implementation at [http://code.google.com/p/agpy/source/browse/trunk/plfit/plfit_py.py plfit_py.py].  It's slower and hobbled, but I think it works...
+
+To install the cython function, run:
+python setup.py build_ext --inplace
+
+To install the fortran function, run:
+f2py -c fplfit.f -m fplfit
+
+
+For usage examples, view speedcompare_plfit.py and plfit_tests.py
+
+*If you use this code, please cite Clauset et al 2009 and consider posting a comment below.*

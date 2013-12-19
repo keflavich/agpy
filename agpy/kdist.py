@@ -8,41 +8,42 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
         kinematic=True,regular=False,rrgal=False,verbose=False,
         inverse=False,silent=False, returnvtan=False):
     """
-    Return the distance to an object given its Galactic longitude, latitude,
-    and LSR velocity assuming a uniform rotation curve
+     NAME:
+       KINDIST 
+     PURPOSE:
+       To return the distance to an object given l,b,v
     
-    Parameters
-    ----------
-    l, b: float,float
-        Galactic Longitude and Latitude (decimal degrees)
-    v: float
-        Velocity w.r.t. LSR in km/s
-    near: bool
-        Return the near kinematic distance if set, otherwise return the far
-        kinematic distance.  The "Kinematic Distance Ambiguity" (i.e., near/far
-        for one velocity) only exists for quadrants 1 & 4 (-90<l<90)
-    RO, VO: float,float
-        Values for galactocentric distance for sun and velocity of the LSR
-        around the GC.  Default to 8.4 kpc and 254 km/s (Reid et al., 2009)
-    rrgal: bool
-        return galactocentric distance in addition to distance from us
-    dynamical: bool
-        Use the dynamical definition of the LSR
-    kinematic: bool
-        Use the kinematic definition of the LSR (default)
-    regular: bool
-        Do not apply the rotation correction for High mass star forming
-        regions.
-    inverse: bool
-        If set, pass DISTANCE instead of velocity, and output is velocity
-    returnvtan: bool
-        if set, return the tanent velocity and ignore the input velocity
+     CALLING SEQUENCE:
+       dist = KDIST (L, B, V)
     
-    Returns
-    -------
-    The kinematic distance in the same units as R0 (defaults to pc).  However,
-    the boolean parameters inverse and returnvtan and rrgal all change the
-    return values.
+     INPUTS:
+       L, B -- Galactic Longitude and Latitude (decimal degrees)
+       V - Velocity w.r.t. LSR in km/s
+     KEYWORD PARAMETERS:
+       /NEAR, /FAR -- Report the near/far kinematic distances for Q1 and
+                      Q4 data.
+       RO, VO -- Force values for galactocentric distance for sun and
+                 velocity of the LSR around the GC.  Default to 8.4 kpc
+                 and 254 km/s (Reid et al., 2009)
+       RGAL -- Named keyword containing galactocentric radius of sources.
+       rrgal  - return galactocentric distance in addition to distance from us
+       /DYNAMICAL -- Use the dynamical definition of the LSR
+       /KINEMATIC -- Use the kinematic definition of the LSR (default)
+       /REGULAR -- Do not apply the rotation correction for High mass
+                   star forming regions.
+        INVERSE -- If set, pass DISTANCE instead of velocity, and output is
+                   velocity
+        returnvtan - if set, return the tanent velocity and ignore the input
+                    velocity
+     OUTPUTS:
+       DIST -- the kinematic distance in units of R0 (defaults to pc).
+    
+     MODIFICATION HISTORY:
+    
+           Fri Feb 27 00:47:18 2009, Erik <eros@orthanc.local>
+    		 Adapted from kindist.pro
+                 Translated from IDL to Python by Adam Ginsburg (adam.ginsburg@colorado.edu)
+
     """
 
     dtor = pi/180.

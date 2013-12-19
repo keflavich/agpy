@@ -9,7 +9,7 @@ try:
 except ImportError:
     pyplotOK = False
 from correlate2d import correlate2d
-from AG_image_tools.radialprofile import azimuthalAverageBins,radialAverageBins
+from image_tools.radialprofile import azimuthalAverageBins,radialAverageBins
 
 def hanning2d(M, N):
     """
@@ -140,7 +140,7 @@ def pspec(psd2, return_index=True, wavenumber=False, return_stddev=False, azbins
     else:
         return_vals = list(zz)
     if return_stddev:
-        zzstd = azimuthalAverageBins(psd2,azbins=azbins,stddev=True,interpnan=True, binsize=binsize, **kwargs)
+        azbinsS,(freqstd,zzstd) = azimuthalAverageBins(psd2,azbins=azbins,stddev=True,interpnan=True, binsize=binsize, **kwargs)
         return_vals.append(zzstd)
     
     if view and pyplotOK:
