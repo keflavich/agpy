@@ -122,8 +122,8 @@ def wcsalign(hdu_list_in, hdu_list_ref):
         ubnd_out[1] += shift[1]
  
         #  Get the value used to represent missing pixel values
-        if "BLANK" in fitschan:
-            badval = fitschan["BLANK"]
+        if "BLANK" in fitschan_in:
+            badval = fitschan_in["BLANK"]
             flags = Ast.USEBAD
         else:
             badval = 0
