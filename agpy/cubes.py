@@ -621,5 +621,8 @@ try:
         
         return
 
+    def resample_cube(cubefilename, header):
+        inhdr = pyfits.getheader(cubefilename)
+
 except:
     pass

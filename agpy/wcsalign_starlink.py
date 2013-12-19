@@ -15,6 +15,7 @@ from __future__ import print_function
 #     - Requires pyast version 2.3
  
 from astropy.io import fits
+#import pyfits
 import sys
 import starlink.Ast as Ast
 import starlink.Atl as Atl
@@ -27,13 +28,13 @@ def main():
 
     wcsalign(hdu_list_in, hdu_list_ref)
 
-def wcsalign(hdu_list_in, hdu_list_ref):
+def wcsalign(hdu_list_in, hdu_list_ref, outname=None):
   
     #  Create objects that will transfer FITS header cards between an AST
     #  FitsChan and the fits header describing the primary HDU of the
     #  supplied FITS file.
-    adapter_in = Atl.fitsAdapter(hdu_list_in[0])
-    adapter_ref = Atl.fitsAdapter(hdu_list_ref[0])
+    adapter_in = Atl.PyFITSAdapter(hdu_list_in[0])
+    adapter_ref = Atl.PyFITSAdapter(hdu_list_ref[0])
      
     #  Create a FitsChan for each and use the above adapters to copy all the header
     #  cards into it.
@@ -80,6 +81,11 @@ def wcsalign(hdu_list_in, hdu_list_ref):
     wcsinfo_in.invert()
     wcsinfo_ref.invert()
     alignment_fs = wcsinfo_in.convert(wcsinfo_ref)
+
+    #  Invert them again to put them back to their original state (i.e.
+    #  base frame = pixel coords, and current Frame = WCS coords).
+    wcsinfo_in.invert()
+    wcsinfo_ref.invert()
 
     #  Check alignment was possible.
     if alignment_fs is None:
@@ -130,37 +136,41 @@ def wcsalign(hdu_list_in, hdu_list_ref):
             flags = 0
  
         # Resample the data array using the above mapping.
-        (npix, out, out_var) = pixmap.resample(lbnd_in, ubnd_in,
-                                             hdu_list[0].data, None,
-                                             Ast.LINEAR, None, flags,
-                                             0.05, 1000, badval, lbnd_out,
-                                             ubnd_out, lbnd_out, ubnd_out)
+        # total_map was pixmap; is this right?
+        (npix, out, out_var) = total_map.resample(lbnd_in, ubnd_in,
+                                                  hdu_list_in[0].data, None,
+                                                  Ast.LINEAR, None, flags,
+                                                  0.05, 1000, badval, lbnd_out,
+                                                  ubnd_out, lbnd_out, ubnd_out)
  
         #  Store the aligned data in the primary HDU, and update the NAXISi keywords
         #  to hold the number of pixels along each edge of the rotated image.
         hdu_list_in[0].data = out
-        fitschan["NAXIS1"] = ubnd_out[0] - lbnd_out[0] + 1
-        fitschan["NAXIS2"] = ubnd_out[1] - lbnd_out[1] + 1
- 
-    #  Get the Mapping from output pixel coordinates to WCS. This is the same as 
-    #  the corresponding mapping in the reference NDF, plus a shift of origin to put
-    #  [1,1] at the bottom left corner. We can use the ShiftMap we created earlier 
-    #  for this, except that its sense is wrong. So we first invert it.
-    shiftmap.invert()
+        fitschan_in["NAXIS1"] = ubnd_out[0] - lbnd_out[0] + 1
+        fitschan_in["NAXIS2"] = ubnd_out[1] - lbnd_out[1] + 1
+
+    #  The WCS to store in the output is the same as the reference WCS
+    #  except for the extra shift of origin. So use the above shiftmap to
+    #  remap the pixel coordinate frame in the reference WCS FrameSet. We
+    #  can then use this FrameSet as the output FrameSet.
     wcsinfo_ref.remapframe(Ast.BASE, shiftmap)
  
     #  Attempt to write the modified WCS information to the primary HDU (i.e.
     #  convert the FrameSet to a set of FITS header cards stored in the
     #  FITS file). Indicate that we want to use original flavour of FITS-WCS.
-    fitschan.Encoding = encoding
-    fitschan.clear('Card')
-    if fitschan.write(wcsinfo_ref) == 0 :
-        print("Failed to convert the aligned WCS to Fits-WCS")
+    fitschan_in.Encoding = encoding
+    fitschan_in.clear('Card')
+
+    if fitschan_in.write(wcsinfo_ref) == 0:
+        raise Exception("Failed to convert the aligned WCS to Fits-WCS")
  
-    #  If successfull, force the FitsChan to copy its contents into the
+    #  If successful, force the FitsChan to copy its contents into the
     #  fits header, then write the changed data and header to the output
     #  FITS file.
     else:
-        fitschan.writefits()
-        hdu_list.writeto(sys.argv[3],clobber=True)
+        fitschan_in.writefits()
 
+    if outname is not None:
+        hdu_list_in.writeto(outname, clobber=True)
+    
+    return hdu_list_in
