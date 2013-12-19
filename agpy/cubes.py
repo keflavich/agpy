@@ -202,6 +202,9 @@ def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
         wcs = pywcs.WCS(header=flathead)
         if header.get('CD3_3'): CD3 = header.get('CD3_3')
         else: CD3 = header.get('CDELT3')
+        if 'CUNIT3' in header['CUNIT3']:
+            if header['CUNIT3'] != wcs.wcs.cunit[2]:
+                raise ValueError("WCS error: WCS tried to convert units.")
 
     if units=="pixels":
         xlo = int( max([xcen-xwidth,0])              )
