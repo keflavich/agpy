@@ -54,3 +54,5 @@ ipython_*py
 build
 autodoc
 *tmp
+
+backup
