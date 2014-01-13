@@ -199,7 +199,7 @@ def subimage_integ(cube, xcen, xwidth, ycen, ywidth, vrange, header=None,
 
     if header:
         flathead = flatten_header(header.copy())
-        wcs = pywcs.WCS(header=flathead)
+        wcs = pywcs.WCS(header=flathead,fix=False)
         if header.get('CD3_3'): CD3 = header.get('CD3_3')
         else: CD3 = header.get('CDELT3')
         if 'CUNIT3' in header['CUNIT3']:
