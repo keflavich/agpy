@@ -1,11 +1,13 @@
 import numpy as np
 from AG_image_tools.downsample import downsample as downsample_2d
 from convolve_nd import convolvend as convolve
+from astropy.convolution import convolve as convolve_cy
 
 def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
         silent=True, psf_pad=True, interpolate_nan=False, nwidths='max',
         min_nwidths=6, return_kernel=False, normalize_kernel=np.sum,
         downsample=False, downsample_factor=None, ignore_edge_zeros=False,
+        use_fft=True,
         **kwargs):
     """
     Returns a smoothed image using a gaussian, boxcar, or tophat kernel
@@ -88,9 +90,12 @@ def smooth(image, kernelwidth=3, kerneltype='gaussian', trapslope=None,
     #if not kwargs.has_key('ignore_edge_zeros'): kwargs['ignore_edge_zeros']=True
     if not kwargs.has_key('interpolate_nan'): kwargs['interpolate_nan']=interpolate_nan
 
-    # No need to normalize - normalization is dealt with in this code
-    temp = convolve(temp,kernel,psf_pad=psf_pad, normalize_kernel=False,
-            ignore_edge_zeros=ignore_edge_zeros, **kwargs)
+    if use_fft:
+        # No need to normalize - normalization is dealt with in this code
+        temp = convolve(temp,kernel,psf_pad=psf_pad, normalize_kernel=False,
+                ignore_edge_zeros=ignore_edge_zeros, **kwargs)
+    else:
+        temp = convolve_cy(temp,kernel, **kwargs)
     if interpolate_nan is False: temp[bad] = image[bad]
 
     if temp.shape != image.shape:

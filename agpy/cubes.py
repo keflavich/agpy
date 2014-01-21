@@ -13,6 +13,7 @@ from math import acos,atan2,tan
 import numpy
 import copy
 import os
+import warnings
 try:
     import astropy.io.fits as pyfits
     import astropy.wcs as pywcs
@@ -21,7 +22,7 @@ except ImportError:
     try:
         import pywcs
     except ImportError:
-        print "cubes.py requires pywcs for some subimage_integ,aper_wordl2pix,getspec, and coords_in_image"
+        warnings.warn("cubes.py requires pywcs for some subimage_integ,aper_world2pix,getspec, and coords_in_image")
 import tempfile
 import posang # agpy code
 try:
@@ -37,7 +38,7 @@ try:
 except ImportError:
     import pywcs
 finally:
-    print "cubes.py requires pywcs for some subimage_integ,aper_wordl2pix,getspec, and coords_in_image"
+    warnings.warn("cubes.py requires pywcs for some subimage_integ,aper_world2pix,getspec, and coords_in_image")
 
 dtor = pi/180.0
 
