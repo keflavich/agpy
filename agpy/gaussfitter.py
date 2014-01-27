@@ -182,6 +182,9 @@ def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=Fals
         Can also output the covariance matrix, 'infodict' that contains a lot
             more detail about the fit (see scipy.optimize.leastsq), and a message
             from leastsq telling what the exit status of the fitting routine was
+            [ This note is from an old version that used optimize.leastsq; now 
+            mpfit is used instead and the covariance etc. can be accessed through
+            the 'mp' structure returned by setting `returnmp=True` ]
 
         Warning: Does NOT necessarily output a rotation angle between 0 and 360 degrees.
     """
