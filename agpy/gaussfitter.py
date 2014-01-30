@@ -7,7 +7,7 @@ gaussfitter
 Latest version available at <http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py>
 
 """
-import numpy
+import numpy as np
 from numpy.ma import median
 from numpy import pi
 #from scipy import optimize,stats,pi
@@ -16,10 +16,12 @@ from agpy.mpfit import mpfit
 Note about mpfit/leastsq: 
 I switched everything over to the Markwardt mpfit routine for a few reasons,
 but foremost being the ability to set limits on parameters, not just force them
-to be fixed.  As far as I can tell, leastsq does not have that capability.  
+to be fixed.  As far as I can tell, leastsq does not have that capability.
 
 The version of mpfit I use can be found here:
     http://code.google.com/p/agpy/source/browse/trunk/mpfit
+
+Alternative: lmfit
 
 .. todo::
     -turn into a class instead of a collection of objects
@@ -32,22 +34,22 @@ def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
     moments.  Depending on the input parameters, will only output 
     a subset of the above.
     
-    If using masked arrays, pass estimator=numpy.ma.median
+    If using masked arrays, pass estimator=np.ma.median
     """
-    total = numpy.abs(data).sum()
-    Y, X = numpy.indices(data.shape) # python convention: reverse x,y numpy.indices
-    y = numpy.argmax((X*numpy.abs(data)).sum(axis=1)/total)
-    x = numpy.argmax((Y*numpy.abs(data)).sum(axis=0)/total)
+    total = np.abs(data).sum()
+    Y, X = np.indices(data.shape) # python convention: reverse x,y np.indices
+    y = np.argmax((X*np.abs(data)).sum(axis=1)/total)
+    x = np.argmax((Y*np.abs(data)).sum(axis=0)/total)
     col = data[int(y),:]
     # FIRST moment, not second!
-    width_x = numpy.sqrt(numpy.abs((numpy.arange(col.size)-y)*col).sum()/numpy.abs(col).sum())
+    width_x = np.sqrt(np.abs((np.arange(col.size)-y)*col).sum()/np.abs(col).sum())
     row = data[:, int(x)]
-    width_y = numpy.sqrt(numpy.abs((numpy.arange(row.size)-x)*row).sum()/numpy.abs(row).sum())
+    width_y = np.sqrt(np.abs((np.arange(row.size)-x)*row).sum()/np.abs(row).sum())
     width = ( width_x + width_y ) / 2.
     height = estimator(data.ravel())
     amplitude = data.max()-height
     mylist = [amplitude,x,y]
-    if numpy.isnan(width_y) or numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
+    if np.isnan(width_y) or np.isnan(width_x) or np.isnan(height) or np.isnan(amplitude):
         raise ValueError("something is nan")
     if vheight==1:
         mylist = [height] + mylist
@@ -62,10 +64,10 @@ def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
 
 def twodgaussian(inpars, circle=False, rotate=True, vheight=True, shape=None):
     """Returns a 2d gaussian function of the form:
-        x' = numpy.cos(rota) * x - numpy.sin(rota) * y
-        y' = numpy.sin(rota) * x + numpy.cos(rota) * y
+        x' = np.cos(rota) * x - np.sin(rota) * y
+        y' = np.sin(rota) * x + np.cos(rota) * y
         (rota should be in degrees)
-        g = b + a * numpy.exp ( - ( ((x-center_x)/width_x)**2 +
+        g = b + a * np.exp ( - ( ((x-center_x)/width_x)**2 +
         ((y-center_y)/width_y)**2 ) / 2 )
 
         inpars = [b,a,center_x,center_y,width_x,width_y,rota]
@@ -78,7 +80,7 @@ def twodgaussian(inpars, circle=False, rotate=True, vheight=True, shape=None):
         inpars = (height,amplitude,center_x,center_y,width_x,width_y,rota)
 
         You can choose to ignore / neglect some of the above input parameters 
-            unumpy.sing the following options:
+            unp.sing the following options:
             circle=0 - default is an elliptical gaussian (different x, y
                 widths), but can reduce the input by one parameter if it's a
                 circular gaussian
@@ -113,8 +115,8 @@ def twodgaussian(inpars, circle=False, rotate=True, vheight=True, shape=None):
     if rotate == 1:
         rota = inpars.pop(0)
         rota = pi/180. * float(rota)
-        rcen_x = center_x * numpy.cos(rota) - center_y * numpy.sin(rota)
-        rcen_y = center_x * numpy.sin(rota) + center_y * numpy.cos(rota)
+        rcen_x = center_x * np.cos(rota) - center_y * np.sin(rota)
+        rcen_y = center_x * np.sin(rota) + center_y * np.cos(rota)
     else:
         rcen_x = center_x
         rcen_y = center_y
@@ -125,25 +127,25 @@ def twodgaussian(inpars, circle=False, rotate=True, vheight=True, shape=None):
             
     def rotgauss(x,y):
         if rotate==1:
-            xp = x * numpy.cos(rota) - y * numpy.sin(rota)
-            yp = x * numpy.sin(rota) + y * numpy.cos(rota)
+            xp = x * np.cos(rota) - y * np.sin(rota)
+            yp = x * np.sin(rota) + y * np.cos(rota)
         else:
             xp = x
             yp = y
-        g = height+amplitude*numpy.exp(
+        g = height+amplitude*np.exp(
             -(((rcen_x-xp)/width_x)**2+
             ((rcen_y-yp)/width_y)**2)/2.)
         return g
     if shape is not None:
-        return rotgauss(*numpy.indices(shape))
+        return rotgauss(*np.indices(shape))
     else:
         return rotgauss
 
 def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=False,
-        fixed=numpy.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
+        fixed=np.repeat(False,7),limitedmin=[False,False,False,False,True,True,True],
         limitedmax=[False,False,False,False,False,False,True],
-        usemoment=numpy.array([],dtype='bool'),
-        minpars=numpy.repeat(0,7),maxpars=[0,0,0,0,0,0,360],
+        usemoment=np.array([],dtype='bool'),
+        minpars=np.repeat(0,7),maxpars=[0,0,0,0,0,0,360],
         rotate=1,vheight=1,quiet=True,returnmp=False,
         returnfitimage=False,**kwargs):
     """
@@ -167,7 +169,7 @@ def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=Fals
         circle=0 - default is an elliptical gaussian (different x, y widths),
             but can reduce the input by one parameter if it's a circular gaussian
         rotate=1 - default allows rotation of the gaussian ellipse.  Can remove
-            last parameter by setting rotate=0.  numpy.expects angle in DEGREES
+            last parameter by setting rotate=0.  np.expects angle in DEGREES
         vheight=1 - default allows a variable height-above-zero, i.e. an
             additive constant for the Gaussian function.  Can remove first
             parameter by setting this to 0
@@ -179,7 +181,7 @@ def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=Fals
         Default output is a set of Gaussian parameters with the same shape as
             the input parameters
 
-        If returnfitimage=True returns a numpy array of a gaussian
+        If returnfitimage=True returns a np array of a gaussian
             contructed using the best fit parameters.
 
         If returnmp=True returns a `mpfit` object. This object contains
@@ -191,16 +193,16 @@ def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=Fals
 
         Warning: Does NOT necessarily output a rotation angle between 0 and 360 degrees.
     """
-    usemoment=numpy.array(usemoment,dtype='bool')
-    params=numpy.array(params,dtype='float')
+    usemoment=np.array(usemoment,dtype='bool')
+    params=np.array(params,dtype='float')
     if usemoment.any() and len(params)==len(usemoment):
-        moment = numpy.array(moments(data,circle,rotate,vheight,**kwargs),dtype='float')
+        moment = np.array(moments(data,circle,rotate,vheight,**kwargs),dtype='float')
         params[usemoment] = moment[usemoment]
     elif params == [] or len(params)==0:
         params = (moments(data,circle,rotate,vheight,**kwargs))
     if vheight==0:
         vheight=1
-        params = numpy.concatenate([[0],params])
+        params = np.concatenate([[0],params])
         fixed[0] = 1
 
 
@@ -210,18 +212,18 @@ def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=Fals
         if params[i] < minpars[i] and limitedmin[i]: params[i] = minpars[i]
 
     if err is None:
-        errorfunction = lambda p: numpy.ravel((twodgaussian(p,circle,rotate,vheight)\
-                (*numpy.indices(data.shape)) - data))
+        errorfunction = lambda p: np.ravel((twodgaussian(p,circle,rotate,vheight)\
+                (*np.indices(data.shape)) - data))
     else:
-        errorfunction = lambda p: numpy.ravel((twodgaussian(p,circle,rotate,vheight)\
-                (*numpy.indices(data.shape)) - data)/err)
+        errorfunction = lambda p: np.ravel((twodgaussian(p,circle,rotate,vheight)\
+                (*np.indices(data.shape)) - data)/err)
     def mpfitfun(data,err):
         if err is None:
-            def f(p,fjac=None): return [0,numpy.ravel(data-twodgaussian(p,circle,rotate,vheight)\
-                    (*numpy.indices(data.shape)))]
+            def f(p,fjac=None): return [0,np.ravel(data-twodgaussian(p,circle,rotate,vheight)\
+                    (*np.indices(data.shape)))]
         else:
-            def f(p,fjac=None): return [0,numpy.ravel((data-twodgaussian(p,circle,rotate,vheight)\
-                    (*numpy.indices(data.shape)))/err)]
+            def f(p,fjac=None): return [0,np.ravel((data-twodgaussian(p,circle,rotate,vheight)\
+                    (*np.indices(data.shape)))/err)]
         return f
 
                     
@@ -256,7 +258,7 @@ def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=Fals
     elif return_all == 1:
         returns = mp.params,mp.perror
     if returnfitimage:
-        fitimage = twodgaussian(mp.params,circle,rotate,vheight)(*numpy.indices(data.shape))
+        fitimage = twodgaussian(mp.params,circle,rotate,vheight)(*np.indices(data.shape))
         returns = (returns,fitimage)
     return returns
 
@@ -267,44 +269,44 @@ def onedmoments(Xax,data,vheight=True,estimator=median,negamp=None,
     moments.  Depending on the input parameters, will only output 
     a subset of the above.
     
-    If using masked arrays, pass estimator=numpy.ma.median
+    If using masked arrays, pass estimator=np.ma.median
     'estimator' is used to measure the background level (height)
 
     negamp can be used to force the peak negative (True), positive (False),
     or it will be "autodetected" (negamp=None)
     """
 
-    dx = numpy.mean(Xax[1:] - Xax[:-1]) # assume a regular grid
+    dx = np.mean(Xax[1:] - Xax[:-1]) # assume a regular grid
     integral = (data*dx).sum()
     height = estimator(data)
     
     # try to figure out whether pos or neg based on the minimum width of the pos/neg peaks
     Lpeakintegral = integral - height*len(Xax)*dx - (data[data>height]*dx).sum()
     Lamplitude = data.min()-height
-    Lwidth_x = 0.5*(numpy.abs(Lpeakintegral / Lamplitude))
+    Lwidth_x = 0.5*(np.abs(Lpeakintegral / Lamplitude))
     Hpeakintegral = integral - height*len(Xax)*dx - (data[data<height]*dx).sum()
     Hamplitude = data.max()-height
-    Hwidth_x = 0.5*(numpy.abs(Hpeakintegral / Hamplitude))
+    Hwidth_x = 0.5*(np.abs(Hpeakintegral / Hamplitude))
     Lstddev = Xax[data<data.mean()].std()
     Hstddev = Xax[data>data.mean()].std()
     #print "Lstddev: %10.3g  Hstddev: %10.3g" % (Lstddev,Hstddev)
     #print "Lwidth_x: %10.3g  Hwidth_x: %10.3g" % (Lwidth_x,Hwidth_x)
 
     if negamp: # can force the guess to be negative
-        xcen,amplitude,width_x = Xax[numpy.argmin(data)],Lamplitude,Lwidth_x
+        xcen,amplitude,width_x = Xax[np.argmin(data)],Lamplitude,Lwidth_x
     elif negamp is None:
         if Hstddev < Lstddev: 
-            xcen,amplitude,width_x, = Xax[numpy.argmax(data)],Hamplitude,Hwidth_x
+            xcen,amplitude,width_x, = Xax[np.argmax(data)],Hamplitude,Hwidth_x
         else:                                                                   
-            xcen,amplitude,width_x, = Xax[numpy.argmin(data)],Lamplitude,Lwidth_x
+            xcen,amplitude,width_x, = Xax[np.argmin(data)],Lamplitude,Lwidth_x
     else:  # if negamp==False, make positive
-        xcen,amplitude,width_x = Xax[numpy.argmax(data)],Hamplitude,Hwidth_x
+        xcen,amplitude,width_x = Xax[np.argmax(data)],Hamplitude,Hwidth_x
 
     if veryverbose:
         print "negamp: %s  amp,width,cen Lower: %g, %g   Upper: %g, %g  Center: %g" %\
                 (negamp,Lamplitude,Lwidth_x,Hamplitude,Hwidth_x,xcen)
     mylist = [amplitude,xcen,width_x]
-    if numpy.isnan(width_x) or numpy.isnan(height) or numpy.isnan(amplitude):
+    if np.isnan(width_x) or np.isnan(height) or np.isnan(amplitude):
         raise ValueError("something is nan")
     if vheight:
         mylist = [height] + mylist
@@ -313,9 +315,9 @@ def onedmoments(Xax,data,vheight=True,estimator=median,negamp=None,
 def onedgaussian(x,H,A,dx,w):
     """
     Returns a 1-dimensional gaussian of form
-    H+A*numpy.exp(-(x-dx)**2/(2*w**2))
+    H+A*np.exp(-(x-dx)**2/(2*w**2))
     """
-    return H+A*numpy.exp(-(x-dx)**2/(2*w**2))
+    return H+A*np.exp(-(x-dx)**2/(2*w**2))
 
 def onedgaussfit(xax, data, err=None,
         params=[0,1,0,1],fixed=[False,False,False,False],
@@ -354,7 +356,7 @@ def onedgaussfit(xax, data, err=None,
         return f
 
     if xax == None:
-        xax = numpy.arange(len(data))
+        xax = np.arange(len(data))
 
     if vheight is False: 
         height = params[0]
@@ -408,9 +410,9 @@ def n_gaussian(pars=None,a=None,dx=None,sigma=None):
         raise ValueError("Wrong array lengths! dx: %i  sigma: %i  a: %i" % (len(dx),len(sigma),len(a)))
 
     def g(x):
-        v = numpy.zeros(len(x))
+        v = np.zeros(len(x))
         for i in range(len(dx)):
-            v += a[i] * numpy.exp( - ( x - dx[i] )**2 / (2.0*sigma[i]**2) )
+            v += a[i] * np.exp( - ( x - dx[i] )**2 / (2.0*sigma[i]**2) )
         return v
     return g
 
@@ -448,7 +450,7 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
     if len(params) != ngauss and (len(params) / 3) > ngauss:
         ngauss = len(params) / 3 
 
-    if isinstance(params,numpy.ndarray): params=params.tolist()
+    if isinstance(params,np.ndarray): params=params.tolist()
 
     # make sure all various things are the right length; if they're not, fix them using the defaults
     for parlist in (params,fixed,limitedmin,limitedmax,minpars,maxpars):
@@ -474,7 +476,7 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
         return f
 
     if xax == None:
-        xax = numpy.arange(len(data))
+        xax = np.arange(len(data))
 
     parnames = {0:"AMPLITUDE",1:"SHIFT",2:"WIDTH"}
 
@@ -509,32 +511,32 @@ def collapse_gaussfit(cube,xax=None,axis=2,negamp=False,usemoments=True,nsigcut=
         return_errors=False, **kwargs):
     import time
     std_coll = cube.std(axis=axis)
-    std_coll[std_coll==0] = numpy.nan # must eliminate all-zero spectra
+    std_coll[std_coll==0] = np.nan # must eliminate all-zero spectra
     mean_std = median(std_coll[std_coll==std_coll])
     if axis > 0:
         cube = cube.swapaxes(0,axis)
-    width_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
-    amp_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
-    chi2_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
-    offset_arr = numpy.zeros(cube.shape[1:]) + numpy.nan
-    width_err = numpy.zeros(cube.shape[1:]) + numpy.nan
-    amp_err = numpy.zeros(cube.shape[1:]) + numpy.nan
-    offset_err = numpy.zeros(cube.shape[1:]) + numpy.nan
+    width_arr = np.zeros(cube.shape[1:]) + np.nan
+    amp_arr = np.zeros(cube.shape[1:]) + np.nan
+    chi2_arr = np.zeros(cube.shape[1:]) + np.nan
+    offset_arr = np.zeros(cube.shape[1:]) + np.nan
+    width_err = np.zeros(cube.shape[1:]) + np.nan
+    amp_err = np.zeros(cube.shape[1:]) + np.nan
+    offset_err = np.zeros(cube.shape[1:]) + np.nan
     if xax is None:
-        xax = numpy.arange(cube.shape[0])
+        xax = np.arange(cube.shape[0])
     starttime = time.time()
     print "Cube shape: ",cube.shape
-    if negamp: extremum=numpy.min
-    else: extremum=numpy.max
-    print "Fitting a total of %i spectra with peak signal above %f" % ((numpy.abs(extremum(cube,axis=0)) > (mean_std*nsigcut)).sum(),mean_std*nsigcut)
+    if negamp: extremum=np.min
+    else: extremum=np.max
+    print "Fitting a total of %i spectra with peak signal above %f" % ((np.abs(extremum(cube,axis=0)) > (mean_std*nsigcut)).sum(),mean_std*nsigcut)
     for i in xrange(cube.shape[1]):
         t0 = time.time()
-        nspec = (numpy.abs(extremum(cube[:,i,:],axis=0)) > (mean_std*nsigcut)).sum()
+        nspec = (np.abs(extremum(cube[:,i,:],axis=0)) > (mean_std*nsigcut)).sum()
         print "Working on row %d with %d spectra to fit" % (i,nspec) ,
         for j in xrange(cube.shape[2]):
-            if numpy.abs(extremum(cube[:,i,j])) > (mean_std*nsigcut):
-                mpp,gfit,mpperr,chi2 = onedgaussfit(xax,cube[:,i,j],err=numpy.ones(cube.shape[0])*mean_std,negamp=negamp,usemoments=usemoments,**kwargs)
-                if numpy.abs(mpp[1]) > (mpperr[1]*mppsigcut):
+            if np.abs(extremum(cube[:,i,j])) > (mean_std*nsigcut):
+                mpp,gfit,mpperr,chi2 = onedgaussfit(xax,cube[:,i,j],err=np.ones(cube.shape[0])*mean_std,negamp=negamp,usemoments=usemoments,**kwargs)
+                if np.abs(mpp[1]) > (mpperr[1]*mppsigcut):
                     width_arr[i,j] = mpp[3]
                     offset_arr[i,j] = mpp[2]
                     chi2_arr[i,j] = chi2

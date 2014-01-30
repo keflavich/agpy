@@ -141,7 +141,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
     status = 0
     if (dojac):
        pderiv = zeros([len(x), len(p)], Float)
-       for j in range(len(p)):
+       for j in xrange(len(p)):
          pderiv[:,j] = FGRAD(x, p, j)
     else:
        pderiv = None
@@ -262,12 +262,12 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
 
  PARINFO Example:
  parinfo = [{'value':0., 'fixed':0, 'limited':[0,0], 'limits':[0.,0.]} 
-                                                for i in range(5)]
+                                                for i in xrange(5)]
  parinfo[0]['fixed'] = 1
  parinfo[4]['limited'][0] = 1
  parinfo[4]['limits'][0]  = 50.
  values = [5.7, 2.2, 500., 1.5, 2000.]
- for i in range(5): parinfo[i]['value']=values[i]
+ for i in xrange(5): parinfo[i]['value']=values[i]
 
  A total of 5 parameters, with starting values of 5.7,
  2.2, 500, 1.5, and 2000 are given.  The first parameter
@@ -802,8 +802,8 @@ class mpfit:
         To compute the correlation matrix, pcor, use this example:
            cov = mpfit.covar
            pcor = cov * 0.
-           for i in range(n):
-              for j in range(n):
+           for i in xrange(n):
+              for j in xrange(n):
                  pcor[i,j] = cov[i,j]/sqrt(cov[i,i]*cov[j,j])
 
         If nocovar is set or MPFIT terminated abnormally, then .covar is set to
@@ -907,7 +907,7 @@ class mpfit:
         # TIED parameters?
         ptied = self.parinfo(parinfo, 'tied', default='', n=npar)
         self.qanytied = 0
-        for i in range(npar):
+        for i in xrange(npar):
             ptied[i] = ptied[i].strip()
             if ptied[i] != '':
                 self.qanytied = 1
@@ -916,7 +916,7 @@ class mpfit:
         # FIXED parameters ?
         pfixed = self.parinfo(parinfo, 'fixed', default=0, n=npar)
         pfixed = (pfixed == 1)
-        for i in range(npar):
+        for i in xrange(npar):
             pfixed[i] = pfixed[i] or (ptied[i] != '') # Tied parameters are also effectively fixed
 
         # Finite differencing step, absolute and relative, and sidedness of deriv.
@@ -1078,13 +1078,13 @@ class mpfit:
                 # See if any "pegged" values should keep their derivatives
                 if nlpeg > 0:
                     # Total derivative of sum wrt lower pegged parameters
-                    for i in range(nlpeg):
+                    for i in xrange(nlpeg):
                         sum0 = sum(fvec * fjac[:,whlpeg[i]])
                         if sum0 > 0:
                             fjac[:,whlpeg[i]] = 0
                 if nupeg > 0:
                     # Total derivative of sum wrt upper pegged parameters
-                    for i in range(nupeg):
+                    for i in xrange(nupeg):
                         sum0 = sum(fvec * fjac[:,whupeg[i]])
                         if sum0 < 0:
                             fjac[:,whupeg[i]] = 0
@@ -1111,7 +1111,7 @@ class mpfit:
             # Form (q transpose)*fvec and store the first n components in qtf
             catch_msg = 'forming (q transpose)*fvec'
             wa4 = fvec.copy()
-            for j in range(n):
+            for j in xrange(n):
                 lj = ipvt[j]
                 temp3 = fjac[j,lj]
                 if temp3 != 0:
@@ -1126,7 +1126,7 @@ class mpfit:
             fjac = fjac[0:n, 0:n]
             fjac.shape = [n, n]
             temp = fjac.copy()
-            for i in range(n):
+            for i in xrange(n):
                 temp[:,i] = fjac[:, ipvt[i]]
             fjac = temp.copy()
 
@@ -1140,7 +1140,7 @@ class mpfit:
             catch_msg = 'computing the scaled gradient'
             gnorm = 0.
             if self.fnorm != 0:
-                for j in range(n):
+                for j in xrange(n):
                     l = ipvt[j]
                     if wa2[l] != 0:
                         sum0 = sum(fjac[0:j+1,j]*qtf[0:j+1])/self.fnorm
@@ -1255,7 +1255,7 @@ class mpfit:
 
                 # Compute the scaled predicted reduction and the scaled directional
                 # derivative
-                for j in range(n):
+                for j in xrange(n):
                     wa3[j] = 0
                     wa3[0:j+1] = wa3[0:j+1] + fjac[0:j+1,j]*wa1[ipvt[j]]
 
@@ -1374,7 +1374,7 @@ class mpfit:
                 # Fill in actual covariance matrix, accounting for fixed
                 # parameters.
                 self.covar = numpy.zeros([nn, nn], dtype=float)
-                for i in range(n):
+                for i in xrange(n):
                     self.covar[ifree,ifree[i]] = cv[:,i]
 
                 # Compute errors in parameters
@@ -1418,7 +1418,7 @@ class mpfit:
         # Determine which parameters to print
         nprint = len(x)
         print "Iter ", ('%6i' % iter),"   CHI-SQUARE = ",('%.10g' % fnorm)," DOF = ", ('%i' % dof)
-        for i in range(nprint):
+        for i in xrange(nprint):
             if (parinfo is not None) and (parinfo[i].has_key('parname')):
                 p = '   ' + parinfo[i]['parname'] + ' = '
             else:
@@ -1464,7 +1464,7 @@ class mpfit:
     
             return values
         values = []
-        for i in range(n):
+        for i in xrange(n):
             if (parinfo is not None) and (parinfo[i].has_key(key)):
                 values.append(parinfo[i][key])
             else:
@@ -1585,7 +1585,7 @@ class mpfit:
             if len(wh) > 0:
                 h[wh] = - h[wh]
         # Loop through parameters, computing the derivative for each
-        for j in range(n):
+        for j in xrange(n):
             xp = xall.copy()
             xp[ifree[j]] = xp[ifree[j]] + h[j]
             [status, fp] = self.call(fcn, xp, functkw)
@@ -1754,7 +1754,7 @@ class mpfit:
 
         # Compute the initial column norms and initialize arrays
         acnorm = numpy.zeros(n, dtype=float)
-        for j in range(n):
+        for j in xrange(n):
             acnorm[j] = self.enorm(a[:,j])
         rdiag = acnorm.copy()
         wa = rdiag.copy()
@@ -1762,7 +1762,7 @@ class mpfit:
 
         # Reduce a to r with householder transformations
         minmn = numpy.min([m,n])
-        for j in range(minmn):
+        for j in xrange(minmn):
             if pivot != 0:
                 # Bring the column of largest norm into the pivot position
                 rmax = numpy.max(rdiag[j:])
@@ -1803,7 +1803,7 @@ class mpfit:
             # but it actually got slower.  Reverted to "for" loop to keep
             # it simple.
             if j+1 < n:
-                for k in range(j+1, n):
+                for k in xrange(j+1, n):
                     lk = ipvt[k]
                     ajk = a[j:,lk]
                     # *** Note optimization a(j:*,lk)
@@ -1909,13 +1909,13 @@ class mpfit:
         # copy r and (q transpose)*b to preserve input and initialize s.
         # in particular, save the diagonal elements of r in x.
 
-        for j in range(n):
+        for j in xrange(n):
             r[j:n,j] = r[j,j:n]
-        x = numpy.diagonal(r)
+        x = numpy.diagonal(r).copy()
         wa = qtb.copy()
 
         # Eliminate the diagonal matrix d using a givens rotation
-        for j in range(n):
+        for j in xrange(n):
             l = ipvt[j]
             if diag[l] == 0:
                 break
@@ -1927,7 +1927,7 @@ class mpfit:
             # is initially zero.
 
             qtbpj = 0.
-            for k in range(j,n):
+            for k in xrange(j,n):
                 if sdiag[k] == 0:
                     break
                 if numpy.abs(r[k,k]) < numpy.abs(sdiag[k]):
@@ -1965,7 +1965,7 @@ class mpfit:
         if nsing >= 1:
             wa[nsing-1] = wa[nsing-1]/sdiag[nsing-1] # Degenerate case
             # *** Reverse loop ***
-            for j in range(nsing-2,-1,-1):
+            for j in xrange(nsing-2,-1,-1):
                 sum0 = sum(r[j+1:nsing,j]*wa[j+1:nsing])
                 wa[j] = (wa[j]-sum0)/sdiag[j]
 
@@ -2091,7 +2091,7 @@ class mpfit:
             wa1[wh[0]:] = 0
         if nsing >= 1:
             # *** Reverse loop ***
-            for j in range(nsing-1,-1,-1):
+            for j in xrange(nsing-1,-1,-1):
                 wa1[j] = wa1[j]/r[j,j]
                 if j-1 >= 0:
                     wa1[0:j] = wa1[0:j] - r[0:j,j]*wa1[j]
@@ -2116,7 +2116,7 @@ class mpfit:
         if nsing >= n:
             wa1 = diag[ipvt] * wa2[ipvt] / dxnorm
             wa1[0] = wa1[0] / r[0,0] # Degenerate case
-            for j in range(1,n):   # Note "1" here, not zero
+            for j in xrange(1,n):   # Note "1" here, not zero
                 sum0 = sum(r[0:j,j]*wa1[0:j])
                 wa1[j] = (wa1[j] - sum0)/r[j,j]
 
@@ -2124,7 +2124,7 @@ class mpfit:
             parl = ((fp/delta)/temp)/temp
 
         # Calculate an upper bound, paru, for the zero of the function
-        for j in range(n):
+        for j in xrange(n):
             sum0 = sum(r[0:j+1,j]*qtb[0:j+1])
             wa1[j] = sum0/diag[ipvt[j]]
         gnorm = self.enorm(wa1)
@@ -2163,7 +2163,7 @@ class mpfit:
             # Compute the newton correction
             wa1 = diag[ipvt] * wa2[ipvt] / dxnorm
 
-            for j in range(n-1):
+            for j in xrange(n-1):
                 wa1[j] = wa1[j]/sdiag[j]
                 wa1[j+1:n] = wa1[j+1:n] - r[j+1:n,j]*wa1[j]
             wa1[n-1] = wa1[n-1]/sdiag[n-1] # Degenerate case
@@ -2192,7 +2192,7 @@ class mpfit:
             print 'Entering tie...'
         if ptied is None:
             return
-        for i in range(len(ptied)):
+        for i in xrange(len(ptied)):
             if ptied[i] == '':
                 continue
             cmd = 'p[' + str(i) + '] = ' + ptied[i]
@@ -2288,11 +2288,11 @@ class mpfit:
         # For the inverse of r in the full upper triangle of r
         l = -1
         tolr = tol * numpy.abs(r[0,0])
-        for k in range(n):
+        for k in xrange(n):
             if numpy.abs(r[k,k]) <= tolr:
                 break
             r[k,k] = 1./r[k,k]
-            for j in range(k):
+            for j in xrange(k):
                 temp = r[k,k] * r[j,k]
                 r[j,k] = 0.
                 r[0:j+1,k] = r[0:j+1,k] - temp*r[0:j+1,j]
@@ -2301,8 +2301,8 @@ class mpfit:
         # Form the full upper triangle of the inverse of (r transpose)*r
         # in the full upper triangle of r
         if l >= 0:
-            for k in range(l+1):
-                for j in range(k):
+            for k in xrange(l+1):
+                for j in xrange(k):
                     temp = r[j,k]
                     r[0:j+1,j] = r[0:j+1,j] + temp*r[0:j+1,k]
                 temp = r[k,k]
@@ -2311,10 +2311,10 @@ class mpfit:
         # For the full lower triangle of the covariance matrix
         # in the strict lower triangle or and in wa
         wa = numpy.repeat([r[0,0]], n)
-        for j in range(n):
+        for j in xrange(n):
             jj = ipvt[j]
             sing = j > l
-            for i in range(j+1):
+            for i in xrange(j+1):
                 if sing:
                     r[i,j] = 0.
                 ii = ipvt[i]
@@ -2325,7 +2325,7 @@ class mpfit:
             wa[jj] = r[j,j]
 
         # Symmetrize the covariance matrix in r
-        for j in range(n):
+        for j in xrange(n):
             r[0:j+1,j] = r[j,0:j+1]
             r[j,j] = wa[j]
 
