@@ -6,12 +6,15 @@ gaussfitter
 
 Latest version available at <http://code.google.com/p/agpy/source/browse/trunk/agpy/gaussfitter.py>
 
+As of January 30, 2014, gaussfitter has its own code repo on github:
+    https://github.com/keflavich/gaussfitter
+
 """
 import numpy as np
 from numpy.ma import median
 from numpy import pi
 #from scipy import optimize,stats,pi
-from agpy.mpfit import mpfit
+from .mpfit import mpfit
 """ 
 Note about mpfit/leastsq: 
 I switched everything over to the Markwardt mpfit routine for a few reasons,
