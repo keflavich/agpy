@@ -1,7 +1,4 @@
-try:
-    import coords
-except ImportError:
-    print "posang requires coords"
+from astropy import coordinates
 from numpy import pi,arctan2,sin,cos,tan
 
 def posang(l1,b1,l2,b2,system='galactic',units='degrees',**kwargs):
@@ -15,10 +12,16 @@ def posang(l1,b1,l2,b2,system='galactic',units='degrees',**kwargs):
 
     Defaults to GALACTIC coordinates.  **kwargs are passed to coords.Position
     """
-    pos1 = coords.Position([l1,b1],system=system,**kwargs)
-    ra1,dec1 = pos1.j2000()
-    pos2 = coords.Position([l2,b2],system=system,**kwargs)
-    ra2,dec2 = pos2.j2000()
+
+    if system.lower() == 'galactic':
+        pos1 = coordinates.Galactic(l1,b1,unit=('deg','deg'))
+        pos2 = coordinates.Galactic(l2,b2,unit=('deg','deg'))
+    elif system.lower() in ('radec','fk5','icrs'):
+        pos1 = coordinates.ICRS(l1,b1,unit=('deg','deg'))
+        pos2 = coordinates.ICRS(l2,b2,unit=('deg','deg'))
+
+    ra1,dec1 = pos1.icrs.ra.deg,pos1.icrs.dec.deg
+    ra2,dec2 = pos2.icrs.ra.deg,pos2.icrs.dec.deg
 
     radiff  = (ra1-ra2)/180.*pi
 

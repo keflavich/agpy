@@ -3,7 +3,6 @@ Various codes to work with the initial mass function
 """
 import numpy as np
 import types # I use typechecking.  Is there a better way to do this?  (see inverse_imf below)
-import scipy.integrate
 
 class MassFunction(object):
     """
@@ -26,6 +25,7 @@ class MassFunction(object):
         """
         Integrate the mass function over some range
         """
+        import scipy.integrate
         return scipy.integrate.quad(self, mlow, mhigh, **kwargs)
 
 class Salpeter(MassFunction):

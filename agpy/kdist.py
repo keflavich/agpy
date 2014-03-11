@@ -3,6 +3,7 @@ try:
 except ImportError:
     print "Can't use kdist without the 'coords' package"
 from numpy import sqrt, abs, pi, cos, sin, max, ones, array
+from astropy import coordinates
 
 def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
         kinematic=True,regular=False,rrgal=False,verbose=False,
@@ -60,11 +61,11 @@ def kdist(l, b, vin, near=True,r0=8.4e3,v0=2.54e2,dynamical=False,
         solarmotion_dec = (28+7/6e1+3.96/3.6e3)
         solarmotion_mag = 16.55294
 
-    cg = coords.Position((l,b),system='galactic')
-    solarmotion = coords.Position((solarmotion_ra,solarmotion_dec))
+    cg = coordinates.Galactic(l,b,unit=('deg','deg'))
+    solarmotion = coordinates.ICRS(solarmotion_ra, solarmotion_dec, unit=('deg','deg'))
     #  ra,dec = cg.j2000()
     #  gcirc, 2, solarmotion_ra, solarmotion_dec, ra, dec, theta
-    theta = cg.angsep(solarmotion).arcsec()
+    theta = cg.separation(solarmotion).to('arcsec').value
 
     vhelio = vin-solarmotion_mag*cos(theta/206265.)
 
