@@ -309,8 +309,12 @@ def subcube(cube, xcen, xwidth, ycen, ywidth, header=None,
 
         xmid_sky,ymid_sky = wcs.wcs_pix2world(xlo+xwidth,ylo+ywidth,0)
 
-        newheader.update('CRVAL1',xmid_sky[0])
-        newheader.update('CRVAL2',ymid_sky[0])
+        try:
+            newheader.update('CRVAL1',xmid_sky[0])
+            newheader.update('CRVAL2',ymid_sky[0])
+        except IndexError:
+            newheader.update('CRVAL1',xmid_sky)
+            newheader.update('CRVAL2',ymid_sky)
         newheader.update('CRPIX1',1+xwidth)
         newheader.update('CRPIX2',1+ywidth)
         
