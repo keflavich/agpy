@@ -313,8 +313,8 @@ def subcube(cube, xcen, xwidth, ycen, ywidth, header=None,
             newheader.update('CRVAL1',xmid_sky[0])
             newheader.update('CRVAL2',ymid_sky[0])
         except IndexError:
-            newheader.update('CRVAL1',xmid_sky)
-            newheader.update('CRVAL2',ymid_sky)
+            newheader.update('CRVAL1',float(xmid_sky))
+            newheader.update('CRVAL2',float(ymid_sky))
         newheader.update('CRPIX1',1+xwidth)
         newheader.update('CRPIX2',1+ywidth)
         
