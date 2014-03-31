@@ -1,9 +1,11 @@
-try:
-    import coords
-    import pyregion
-except ImportError:
-    print "reg_gal2cel requires coords & pyregion"
+#try:
+#    import coords
+#except ImportError:
+#    print "reg_gal2cel requires coords & pyregion"
+import pyregion
 import posang
+from astropy import coordinates
+from astropy import units as u
 
 def gal2cel(regfile):
     """
@@ -20,8 +22,10 @@ def gal2cel(regfile):
         if R.name == 'box':
             x,y,dx,dy,angle = R.coord_list
 
-            posn = coords.Position([x,y],system='galactic')
-            ra,dec = posn.j2000()
+            #posn = coords.Position([x,y],system='galactic')
+            #ra,dec = posn.j2000()
+            posn = coordinates.Galactic(x*u.deg, y*u.deg)
+            ra,dec = posn.fk5.ra.deg, posn.fk5.dec.deg
 
             newang = posang.posang(x-dx,y,x+dx,y,system='galactic')
 
@@ -32,4 +36,3 @@ def gal2cel(regfile):
             R.params = coord_list
 
     reg.write(regfile[:-4] + "_fk5.reg")
-

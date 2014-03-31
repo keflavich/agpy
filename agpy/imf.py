@@ -341,7 +341,8 @@ vgslogLe = np.concatenate([
     vgslogL[::-1],
     np.polyval(np.polyfit(np.log10(vgsM)[:3],vgslogL[:3],1),np.log10(np.linspace(50,150,100)))])
 vgslogQe = np.concatenate([
-    np.polyval(np.polyfit(np.log10(vgsM)[-3:],vgslogQ[-3:],1),np.log10(np.linspace(8,18.4,100))),
+    np.zeros(200),
+    np.polyval(np.polyfit(np.log10(vgsM)[-3:],vgslogQ[-3:],1),np.log10(np.linspace(2,20,100))), # was: 8 to 18
     vgslogQ[::-1],
     np.polyval(np.polyfit(np.log10(vgsM)[:3],vgslogQ[:3],1),np.log10(np.linspace(50,150,100)))])
 
