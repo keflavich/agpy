@@ -1,7 +1,3 @@
-try: 
-    import coords
-except ImportError:
-    print "Can't use kdist without the 'coords' package"
 from numpy import sqrt, abs, pi, cos, sin, max, ones, array
 from astropy import coordinates
 
