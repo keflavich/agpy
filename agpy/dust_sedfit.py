@@ -4,15 +4,16 @@ import pymc # pymc breaks np error settings
 np.seterr(**old_errsettings)
 import itertools
 from . import blackbody
+from scipy.integrate import quad
 
 
 def fit_blackbody_montecarlo(frequency, seds, errors=None,
-        temperature_guess=10, beta_guess=None, scale_guess=None,
-        blackbody_function=blackbody, quiet=True, return_MC=True,
-        nsamples=5000, burn=1000, min_temperature=0, max_temperature=100,
-        scale_keyword='scale', max_scale=1e60,
-        multivariate=False,
-        **kwargs):
+                             temperature_guess=10, beta_guess=None,
+                             scale_guess=None, blackbody_function=blackbody,
+                             quiet=True, return_MC=True, nsamples=5000,
+                             burn=1000, min_temperature=0, max_temperature=100,
+                             scale_keyword='scale', max_scale=1e60,
+                             multivariate=False, **kwargs):
     """
     Parameters
     ----------
@@ -51,15 +52,27 @@ def fit_blackbody_montecarlo(frequency, seds, errors=None,
     d = {}
 
     d['temperature'] = pymc.distributions.Uniform('temperature',
-            min_temperature, max_temperature, value=temperature_guess)
-    d['scale'] = pymc.distributions.Uniform('scale',0,max_scale,
-            value=scale_guess)
+                                                  min_temperature,
+                                                  max_temperature,
+                                                  value=temperature_guess)
+    d['scale'] = pymc.distributions.Uniform('scale', 0, max_scale,
+                                            value=scale_guess)
     if beta_guess is not None:
-        d['beta'] = pymc.distributions.Uniform('beta',0,10,
-                value=beta_guess)
+        d['beta'] = pymc.distributions.Uniform('beta',0,10, value=beta_guess)
     else:
-        d['beta'] = pymc.distributions.Uniform('beta',0,10,
-                value=1)
+        d['beta'] = pymc.distributions.Uniform('beta',0,10, value=1)
+
+    @pymc.deterministic
+    def luminosity(temperature=d['temperature'], beta=d['beta'],
+                   scale=d['scale']):
+
+        f = lambda nu: blackbody_function(nu, temperature, logN=scale,
+                                          beta=beta, normalize=False)
+        # integrate from 0.1 to 10,000 microns (100 angstroms to 1 cm)
+        # some care should be taken; going from 0 to inf results in failure
+        return quad(f, 1e4, 1e17)
+
+    d['luminosity'] = luminosity
 
     covar_list = dict([((i,j),pymc.Uninformative('%s-%s' % (i,j),value=(i==j))) for i,j in
         itertools.combinations_with_replacement(('t','b','s'),2)])
@@ -67,11 +80,15 @@ def fit_blackbody_montecarlo(frequency, seds, errors=None,
         if (i,j) in covar_list:
             covar_list[(j,i)] = covar_list[(i,j)]
     covar_grid = [[covar_list[(i,j)] for i in ('t','b','s')] for j in ('t','b','s')]
-    d['tbcov'] = pymc.MvNormalCov('tbcov', mu=[d['temperature'],d['beta'],d['scale']],
-            C=covar_grid, value=[d['temperature'],d['beta'],d['scale']])
+    d['tbcov'] = pymc.MvNormalCov('tbcov',
+                                  mu=[d['temperature'],d['beta'],d['scale']],
+                                  C=covar_grid,
+                                  value=[d['temperature'],d['beta'],d['scale']])
 
-    precision_list = dict([((i,j),pymc.Uninformative('%s-%s' % (i,j),value=(i==j))) for i,j in
-        itertools.combinations_with_replacement(('t','b','s'),2)])
+    precision_list = dict([((i,j),pymc.Uninformative('%s-%s' %
+                                                     (i,j),value=(i==j))) 
+                           for i,j in
+                           itertools.combinations_with_replacement(('t','b','s'),2)])
     for i,j in itertools.permutations(('t','b','s'),2):
         if (i,j) in precision_list:
             precision_list[(j,i)] = precision_list[(i,j)]
@@ -89,21 +106,19 @@ def fit_blackbody_montecarlo(frequency, seds, errors=None,
                 tau=d['tbprec'][2])
 
 
-        def bb_model(temperature=d['t_%i' % ii],
-                scale=d['s_%i' % ii],
-                beta=d['b_%i' % ii]):
+        def bb_model(temperature=d['t_%i' % ii], scale=d['s_%i' % ii],
+                     beta=d['b_%i' % ii]):
             kwargs[scale_keyword] = scale
-            y = blackbody_function(frequency, temperature, 
-                    beta=beta, normalize=False, **kwargs)
+            y = blackbody_function(frequency, temperature, beta=beta,
+                                   normalize=False, **kwargs)
             #print kwargs,beta,temperature,(-((y-flux)**2)).sum()
             return y
 
         d['bb_model_%i' % ii] = pymc.Deterministic(
                 eval=bb_model,
                 name='bb_model_%i' % ii,
-                parents={'temperature': d['t_%i' % ii], 
-                    'scale':d['s_%i' % ii],
-                    'beta':d['b_%i' % ii]},
+                parents={'temperature': d['t_%i' % ii], 'scale':d['s_%i' % ii],
+                         'beta':d['b_%i' % ii]},
                 doc='Blackbody SED model.',
                 trace=True,
                 verbose=0,
