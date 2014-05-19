@@ -171,6 +171,8 @@ def modified_blackbody_wavelength(lam, temperature, beta=1.75, logN=22,
     beta = 1.75 is a reasonable default for Herschel data
     N = 1e22 is the column density in cm^-2
 
+    This is the blackbody function *in frequency units*
+
     nu0 and nu must have same units!  But wavelength is converted to frequency
     of the right unit anyway
 
