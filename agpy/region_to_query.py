@@ -62,7 +62,10 @@ tbl.pprint()
 
 tbl['RA'] = [x.replace(" ",":") for x in tbl['RA']]
 tbl['DEC'] = [x.replace(" ",":") for x in tbl['DEC']]
-tbl['MAIN_ID'] = [x.replace(" ","_").replace("[","").replace("]","") for x in tbl['MAIN_ID']]
+col = tbl['MAIN_ID']
+tbl.remove_column('MAIN_ID')
+tbl.add_column(col, index=2)
+#tbl['MAIN_ID'] = [x.replace(" ","_").replace("[","").replace("]","") for x in tbl['MAIN_ID']]
 bad = np.array([(x['RA'].count(":") < 2) or (x['DEC'].count(":") < 2) for x in tbl])
 tbl = tbl[~bad]
 tbl = tbl.filled(0)
@@ -76,6 +79,8 @@ for row_id,row in enumerate(tbl):
 temp = tempfile.NamedTemporaryFile(suffix='.tsv')
 tbl.write(temp.name, format='ascii.csv', delimiter='\t')
 dd.set('catalog import tsv {0}'.format(temp.name))
+dd.set('catalog sky fk5')
+dd.set('catalog psky fk5')
 #except:
 #    vot = votable.table.from_table(tbl)
 #    temp = tempfile.NamedTemporaryFile(suffix='.xml')
