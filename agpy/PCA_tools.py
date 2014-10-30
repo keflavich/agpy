@@ -21,7 +21,10 @@ def efuncs(arr, return_others=False):
     if hasattr(arr,'filled'):
         arr = arr.filled(0)
     covmat = numpy.dot(arr.T,arr)
-    evals,evects = numpy.linalg.eig(covmat)
+    evals,evects = numpy.linalg.eigh(covmat)
+    inds = np.argsort(evals)[::-1]
+    evals = evals[inds]
+    evects = evects[:,inds]
     efuncarr = numpy.dot(arr,evects)
     if return_others:
         return efuncarr,covmat,evals,evects
