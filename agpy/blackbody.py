@@ -171,6 +171,8 @@ def modified_blackbody_wavelength(lam, temperature, beta=1.75, logN=22,
     beta = 1.75 is a reasonable default for Herschel data
     N = 1e22 is the column density in cm^-2
 
+    This is the blackbody function *in frequency units*
+
     nu0 and nu must have same units!  But wavelength is converted to frequency
     of the right unit anyway
 
@@ -392,13 +394,16 @@ try:
     import pymc # pymc breaks np error settings
     np.seterr(**old_errsettings)
 
+    from scipy.integrate import quad
+
     def fit_blackbody_montecarlo(frequency, flux, err=None,
-            temperature_guess=10, beta_guess=None, scale_guess=None,
-            blackbody_function=blackbody, quiet=True, return_MC=False,
-            nsamples=5000, burn=1000, min_temperature=0, max_temperature=100,
-            scale_keyword='scale', max_scale=1e60,
-            multivariate=False,
-            **kwargs):
+                                 temperature_guess=10, beta_guess=None,
+                                 scale_guess=None,
+                                 blackbody_function=blackbody, quiet=True,
+                                 return_MC=False, nsamples=5000, burn=1000,
+                                 min_temperature=0, max_temperature=100,
+                                 scale_keyword='scale', max_scale=1e60,
+                                 multivariate=False, **kwargs):
         """
         Parameters
         ----------
@@ -448,12 +453,23 @@ try:
 
 
         @pymc.deterministic
-        def bb_model(temperature=d['temperature'],
-                scale=d['scale'],
-                beta=d['beta']):
+        def luminosity(temperature=d['temperature'], beta=d['beta'],
+                       scale=d['scale']):
+
+            f = lambda nu: blackbody_function(nu, temperature, logN=scale,
+                                              beta=beta, normalize=False)
+            # integrate from 0.1 to 10,000 microns (100 angstroms to 1 cm)
+            # some care should be taken; going from 0 to inf results in failure
+            return quad(f, 1e4, 1e17)[0]
+
+        d['luminosity'] = luminosity
+
+        @pymc.deterministic
+        def bb_model(temperature=d['temperature'], scale=d['scale'],
+                     beta=d['beta']):
             kwargs[scale_keyword] = scale
-            y = blackbody_function(frequency, temperature, 
-                    beta=beta, normalize=False, **kwargs)
+            y = blackbody_function(frequency, temperature, beta=beta,
+                                   normalize=False, **kwargs)
             #print kwargs,beta,temperature,(-((y-flux)**2)).sum()
             return y
 
@@ -464,8 +480,9 @@ try:
         else:
             d['err'] = pymc.distributions.Uninformative('error',value=err,observed=True)
 
-        d['flux'] = pymc.distributions.Normal('flux', mu=d['bb_model'], tau=1./d['err']**2,
-                value=flux, observed=True)
+        d['flux'] = pymc.distributions.Normal('flux', mu=d['bb_model'],
+                                              tau=1./d['err']**2, value=flux,
+                                              observed=True)
 
         #print d.keys()
         MC = pymc.MCMC(d)

@@ -1,0 +1,10 @@
+# SIMBAD Query
+SIMBAD Query
+*
+menu
+region_to_query.py $xpa_method
+
+SIMBAD Query
+*
+bind q
+region_to_query.py $xpa_method

@@ -32,5 +32,5 @@ setup(name='agpy',
         'h2fit_support/h2pars.txt',
         'h2fit_support/linelist.txt'])],
       url='http://code.google.com/p/agpy/',
-      packages=['agpy','agpy/mpfit','AG_fft_tools','AG_image_tools','plfit','contributed','radex'],
+      packages=['agpy','agpy/mpfit','AG_fft_tools','AG_image_tools','contributed','radex'],
      )

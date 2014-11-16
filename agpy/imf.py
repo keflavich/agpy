@@ -3,7 +3,6 @@ Various codes to work with the initial mass function
 """
 import numpy as np
 import types # I use typechecking.  Is there a better way to do this?  (see inverse_imf below)
-import scipy.integrate
 
 class MassFunction(object):
     """
@@ -26,6 +25,7 @@ class MassFunction(object):
         """
         Integrate the mass function over some range
         """
+        import scipy.integrate
         return scipy.integrate.quad(self, mlow, mhigh, **kwargs)
 
 class Salpeter(MassFunction):
@@ -341,7 +341,8 @@ vgslogLe = np.concatenate([
     vgslogL[::-1],
     np.polyval(np.polyfit(np.log10(vgsM)[:3],vgslogL[:3],1),np.log10(np.linspace(50,150,100)))])
 vgslogQe = np.concatenate([
-    np.polyval(np.polyfit(np.log10(vgsM)[-3:],vgslogQ[-3:],1),np.log10(np.linspace(8,18.4,100))),
+    np.zeros(200),
+    np.polyval(np.polyfit(np.log10(vgsM)[-3:],vgslogQ[-3:],1),np.log10(np.linspace(2,20,100))), # was: 8 to 18
     vgslogQ[::-1],
     np.polyval(np.polyfit(np.log10(vgsM)[:3],vgslogQ[:3],1),np.log10(np.linspace(50,150,100)))])
 

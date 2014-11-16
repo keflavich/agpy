@@ -17,7 +17,7 @@ try:
     sys.modules['montage'] = __import__('montage')
     montage = sys.modules['montage']
 
-    print montage.__file__
+    # DEBUG print montage.__file__
     if "agpy" in montage.__file__:
         raise ImportError
 
