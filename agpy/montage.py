@@ -102,7 +102,7 @@ try:
 
         shutil.rmtree(tmpdir+'/')
 except ImportError:
-    print "Cannot import montage."
+    pass
 
 if __name__ == "__main__":
 
