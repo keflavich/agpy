@@ -44,7 +44,7 @@ import get_cutouts
 import pymc_plotting
 import imf
 
-import montage
+import montage_wrapper as montage
 
 from __version__ import __version__
 

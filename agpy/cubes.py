@@ -577,7 +577,7 @@ def plane_smooth(cube,cubedim=0,parallel=True,numcores=None,**kwargs):
 
 
 try:
-    import montage 
+    import montage_wrapper as montage
 
     def rotcrop_cube(x1, y1, x2, y2, cubename, outname, xwidth=25, ywidth=25,
                      in_system='galactic',  out_system='equatorial',

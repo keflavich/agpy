@@ -103,7 +103,7 @@ then
       cmd="/usr/bin/env python -c "
     fi
 
-    montagecmd="import tempfile; tempfile.tempdir='/Volumes/disk4/var/tmp'; import montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
+    montagecmd="import tempfile; tempfile.tempdir='/Volumes/disk4/var/tmp'; import montage_wrapper as montage; montage.wrappers.mosaic('$dir','$dir/mosaic',header='$dir/$headerfile'$params)"
     dir=`pwd`
     echo $cmd $montagecmd
     $cmd $montagecmd 
