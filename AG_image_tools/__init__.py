@@ -1,3 +1,8 @@
+import warnings
+warnings.warn("agpy.AG_image_tools is deprecated."
+              " Instead, seek out image_tools: "
+              "https://github.com/keflavich/image_tools",
+              DeprecationWarning)
 import radialprofile
 from radialprofile import azimuthalAverage,azimuthalAverageBins,radialAverage,radialAverageBins
 from drizzle import drizzle

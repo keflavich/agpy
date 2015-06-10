@@ -8,6 +8,11 @@ general, smoothing with a set of 'standard' kernels, and computing power
 spectra and PSDs.
 
 """
+import warnings
+warnings.warn("agpy.AG_fft_tools is deprecated."
+              " Instead, seek out image_tools (which contains all these tools): "
+              "https://github.com/keflavich/image_tools",
+              DeprecationWarning)
 
 from correlate2d import correlate2d
 from psds import PSD2
