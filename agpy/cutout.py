@@ -83,7 +83,7 @@ def cutout(filename, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
         os.remove('temp_montage.hdr')
     else:
 
-        xx,yy = wcs.wcs_sky2pix(xc,yc,0)
+        xx,yy = wcs.wcs_world2pix(xc,yc,0)
 
         if units=='pixels':
             xmin,xmax = numpy.max([0,xx-xw]),numpy.min([head['NAXIS1'],xx+xw])
