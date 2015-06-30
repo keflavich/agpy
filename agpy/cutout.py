@@ -42,7 +42,8 @@ def cutout(filename, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
         x and y coordinates in the fits files' coordinate system (CTYPE)
         or in pixel units
     xw,yw : float
-        x and y width (pixels or wcs)
+        x and y half-width (pixels or wcs)
+        (the output file will be size xw*2 * yw*2)
     units : str
         specify units to use: either pixels or wcs
     outfile : str
