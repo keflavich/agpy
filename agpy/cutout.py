@@ -27,15 +27,35 @@ class DimensionError(ValueError):
     pass
 
 def cutout(filename, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
-        clobber=True, useMontage=False, coordsys='celestial', verbose=False):
+           clobber=True, useMontage=False, coordsys='celestial',
+           verbose=False, centerunits=None):
     """
-    Inputs:
-        file  - .fits filename or pyfits HDUList (must be 2D)
-        xc,yc - x and y coordinates in the fits files' coordinate system (CTYPE)
-        xw,yw - x and y width (pixels or wcs)
-        units - specify units to use: either pixels or wcs
-        outfile - optional output file
+    Simple cutout function.  Should be replaced by a function in astropy's
+    imageutils eventually - keep an eye on
+    https://github.com/astropy/imageutils/issues/4
+
+    Parameters
+    ----------
+    file : str or fits.HDUList
+        .fits filename or pyfits HDUList (must be 2D)
+    xc,yc : float,float
+        x and y coordinates in the fits files' coordinate system (CTYPE)
+        or in pixel units
+    xw,yw : float
+        x and y width (pixels or wcs)
+    units : str
+        specify units to use: either pixels or wcs
+    outfile : str
+        optional output file
+    centerunits : None or str
+        If None, is the same as 'units'.  Can be 'wcs' or 'pixels'
     """
+
+    if centerunits is None:
+        centerunits = units
+
+    if units not in ('wcs','pixels'):
+        raise ValueError("units must be wcs or pixels")
 
     if isinstance(filename,str):
         file = pyfits.open(filename)
@@ -83,7 +103,10 @@ def cutout(filename, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
         os.remove('temp_montage.hdr')
     else:
 
-        xx,yy = wcs.wcs_world2pix(xc,yc,0)
+        if centerunits == 'wcs':
+            xx,yy = wcs.wcs_world2pix(xc,yc,0)
+        else:
+            xx,yy = xc,yc
 
         if units=='pixels':
             xmin,xmax = numpy.max([0,xx-xw]),numpy.min([head['NAXIS1'],xx+xw])
