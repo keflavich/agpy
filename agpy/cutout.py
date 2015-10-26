@@ -30,9 +30,10 @@ def cutout(filename, xc, yc, xw=25, yw=25, units='pixels', outfile=None,
            clobber=True, useMontage=False, coordsys='celestial',
            verbose=False, centerunits=None):
     """
-    Simple cutout function.  Should be replaced by a function in astropy
-    eventually - keep an eye on
-    https://github.com/astropy/astropy/pull/3823
+    Simple cutout function.  A more modern version is implemented in astropy
+    now:
+
+    http://astropy.readthedocs.org/en/latest/api/astropy.nddata.utils.Cutout2D.html
 
     Parameters
     ----------
