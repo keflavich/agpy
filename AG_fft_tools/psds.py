@@ -1,5 +1,8 @@
 """
 Power Spectra
+
+These tools have been reimplemented and may be more up-to-date in turbustat:
+https://github.com/Astroua/TurbuStat
 """
 
 import numpy
