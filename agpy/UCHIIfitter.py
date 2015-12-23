@@ -17,7 +17,7 @@ for k,v in pylab.__dict__.iteritems():
 try:
     from scipy import optimize
 except ImportError:
-    print "scipy not installed correctly: UCHIIfitter may fail"
+    print("scipy not installed correctly: UCHIIfitter may fail")
 from agpy.mpfit import mpfit
 import numpy
 from agpy.constants import *

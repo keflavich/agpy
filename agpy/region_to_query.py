@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 """
 SIMBAD query a region
 """
@@ -39,7 +39,7 @@ if reg.name == 'circle':
 else:
     radius = 2/60.
 
-print url
+print(url)
 
 webbrowser.open(url)
 
@@ -73,7 +73,7 @@ tbl = tbl.filled(0)
 for row_id,row in enumerate(tbl):
     for key,val in zip(row.dtype.names, row):
         if val == '':
-            print row_id,key
+            print(row_id,key)
             tbl[row_id][key] = 0
 
 temp = tempfile.NamedTemporaryFile(suffix='.tsv')
