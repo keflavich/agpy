@@ -3,21 +3,16 @@
 UCHII Fitter
 ============
 
-Fit a free-free spectrum to an SED.  
+Fit a free-free spectrum to an SED.
 
 .. moduleauthor:: Adam Ginsburg <adam.g.ginsburg@gmail.com>
 
 """
 import pylab
-from pylab import *
-for k,v in pylab.__dict__.iteritems():  
-    if hasattr(v,'__module__'):
-        if v.__module__ is None:
-            locals()[k].__module__ = 'pylab'
 try:
     from scipy import optimize
 except ImportError:
-    print("scipy not installed correctly: UCHIIfitter may fail")
+    print("scipy not installed: UCHIIfitter may fail")
 from agpy.mpfit import mpfit
 import numpy
 from agpy.constants import *
@@ -47,7 +42,7 @@ def tnu(Te,nu,EM):
     """
 #    nu0 = .3045 * Te**-.643 * EM**.476
     nu0 = Te**1.5 / 1000
-    answer_highnu = (nu > nu0) * 3.014e-2 * Te**-1.5 * nu**-2 * EM  
+    answer_highnu = (nu > nu0) * 3.014e-2 * Te**-1.5 * nu**-2 * EM
     gff_lownu = ( log(4.955e-2 * nu**-1) + 1.5 * log(Te) )  # <gff> Gaunt factor for free-free
     answer_lownu  = (nu < nu0) * 3.014e-2 * Te**-1.5 * nu**-2 * EM * gff_lownu
     tau = answer_lownu+answer_highnu
