@@ -14,7 +14,7 @@ with open('CHANGES') as file:
     long_description += file.read()
 
 
-execfile('agpy/__version__.py')
+__version__='0.1.4'
 
 setup(name='agpy',
       version=__version__,
