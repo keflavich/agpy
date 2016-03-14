@@ -21,7 +21,6 @@ from .reg_gal2cel import gal2cel
 from .posang import posang
 #import densitymap
 #import downsample as downsample_mod
-from .AG_image_tools import downsample,downsample_cube
 
 #from asinh_norm import AsinhNorm
 #import showspec # imports matplotlib = BAD
@@ -33,11 +32,12 @@ from .PCA_tools import efuncs,pca_subtract,unpca_subtract,smooth_waterfall
 from . import constants
 from . import blackbody
 
-from . import AG_fft_tools
-from .AG_fft_tools import *
+import AG_fft_tools
+from AG_fft_tools import *
 
-from . import AG_image_tools
-from .AG_image_tools import *
+import AG_image_tools
+from AG_image_tools import downsample,downsample_cube
+from AG_image_tools import *
 
 from . import cutout
 from . import get_cutouts
