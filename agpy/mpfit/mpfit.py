@@ -408,6 +408,7 @@ Perform Levenberg-Marquardt least-squares minimization, based on MINPACK-1.
    Converted from Numeric to numpy (Sergey Koposov, July 2008)
 """
 
+from warnings import warn
 import numpy
 import types
 
@@ -837,6 +838,9 @@ class mpfit:
            pcerror = mpfit.perror * sqrt(mpfit.fnorm / dof)
 
         """
+        warn("Please use a more recent version of mpfit: "
+             "https://github.com/segasai/astrolibpy/blob/master/mpfit/mpfit.py",
+             DeprecationWarning)
         self.niter = 0
         self.params = None
         self.covar = None
