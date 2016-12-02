@@ -11,6 +11,7 @@ As of January 30, 2014, gaussfitter has its own code repo on github:
 
 """
 import numpy as np
+from warnings import warn
 from numpy.ma import median
 from numpy import pi
 #from scipy import optimize,stats,pi
@@ -39,6 +40,9 @@ def moments(data,circle,rotate,vheight,estimator=median,**kwargs):
     
     If using masked arrays, pass estimator=np.ma.median
     """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
     total = np.abs(data).sum()
     Y, X = np.indices(data.shape) # python convention: reverse x,y np.indices
     y = np.argmax((X*np.abs(data)).sum(axis=1)/total)
@@ -95,6 +99,9 @@ def twodgaussian(inpars, circle=False, rotate=True, vheight=True, shape=None):
             shape=None - if shape is set (to a 2-parameter list) then returns
                 an image with the gaussian defined by inpars
         """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
     inpars_old = inpars
     inpars = list(inpars)
     if vheight == 1:
@@ -196,6 +203,9 @@ def gaussfit(data,err=None,params=(),autoderiv=True,return_all=False,circle=Fals
 
         Warning: Does NOT necessarily output a rotation angle between 0 and 360 degrees.
     """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
     usemoment=np.array(usemoment,dtype='bool')
     params=np.array(params,dtype='float')
     if usemoment.any() and len(params)==len(usemoment):
@@ -278,6 +288,9 @@ def onedmoments(Xax,data,vheight=True,estimator=median,negamp=None,
     negamp can be used to force the peak negative (True), positive (False),
     or it will be "autodetected" (negamp=None)
     """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
 
     dx = np.mean(Xax[1:] - Xax[:-1]) # assume a regular grid
     integral = (data*dx).sum()
@@ -320,6 +333,9 @@ def onedgaussian(x,H,A,dx,w):
     Returns a 1-dimensional gaussian of form
     H+A*np.exp(-(x-dx)**2/(2*w**2))
     """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
     return H+A*np.exp(-(x-dx)**2/(2*w**2))
 
 def onedgaussfit(xax, data, err=None,
@@ -350,6 +366,9 @@ def onedgaussfit(xax, data, err=None,
        Fit errors
        chi2
     """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
 
     def mpfitfun(x,y,err):
         if err is None:
@@ -405,6 +424,9 @@ def n_gaussian(pars=None,a=None,dx=None,sigma=None):
     sigma - line widths
     a     - amplitudes
     """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
     if len(pars) % 3 == 0:
         a = [pars[ii] for ii in xrange(0,len(pars),3)]
         dx = [pars[ii] for ii in xrange(1,len(pars),3)]
@@ -449,6 +471,9 @@ def multigaussfit(xax, data, ngauss=1, err=None, params=[1,0,1],
        Fit errors
        chi2
     """
+    warn("Gaussfitter has been moved from agpy to its own repository: "
+         "https://github.com/keflavich/gaussfitter.  Please use that version",
+         DeprecationWarning)
 
     if len(params) != ngauss and (len(params) / 3) > ngauss:
         ngauss = len(params) / 3 
